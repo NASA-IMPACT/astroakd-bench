@@ -26,7 +26,7 @@ DEFAULT_DATASET = Path("datasets/generated/synthetic_queries.jsonl")
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="astroakd-bench",
-        description="AstroAKD-Bench 0.5.1 independent MCP benchmarking, scoring, and readable exports.",
+        description="AstroAKD-Bench 0.6.0 offline fixture recording, replay, and scoring.",
     )
     parser.add_argument("--version", action="version", version=__version__)
     common = argparse.ArgumentParser(add_help=False)
@@ -116,6 +116,10 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--limit", type=int, help="Number of remaining tasks to run")
     run.add_argument("--resume", action="store_true")
     run.add_argument("--replace", action="store_true")
+    run.add_argument("--mcp-mode", choices=("live", "record", "replay"), default="live",
+        help="live MCP HTTP, record MCP calls into a fixture, or replay offline")
+    run.add_argument("--fixtures", type=Path,
+        help="Replay fixture JSON file; required for record and replay modes")
     run.add_argument("--strict-accepted-020", action="store_true",
         help="Require frozen accepted 50-task candidate dataset")
     score = commands.add_parser('evaluate', parents=[common],
@@ -130,6 +134,13 @@ def build_parser() -> argparse.ArgumentParser:
         help='Save all per-task scores as an indented JSON array (.json) alongside compact JSONL')
     score.add_argument('--strict-accepted-020', action='store_true')
     score.add_argument('--replace', action='store_true')
+    fixture = commands.add_parser('build-fixtures', parents=[common],
+        help='Construct offline MCP fixtures from accepted reference responses; NO network calls')
+    fixture.add_argument('--tasks', type=Path, default=DEFAULT_DATASET)
+    fixture.add_argument('--references', type=Path, default=Path('datasets/validated/reference_answers.jsonl'))
+    fixture.add_argument('--output', type=Path, default=Path('datasets/replay/reference_fixtures.json'))
+    fixture.add_argument('--strict-accepted-020', action='store_true')
+    fixture.add_argument('--replace', action='store_true')
     inspect = commands.add_parser('inspect', parents=[common],
         help='Render a bounded JSONL sample or a JSON report for inspection')
     inspect.add_argument('--input', required=True, type=Path)
@@ -139,6 +150,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 async def _execute(args: argparse.Namespace) -> dict[str, Any]:
+    if args.command == 'build-fixtures':
+        from .replay import build_reference_fixtures
+        return build_reference_fixtures(args.tasks, args.references, args.output,
+                                       strict_accepted_020=args.strict_accepted_020,
+                                       replace=args.replace)
     if args.command == 'inspect':
         return inspect_file(args.input, args.limit)
     if args.command == 'evaluate':
@@ -169,6 +185,7 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
             task_timeout=args.task_timeout, limit=args.limit,
             resume=args.resume, replace=args.replace,
             strict_accepted_020=args.strict_accepted_020, json_format=args.json_format,
+            mcp_mode=args.mcp_mode, fixtures=args.fixtures,
         )
     if args.command == "generate":
         if args.output.exists() and not args.replace:
@@ -209,7 +226,7 @@ def main(argv: list[str] | None = None) -> int:
                    "message": str(exc)}}
     output = json_text(payload, args.json_format)
     print(output)
-    report_destination = (None if args.command in {"validate", "run", "evaluate"} else
+    report_destination = (None if args.command in {"validate", "run", "evaluate", "build-fixtures"} else
                           args.report if args.command == "generate" else args.output)
     if report_destination is not None:
         try:

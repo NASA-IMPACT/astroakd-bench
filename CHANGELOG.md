@@ -5,13 +5,61 @@ here. This history is separate from the external `astroquery-mcp` project's
 releases: AstroAKD-Bench versions track benchmark capabilities, not versions
 of Astroquery or the MCP server.
 
-The current implemented benchmark version is **0.5.1**.
+The current implemented benchmark version is **0.6.0**.
 Dates are in UTC. Release statuses distinguish **offline implementation
 qualification** from **real laptop / live-service qualification**.
 
 ## [Unreleased]
 
-- Planned: 0.6.0 offline MCP record/replay and expanded scientific claim verification.
+- Planned after 0.6.0: broader scientific claim verification, multi-archive workflows and frozen evaluation suites.
+
+## [0.6.0] - 2026-10-13
+
+### Added
+
+- `REPLAY_AND_BENCHMARK_RELEASE`: new `benchmark/replay.py` with integrity-checked,
+  read-only MCP fixtures, a no-network replay client, and a transparent live
+  recorder. Fixture lookups match the exact MCP tool name and canonical JSON
+  arguments. Unknown calls produce an explicit `OFFLINE_REPLAY_MISS` without
+  a live-archive fallback.
+- `benchmark build-fixtures` constructs 50 deterministic, offline source-backed
+  MCP fixtures from the accepted 0.3.0 reference data, using a documented
+  **bootstrap** tool catalog. No internet connection, MCP server or LLM call
+  is required; these are validated structural references, not scientific truth.
+- `benchmark run --mcp-mode {live,record,replay} --fixtures PATH` selects live
+  network access, automatic fixture recording, or deterministic offline replay.
+  `record` saves the actual advertised MCP catalog and each successful/error
+  tool result with fsynced atomic publication; `replay` uses no HTTP client.
+- Fixture content and individual results are SHA-256 authenticated against the
+  recorded payload. Mutation, unsafe operations, duplicate/conflicting calls,
+  mismatched candidate fingerprints and incompatible run-resume manifests are
+  rejected. Recorded fixtures distinguish from gold reference data passed to
+  the scoring process; agents receive only response data for the calls they make.
+- The release includes root README/CHANGELOG, root-level accepted datasets,
+  a built offline fixture, a detailed replay guide, test suite, and local
+  installation/qualification instructions. No changes to the external NASA
+  IMPACT Astroquery MCP server or its contributor attribution.
+
+### Qualification
+
+- User-uploaded 0.5.1 evaluation results checked: two saved compact JSONL
+  streams exactly match their respective pretty JSON arrays, each containing
+  five scores [100,100,100,80,90]. Mean 94/100; 3 technical PASS, 2 REVIEW.
+  These are **technical evidence** scores and do not establish scientific
+  accuracy for the 50-task benchmark.
+- Offline unit suite: **PASS**, 110 tests passed with one optional live HTTP test skipped (previous regressions plus replay tests),
+  including the actual frozen 50-task fixture build, no-network agent replay,
+  recorder capture, fingerprint tamper rejection, missing-call handling and
+  fixture-file protection. The optional real MCP test remains skipped.
+- Real laptop 0.6.0 record/replay qualification: **PENDING**.
+
+### Limitations
+
+- Archive replay can be offline, but OpenAI API agents still need internet.
+  Reference-derived fixture catalogs are bootstrap schemas, not an exact copy
+  of the live server's catalog; `record` captures a live catalog when needed.
+- Fixture equality does not guarantee identical LLM wording, token usage, or
+  scientific interpretation. A replay miss is **not** a live archive error.
 
 ## [0.5.1] - 2026-10-13
 

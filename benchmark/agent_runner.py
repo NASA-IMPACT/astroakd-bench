@@ -1,4 +1,4 @@
-"""0.4.1: independently run agents with archive routing and evidence checks.
+"""Run benchmark agents with archive routing, evidence checks, and 0.6.0 fixture modes.
 
 Reference responses and reference calls are intentionally never exposed to an agent.
 This module records execution, NOT scientific correctness (reserved for 0.5.0).
@@ -453,7 +453,25 @@ async def run_agents(tasks_file: Path, reference_file: Path, output: Path, repor
                      strict_accepted_020: bool = False, json_format: str = 'compact',
                      session_factory: Callable[[str], Any] | None = None,
                      agent_factory: Callable[[], Any] | None = None,
+                     mcp_mode: str = 'live', fixtures: Path | None = None,
                      ) -> dict[str, Any]:
+    if mcp_mode not in ('live', 'record', 'replay'):
+        raise AgentRunError('--mcp-mode must be live, record, or replay')
+    if (mcp_mode != 'live') != (fixtures is not None):
+        raise AgentRunError('--fixtures is required only for --mcp-mode record/replay')
+    if fixtures is not None and fixtures.resolve() in {
+            tasks_file.resolve(), reference_file.resolve(), output.resolve(), report_path.resolve(),
+            output.with_name(output.name+'.progress.jsonl').resolve(),
+            output.with_name(output.name+'.manifest.json').resolve()}:
+        raise AgentRunError('Fixture path conflicts with benchmark input or output')
+    # Validate replay before starting any agent or touching run artifacts.
+    from .replay import FixtureStore, RecordClient, ReplayClient
+    fixture_store = (FixtureStore.load(fixtures) if mcp_mode == 'replay' else None)
+    fixture_digest = (fixture_store.fingerprint if fixture_store is not None else None)
+    if mcp_mode == 'record' and fixtures.exists() and not (replace or resume):
+        raise AgentRunError('Recording fixtures exist; use --resume or --replace')
+    if mcp_mode == 'record' and resume and not fixtures.is_file():
+        raise AgentRunError('Recording fixtures missing for --resume')
     if resume and replace:
         raise AgentRunError('--resume and --replace cannot be used together')
     if limit is not None and limit < 1:
@@ -473,6 +491,8 @@ async def run_agents(tasks_file: Path, reference_file: Path, output: Path, repor
         raise AgentRunError('Input, reference, output, report must be distinct')
     tasks, dataset_hash, reference_hash = load_run_inputs(tasks_file, reference_file,
                                                          strict_sha=strict_accepted_020)
+    if fixture_store is not None and fixture_store.dataset_sha256 not in (None, dataset_hash):
+        raise AgentRunError('Replay fixture candidate dataset SHA-256 mismatch')
     journal = output.with_name(output.name + '.progress.jsonl')
     manifest = output.with_name(output.name + '.manifest.json')
     context = {'input_dataset_sha256': dataset_hash,
@@ -480,7 +500,9 @@ async def run_agents(tasks_file: Path, reference_file: Path, output: Path, repor
                'endpoint': url, 'agent': agent_name, 'model': model if agent_name == 'openai' else None,
                'adapter': adapter, 'max_turns': max_turns, 'max_calls': max_calls,
                'max_tool_bytes': max_tool_bytes, 'task_timeout': task_timeout,
-               'routing_policy': ROUTING_POLICY}
+               'routing_policy': ROUTING_POLICY,
+               'mcp_mode': mcp_mode, 'fixtures': str(fixtures.resolve()) if fixtures else None,
+               'fixture_fingerprint': fixture_digest}
     if resume:
         if output.exists() or not manifest.exists():
             raise AgentRunError('Cannot resume completed output or absent manifest')
@@ -502,8 +524,14 @@ async def run_agents(tasks_file: Path, reference_file: Path, output: Path, repor
         agent = agent_factory() if agent_factory else (
             OpenAIAgent(model=model) if agent_name == 'openai' else
             ExternalAgent(adapter or '') if agent_name == 'external' else EchoAgent())
-        async with AstroqueryMCPClient(url, timeout=timeout,
-                                       session_factory=session_factory) as client:
+        if mcp_mode == 'replay':
+            client_instance = ReplayClient(fixture_store)
+        else:
+            live_client = AstroqueryMCPClient(url, timeout=timeout, session_factory=session_factory)
+            client_instance = (RecordClient(live_client, fixtures, resume=resume, replace=replace,
+                                            dataset_hash=dataset_hash)
+                               if mcp_mode == 'record' else live_client)
+        async with client_instance as client:
             advertised = [x for x in await client.list_tools() if x['name'] in ALLOWED_TOOLS]
             names = {x['name'] for x in advertised}
             if 'astroquery_execute' not in names or 'astroquery_list_modules' not in names:
@@ -513,7 +541,7 @@ async def run_agents(tasks_file: Path, reference_file: Path, output: Path, repor
                 if replace:
                     for p in (output, report_path, journal, manifest):
                         p.unlink(missing_ok=True)
-                atomic_json(manifest, {'milestone':'0.5.0 — AUTOMATED_EVALUATION_AND_SCORING',
+                atomic_json(manifest, {'milestone':'0.6.0 — REPLAY_AND_BENCHMARK_RELEASE',
                                        'created_utc': now_utc(), 'context':context})
             for task in remaining:
                 gateway = TracedMCPGateway(client, max_calls=max_calls,
@@ -569,9 +597,12 @@ async def run_agents(tasks_file: Path, reference_file: Path, output: Path, repor
     evidence_tally = dict(sorted(Counter(x.get('query_evidence', 'missing') for x in ordered).items()))
     by_module = {mod: dict(Counter(x['status'] for x in ordered if x['module'] == mod))
                  for mod in dict.fromkeys(task['module'] for task in tasks)}
-    report = {'milestone': '0.5.0 — AUTOMATED_EVALUATION_AND_SCORING',
+    report = {'milestone': '0.6.0 — REPLAY_AND_BENCHMARK_RELEASE',
               'benchmark_version': __version__, 'timestamp_utc': now_utc(),
-              'endpoint': url, 'agent': agent_name, 'model': model if agent_name == 'openai' else None,
+              'endpoint': url if mcp_mode != 'replay' else 'offline://fixture',
+              'mcp_mode': mcp_mode, 'fixtures': str(fixtures) if fixtures else None,
+              'fixture_fingerprint': fixture_digest,
+              'agent': agent_name, 'model': model if agent_name == 'openai' else None,
               'input_dataset_sha256': dataset_hash, 'reference_answers_sha256': reference_hash,
               'total_tasks': len(tasks), 'processed': len(ordered),
               'remaining': len(tasks)-len(ordered), 'dispositions': tally,
@@ -591,7 +622,7 @@ async def run_agents(tasks_file: Path, reference_file: Path, output: Path, repor
               'notes': ['Agent sees only the question and allowlisted MCP tool schemas, not reference calls/results.',
                         'Explicit single-archive routing is derived from question text alone.',
                         'PASS requires a successful astronomical execute result per task, not just a final answer.',
-                        '0.5.0 run captures tool evidence; use evaluate separately for technical scoring and limited answer-claim checks.',
+                        '0.6.0 captures replay/record provenance; use evaluate separately for scientific scoring.',
                         'Echo adapter is harness-only, not an astronomical agent.',
                         'External adapters must call gateway.call_tool for auditable MCP traces.']}
     if all_done:
