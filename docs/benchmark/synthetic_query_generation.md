@@ -21,7 +21,7 @@ uv sync
 uv run fastmcp run server.py --transport http --host 127.0.0.1 --port 8000
 ```
 
-Then in Terminal B, from the same checkout:
+Then in Terminal B, from the separate AstroAKD-Bench checkout:
 
 ```bash
 uv run python -m benchmark doctor --fast
@@ -128,3 +128,48 @@ records.
 **Host acceptance remains pending** until the user runs the generator against
 their actual MCP endpoint and shares the resulting report. Actual archive
 result validation remains milestone 0.3.0.
+
+
+## 0.6.2: Human-readable CSV and pretty JSON exports
+
+Canonical `.jsonl` stays **one compact JSON object per line**. Pass
+`--csv-output PATH.csv` to create an inspection table and `--pretty-output
+PATH.json` to save a complete indented JSON array. `--json-format pretty`
+alone affects only terminal output and `.json` summary reports; it does **not**
+change canonical JSONL encoding. Saved CSV/pretty views do not replace JSONL
+in API calls, validation inputs or frozen-hash checks.
+
+For generated queries:
+
+```bash
+uv run python -m benchmark generate \
+  --count 50 --seed 123 \
+  --modules simbad,mast,heasarc,gaia,vizier \
+  --output datasets/generated/my_50_queries.jsonl \
+  --csv-output datasets/generated/my_50_queries.csv \
+  --pretty-output datasets/generated/my_50_queries_pretty.json \
+  --report datasets/generated/my_50_report.json \
+  --json-format pretty
+```
+
+For live validation of this **new seed=123 dataset**, start conservatively:
+
+```bash
+uv run python -m benchmark validate \
+  --input datasets/generated/my_50_queries.jsonl \
+  --limit 1 --attempts 1 --timeout 30 --delay 0 \
+  --output datasets/validated/my_50_references.jsonl \
+  --csv-output datasets/validated/my_50_references.csv \
+  --pretty-output datasets/validated/my_50_references_pretty.json \
+  --report datasets/validated/my_50_validation_report.json \
+  --json-format pretty
+```
+
+The validator reports progress on **stderr** at preflight, START, WAITING
+(every 15 seconds), and DONE, so a slow remote archive cannot silently
+appear idle. It saves completed-task results into an fsynced `.progress.jsonl`
+journal. If interrupted, use `--resume` with the same input and output names,
+and remove `--limit`. Do not use `--strict-accepted-020` for new seeds.
+CSV and pretty JSON views are updated after each successful command invocation,
+including pilot runs, and contain only processed records. The final canonical
+reference `.jsonl` is published when all input tasks have dispositions.

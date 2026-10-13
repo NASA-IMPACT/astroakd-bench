@@ -6,6 +6,7 @@ new questions. It records the actual MCP result and evidence of its validation.
 from __future__ import annotations
 
 import asyncio
+from contextlib import asynccontextmanager, suppress
 from collections import Counter
 from datetime import datetime, timezone
 import hashlib
@@ -25,7 +26,7 @@ from .seeds import RADII_ARCMIN, HEASARC_CATALOGS, VIZIER_CATALOGS, TARGETS
 
 EXPECTED_ACCEPTED_020_SHA256 = "e6de68eedf2b38ea08dd684cac678edc80ee23abe51b7189f0adfb5e369c1fe9"
 SUCCESS_DISPOSITIONS = frozenset({"accepted_nonempty", "accepted_empty"})
-RETRYABLE_ERRORS = (MCPTransportError, MCPConnectionError)
+RETRYABLE_ERRORS = (MCPTransportError, MCPConnectionError, TimeoutError)
 
 
 class ValidationError(ValueError):
@@ -333,9 +334,12 @@ async def execute_task(task: dict[str, Any], *, url: str, timeout: float,
         try:
             # Fresh HTTP session per attempt: a request timeout cannot poison
             # a subsequent query and reference calls cannot share session state.
-            async with AstroqueryMCPClient(url, timeout=timeout,
-                                           session_factory=session_factory) as client:
-                response = await client.call(call["tool"], params)
+            # Bound the complete attempt including HTTP session teardown. A
+            # stalled upstream archive must not block the entire benchmark.
+            async with asyncio.timeout(timeout):
+                async with AstroqueryMCPClient(url, timeout=timeout,
+                                               session_factory=session_factory) as client:
+                    response = await client.call(call["tool"], params)
             blob = json_bytes(response)
             if len(blob) > max_response_bytes:
                 evaluation = {"disposition": "rejected_oversize",
@@ -351,8 +355,10 @@ async def execute_task(task: dict[str, Any], *, url: str, timeout: float,
             return {"disposition": evaluation["disposition"], "evaluation": evaluation,
                     "response": response_saved, "attempts": traces}
         except (MCPConnectionError, MCPToolError, MCPTransportError, MCPResponseError,
-                ValueError, TypeError, OverflowError) as exc:
+                ValueError, TypeError, OverflowError, TimeoutError) as exc:
             disposition, retryable, error = classify_failure(exc)
+            if isinstance(exc, TimeoutError):
+                error["message"] = f"MCP attempt timed out after {timeout:g}s"
             event.update({"elapsed_seconds": round(time.monotonic() - start, 5),
                           "outcome": disposition, "error": error})
             traces.append(event)
@@ -385,6 +391,8 @@ async def validate(dataset: Path, output: Path, report_path: Path, *,
                    max_response_bytes: int = 8 * 1024 * 1024,
                    limit: int | None = None, resume: bool = False,
                    replace: bool = False, strict_sha256: str | None = None, json_format: str = 'compact',
+                   pretty_output: Path | None = None, csv_output: Path | None = None,
+                   progress: Callable[[str], None] | None = None,
                    session_factory: Callable[[str], Any] | None = None,
                    sleep: Callable[[float], Any] = asyncio.sleep,
                    ) -> dict[str, Any]:
@@ -398,13 +406,40 @@ async def validate(dataset: Path, output: Path, report_path: Path, *,
         raise ValidationError("--resume and --replace are mutually exclusive")
     if dataset.resolve() in {output.resolve(), report_path.resolve()} or output.resolve() == report_path.resolve():
         raise ValidationError("Input, output, and report must have distinct paths")
+    from .exports import check_destinations, save_views
+    journal = output.with_name(output.name + ".progress.jsonl")
+    manifest = output.with_name(output.name + ".manifest.json")
+    check_destinations(dataset, output, report_path, pretty_output, csv_output,
+                       replace=(replace or resume), extras=(journal, manifest))
+    def notify(message: str) -> None:
+        if progress is not None:
+            progress(message)
+
+    @asynccontextmanager
+    async def waiting(activity: str):
+        if progress is None:
+            yield
+            return
+        started = time.monotonic()
+        async def heartbeat():
+            while True:
+                await asyncio.sleep(15)
+                notify(f"WAITING {activity}: {time.monotonic()-started:.0f}s "
+                       "elapsed (upstream MCP/archive I/O)")
+        watcher = asyncio.create_task(heartbeat())
+        try:
+            yield
+        finally:
+            watcher.cancel()
+            with suppress(asyncio.CancelledError):
+                await watcher
+
+    notify(f"loading candidates: {dataset}")
     records, dataset_hash = load_jsonl(dataset)
     schema_hash, modules = check_dataset(records)
     if strict_sha256 is not None and strict_sha256.lower() != dataset_hash:
         raise ValidationError(f"Input dataset SHA256 mismatch: actual {dataset_hash}")
 
-    journal = output.with_name(output.name + ".progress.jsonl")
-    manifest = output.with_name(output.name + ".manifest.json")
     context = {"input_dataset_sha256": dataset_hash, "endpoint": url,
                "max_rows": max_rows, "max_response_bytes": max_response_bytes,
                "discovered_schema_sha256": schema_hash}
@@ -428,21 +463,24 @@ async def validate(dataset: Path, output: Path, report_path: Path, *,
     if limit is not None:
         remaining = remaining[:limit]
     if remaining:
+        notify(f"preflight: checking MCP endpoint and signatures for {len(modules)} modules")
         # Verify read-only candidate functions remain advertised. A drifted
         # signature fails closed rather than running a stale/dangerous call.
-        async with AstroqueryMCPClient(url, timeout=timeout, session_factory=session_factory) as client:
-            tools = {tool["name"] for tool in await client.list_tools()}
-            if "astroquery_execute" not in tools:
-                raise ValidationError("Server no longer advertises astroquery_execute")
-            bindings = await discover_bindings(client, modules)
-            observed_hash = generate_candidates(bindings, count=1, seed=42,
-                                                modules=modules)[0]["provenance"]["discovered_schema_sha256"]
-            if observed_hash != schema_hash:
-                raise ValidationError("MCP signature drift: regenerate 0.2.0 candidates or restore prior server")
-            for task in remaining:
-                bound = bindings[task["module"]]
-                if task["reference_call"]["arguments"]["function_name"] != bound.method:
-                    raise ValidationError("Selected function changed: " + task["id"])
+        async with waiting("MCP signature preflight"):
+            async with AstroqueryMCPClient(url, timeout=timeout, session_factory=session_factory) as client:
+                tools = {tool["name"] for tool in await client.list_tools()}
+                if "astroquery_execute" not in tools:
+                    raise ValidationError("Server no longer advertises astroquery_execute")
+                bindings = await discover_bindings(client, modules)
+                observed_hash = generate_candidates(bindings, count=1, seed=42,
+                                                    modules=modules)[0]["provenance"]["discovered_schema_sha256"]
+                if observed_hash != schema_hash:
+                    raise ValidationError("MCP signature drift: regenerate 0.2.0 candidates or restore prior server")
+                for task in remaining:
+                    bound = bindings[task["module"]]
+                    if task["reference_call"]["arguments"]["function_name"] != bound.method:
+                        raise ValidationError("Selected function changed: " + task["id"])
+        notify("preflight passed; beginning sequential reference queries")
         # Only publish/replace a run after live preflight has succeeded.
         # Connectivity and signature-drift failures must not destroy an older
         # reference dataset or leave a misleading new progress manifest.
@@ -454,17 +492,23 @@ async def validate(dataset: Path, output: Path, report_path: Path, *,
                                "created_utc": now_utc(), "context": context})
     if remaining:
         for index, task in enumerate(remaining):
+            notify(f"START {len(completed)+1}/{len(records)} {task['module']} {task['id']} "
+                   f"(up to {attempts} attempt(s), {timeout:g}s timeout per MCP operation)")
+            started_task = time.monotonic()
             if index and delay:
                 await sleep(delay)
-            outcome = await execute_task(task, url=url, timeout=timeout, attempts=attempts,
-                                         delay=delay, max_rows=max_rows,
-                                         max_response_bytes=max_response_bytes,
-                                         session_factory=session_factory, sleep=sleep)
+            async with waiting(f"{task['module']} {task['id']}"):
+                outcome = await execute_task(task, url=url, timeout=timeout, attempts=attempts,
+                                             delay=delay, max_rows=max_rows,
+                                             max_response_bytes=max_response_bytes,
+                                             session_factory=session_factory, sleep=sleep)
             entry = {"task_id": task["id"], "module": task["module"],
                      "input_dataset_sha256": dataset_hash, "reference_call": task["reference_call"],
                      "evaluated_at_utc": now_utc(), **outcome}
             append_journal(journal, entry)
             completed[task["id"]] = entry
+            notify(f"DONE {len(completed)}/{len(records)} {task['module']} {task['id']} "
+                   f"{entry['disposition']} after {time.monotonic()-started_task:.1f}s")
 
     ordered = [completed[task["id"]] for task in records if task["id"] in completed]
     tally = Counter(item["disposition"] for item in ordered)
@@ -488,8 +532,20 @@ async def validate(dataset: Path, output: Path, report_path: Path, *,
                   "Only MAST query_region currently honors max_rows at the MCP server level.",
                   "Every attempted task is journaled, including errors and empty results."],
     }
+    # Secondary human-readable views also work for --limit pilot runs. They are
+    # rewritten on --resume, while the canonical JSONL is published on completion.
+    if pretty_output is not None or csv_output is not None:
+        save_views(ordered, pretty=pretty_output, csv_path=csv_output,
+                   kind="reference", tasks={r["id"]: r for r in records},
+                   replace=(replace or resume))
+        if pretty_output is not None:
+            result["pretty_output"] = str(pretty_output)
+        if csv_output is not None:
+            result["csv_output"] = str(csv_output)
     if all_done:
         result["reference_answers_sha256"] = atomic_jsonl(output, ordered)
         result["output"] = str(output)
     atomic_json(report_path, result, style=json_format)
+    notify(f"{result['status']}: {len(ordered)}/{len(records)} tasks, "
+           f"accepted={result['accepted_reference_count']}; report={report_path}")
     return result

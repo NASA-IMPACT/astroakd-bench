@@ -186,3 +186,48 @@ See [CHANGELOG.md](../../CHANGELOG.md) for cumulative release history and [docs/
 ## Semantic replay and reusable Python API (0.6.1)
 
 See [0.6.1 MCP record/replay](replay_and_release.md) and the [reusable Python API guide](python_api.md) for custom astronomical seed lists, programmatic query generation, reference validation, independent agent runs, scoring and offline replay. The benchmark remains independent of the NASA IMPACT Astroquery MCP server repository.
+
+
+## 0.6.2: Human-readable CSV and pretty JSON exports
+
+Canonical `.jsonl` stays **one compact JSON object per line**. Pass
+`--csv-output PATH.csv` to create an inspection table and `--pretty-output
+PATH.json` to save a complete indented JSON array. `--json-format pretty`
+alone affects only terminal output and `.json` summary reports; it does **not**
+change canonical JSONL encoding. Saved CSV/pretty views do not replace JSONL
+in API calls, validation inputs or frozen-hash checks.
+
+For generated queries:
+
+```bash
+uv run python -m benchmark generate \
+  --count 50 --seed 123 \
+  --modules simbad,mast,heasarc,gaia,vizier \
+  --output datasets/generated/my_50_queries.jsonl \
+  --csv-output datasets/generated/my_50_queries.csv \
+  --pretty-output datasets/generated/my_50_queries_pretty.json \
+  --report datasets/generated/my_50_report.json \
+  --json-format pretty
+```
+
+For live validation of this **new seed=123 dataset**, start conservatively:
+
+```bash
+uv run python -m benchmark validate \
+  --input datasets/generated/my_50_queries.jsonl \
+  --limit 1 --attempts 1 --timeout 30 --delay 0 \
+  --output datasets/validated/my_50_references.jsonl \
+  --csv-output datasets/validated/my_50_references.csv \
+  --pretty-output datasets/validated/my_50_references_pretty.json \
+  --report datasets/validated/my_50_validation_report.json \
+  --json-format pretty
+```
+
+The validator reports progress on **stderr** at preflight, START, WAITING
+(every 15 seconds), and DONE, so a slow remote archive cannot silently
+appear idle. It saves completed-task results into an fsynced `.progress.jsonl`
+journal. If interrupted, use `--resume` with the same input and output names,
+and remove `--limit`. Do not use `--strict-accepted-020` for new seeds.
+CSV and pretty JSON views are updated after each successful command invocation,
+including pilot runs, and contain only processed records. The final canonical
+reference `.jsonl` is published when all input tasks have dispositions.

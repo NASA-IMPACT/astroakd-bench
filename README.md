@@ -4,7 +4,7 @@
 
 AstroAKD-Bench is an **independent Python repository** for developing and evaluating agents that discover astronomical data through the [NASA IMPACT Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp). That server is an **external service**, not this repository or the owner of this benchmark. AstroAKD-Bench generates natural-language astronomy tasks, executes reference archive queries via MCP, collects independent agent traces, and scores observable execution and a bounded set of claims.
 
-**Current version: 0.6.1 — SEMANTIC_REPLAY_ARGUMENT_CANONICALIZATION.** The benchmark works on a local laptop. The server normally runs at `http://127.0.0.1:8000/mcp`; only the agent execution mode `--agent openai` needs the OpenAI API. No OpenAI key is needed to generate, validate, inspect, or score saved runs.
+**Current version: 0.6.2 — READABLE_DATASET_EXPORT_AND_VALIDATION_PROGRESS.** The benchmark works on a local laptop. The server normally runs at `http://127.0.0.1:8000/mcp`; only the agent execution mode `--agent openai` needs the OpenAI API. No OpenAI key is needed to generate, validate, inspect, or score saved runs.
 
 ## Status and scope
 
@@ -18,7 +18,8 @@ AstroAKD-Bench is an **independent Python repository** for developing and evalua
 | **0.5.0 — AUTOMATED_EVALUATION_AND_SCORING** | Deterministic technical scoring, claim checks, readable JSON reports, root datasets | **Offline tests PASS; laptop requalification pending** |
 | **0.5.1 — PRETTY_SCORE_EXPORT_CLOSURE** | Optional saved, indented JSON array of every per-task score (`--pretty-output`) | **Offline tests PASS; user's saved 0.5.1 scores verified** |
 | **0.6.0 — REPLAY_AND_BENCHMARK_RELEASE** | Frozen offline MCP fixtures, live recording and reproducible replay | **5-task laptop live-record/replay ACCEPT; generic reference replay found an ICRS mismatch** |
-| **0.6.1 — SEMANTIC_REPLAY_ARGUMENT_CANONICALIZATION** | ICRS default-aware fixture lookup and public Python workflow API | **Offline qualification PASS; laptop replay pending** |
+| **0.6.1 — SEMANTIC_REPLAY_ARGUMENT_CANONICALIZATION** | ICRS default-aware fixture lookup and public Python workflow API | **ACCEPT** (five-task laptop replay) |
+| **0.6.2 — READABLE_DATASET_EXPORT_AND_VALIDATION_PROGRESS** | Optional query/reference CSV and pretty JSON exports, progress messages and bounded validation waits | **Offline qualification; laptop live validation pending** |
 
 **What the scores mean.** The weighted 0–100 **technical evidence score** assesses archive/function selection, argument alignment, successful execution, reference-result consistency, and *limited* automated answer-claim checks. It is **not a general scientific answer-accuracy score**. Truncated responses, changing public archives, and unverified scientific assertions are explicitly flagged for independent review. Reference acceptance establishes structurally valid MCP data, not independently proven astrophysical ground truth.
 
@@ -88,11 +89,13 @@ uv run python -m benchmark generate \
   --count 50 --seed 42 \
   --modules simbad,mast,heasarc,gaia,vizier \
   --output datasets/generated/synthetic_queries.jsonl \
+  --csv-output datasets/generated/synthetic_queries.csv \
+  --pretty-output datasets/generated/synthetic_queries_pretty.json \
   --report datasets/generated/generation_report.json \
   --json-format pretty
 ```
 
-Only run this if intentionally regenerating a dataset. The distributed 50-task seed=42 dataset is already accepted; `--replace` would intentionally replace an existing file. Generation makes **no astronomy archive queries** and **no LLM calls**.
+Only run this if intentionally regenerating a dataset. The distributed 50-task seed=42 dataset is already accepted; `--replace` would intentionally replace an existing file. Generation makes **no astronomy archive queries** and **no LLM calls**. The CSV and indented JSON array are **optional inspection copies**; the canonical `.jsonl` remains compact to preserve deterministic hashes and stream processing. `--json-format pretty` affects the summary report and console, **not** the JSONL records. The `.json` saved with `--pretty-output` contains complete records, not just a summary.
 
 ### Validate reference results — 0.3.0
 
@@ -107,6 +110,38 @@ uv run python -m benchmark validate \
 ```
 
 Resume an interrupted validation with `--resume` and without `--limit`. Existing accepted reference data is already included in the package, so **do not revalidate solely to run scoring**. Live validation requires network access to the archives.
+
+### Generate inspectable data and diagnose a slow validation — 0.6.2
+
+For a **new** seed=123 candidate dataset (without `--strict-accepted-020`), first run a **single-task pilot** with a short timeout and a single attempt:
+
+```bash
+uv run python -m benchmark validate \
+  --input datasets/generated/my_50_queries.jsonl \
+  --limit 1 --attempts 1 --timeout 30 --delay 0 \
+  --output datasets/validated/my_50_references.jsonl \
+  --report datasets/validated/my_50_validation_report.json \
+  --csv-output datasets/validated/my_50_references.csv \
+  --pretty-output datasets/validated/my_50_references_pretty.json \
+  --json-format pretty
+```
+
+The validator now writes **START**, **WAITING** (every 15 seconds during network I/O), and **DONE** messages to **stderr**, plus a preflight notification. This avoids mistaking slow external archive requests for CPU-bound processing. Disable messages with `--quiet-progress`. A single query attempt is bounded by `--timeout`; a server-side query already started may continue running after a client timeout.
+
+When the pilot completes, resume without `--limit`, keeping the same input/output/report/export paths and the same endpoint/row and response-size constraints:
+
+```bash
+uv run python -m benchmark validate \
+  --input datasets/generated/my_50_queries.jsonl \
+  --resume --attempts 1 --timeout 30 --delay 2 \
+  --output datasets/validated/my_50_references.jsonl \
+  --report datasets/validated/my_50_validation_report.json \
+  --csv-output datasets/validated/my_50_references.csv \
+  --pretty-output datasets/validated/my_50_references_pretty.json \
+  --json-format pretty
+```
+
+If a validation is interrupted after a task completes, the `.progress.jsonl` journal retains that result and `--resume` skips it. A `.jsonl` reference file is published only when **all tasks have a disposition**; the optional CSV/pretty JSON are updated at the end of each completed pilot/resume invocation and show **processed tasks only**. If there is no manifest yet, preflight did not finish and `--resume` cannot be used. Do not use `--replace` unless intentionally discarding prior results. The 0.6.2 exports never alter the canonical JSONL bytes or hash.
 
 ### Execute the agent — 0.4.1 / 0.5.0
 

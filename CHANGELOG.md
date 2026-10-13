@@ -5,13 +5,42 @@ here. This history is separate from the external `astroquery-mcp` project's
 releases: AstroAKD-Bench versions track benchmark capabilities, not versions
 of Astroquery or the MCP server.
 
-The current implemented benchmark version is **0.6.1**.
+The current implemented benchmark version is **0.6.2**.
 Dates are in UTC. Release statuses distinguish **offline implementation
 qualification** from **real laptop / live-service qualification**.
 
 ## [Unreleased]
 
 - Planned after 0.6.1: broader scientific claim verification, multi-archive workflows and frozen evaluation suites.
+
+## [0.6.2] - 2026-10-13
+
+### Added
+
+- `READABLE_DATASET_EXPORT_AND_VALIDATION_PROGRESS`: optional `--csv-output` and
+  `--pretty-output` on `benchmark generate` and `benchmark validate`. They
+  create complete, readable tabular and indented JSON-array views alongside
+  **unchanged compact canonical JSONL**. The same options are available from
+  the reusable `AstroAKDBench` Python API.
+- Generate CSV includes questions, target, sky coordinates, constraints,
+  catalog and exact MCP parameters; validation CSV includes disposition,
+  row counts, evidence hashes, errors and the original question.
+- Validation emits flush-on-write preflight, per-task START/DONE, and 15-second
+  WAITING messages to stderr (disable with `--quiet-progress`). Whole query
+  attempts are limited by the configured timeout, and retryable timeouts are
+  classified as transport errors. Journaling and resumability are retained.
+- Path/collision, overwrite and extension checks on optional exports, atomic
+  export publication, and CSV spreadsheet-formula injection protection.
+- New local troubleshooting and reusable CSV/pretty-export documentation.
+
+### Qualification
+
+- Uploaded seed=123 generation run verified: 50 candidates, schema unchanged,
+  canonical candidate SHA-256 `dbcfebaad9687f09c7778b83fc7e1e85d301c8548b30d15b01847ed62bb2b2cd`.
+- The user's `validate` run apparently stalled without terminal feedback;
+  its precise blocking archive/operation was not identifiable from the uploaded
+  generation files. Live laptop qualification of these improvements is pending.
+- Frozen seed=42 candidate, accepted references and replay fixtures preserved.
 
 ## [0.6.1] - 2026-10-13
 
@@ -43,7 +72,7 @@ qualification** from **real laptop / live-service qualification**.
   omitted ICRS frame and that altered coordinates, radii, catalogs, top-level
   limits, and unsafe operations cannot match. Frozen dataset and fixture hashes
   remain unchanged. The full offline regression suite: **120 PASS, 1 SKIP**.
-  Real laptop 0.6.1 qualification is **PENDING**.
+  Real laptop 0.6.1 five-task replay qualification subsequently **ACCEPTED** (5/5 successful, no replay misses).
 
 ### Limits
 

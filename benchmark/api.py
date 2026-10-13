@@ -54,6 +54,8 @@ class AstroAKDBench:
                                modules: str | tuple[str, ...] = ('simbad','mast','heasarc','gaia','vizier'),
                                output: str | Path | None = None, report: str | Path | None = None,
                                replace: bool = False, session_factory: Callable | None = None,
+                               csv_output: str | Path | None = None,
+                               pretty_output: str | Path | None = None,
                                targets: tuple[SkyTarget, ...] | None = None,
                                ) -> dict[str, Any]:
         """Discover read-only signatures and save reproducible candidate JSONL."""
@@ -61,6 +63,11 @@ class AstroAKDBench:
         report_path = self.path(report) if report is not None else None
         if report_path is not None and report_path.resolve() == destination.resolve():
             raise ValueError('Dataset and report destinations must differ')
+        from .exports import check_destinations, save_views
+        csv_path = self.path(csv_output) if csv_output is not None else None
+        pretty_path = self.path(pretty_output) if pretty_output is not None else None
+        check_destinations(None, destination, report_path,
+                           pretty_path, csv_path, replace=replace)
         if destination.exists() and not replace:
             raise ValueError(f'Dataset already exists: {destination}; use replace=True')
         if report_path is not None and report_path.exists() and not replace:
@@ -71,6 +78,12 @@ class AstroAKDBench:
                                              targets=targets)
         summary['dataset_sha256'] = write_jsonl(destination, candidates, replace=replace)
         summary['output'] = str(destination)
+        save_views(candidates, pretty=pretty_path, csv_path=csv_path,
+                   kind='candidate', replace=replace)
+        if csv_path is not None:
+            summary['csv_output'] = str(csv_path)
+        if pretty_path is not None:
+            summary['pretty_output'] = str(pretty_path)
         if report_path is not None:
             atomic_json(report_path, summary, replace=replace)
         return summary
@@ -82,7 +95,10 @@ class AstroAKDBench:
                                delay: float = 2.0, limit: int | None = None,
                                resume: bool = False, replace: bool = False,
                                max_rows: int = 20, json_format: str = 'compact',
-                               session_factory: Callable | None = None) -> dict[str, Any]:
+                               session_factory: Callable | None = None,
+                               pretty_output: str | Path | None = None,
+                               csv_output: str | Path | None = None,
+                               progress: Callable[[str], None] | None = None) -> dict[str, Any]:
         """Query real archives through MCP and journal every reference disposition."""
         return await validate(self.path(input) if input is not None else self.tasks_path,
                               self.path(output), self.path(report), url=self.mcp_url,
@@ -90,7 +106,10 @@ class AstroAKDBench:
                               limit=limit, resume=resume, replace=replace, max_rows=max_rows,
                               strict_sha256=(EXPECTED_ACCEPTED_020_SHA256
                                              if strict_accepted_020 else None),
-                              json_format=json_format, session_factory=session_factory)
+                              json_format=json_format, session_factory=session_factory,
+                              pretty_output=self.path(pretty_output) if pretty_output is not None else None,
+                              csv_output=self.path(csv_output) if csv_output is not None else None,
+                              progress=progress)
 
     async def run_agent(self, *, agent: str = 'openai', model: str = 'gpt-4.1-mini',
                         adapter: str | None = None, mcp_mode: str = 'live',
