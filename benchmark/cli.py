@@ -1,4 +1,4 @@
-"""Command-line entry point for local MCP connection qualification."""
+"""Local MCP diagnostics and deterministic benchmark candidate generation."""
 
 from __future__ import annotations
 
@@ -14,34 +14,56 @@ from . import DEFAULT_MCP_URL, __version__
 from .client import AstroqueryMCPClient, normalize
 from .diagnostics import doctor
 from .errors import BenchmarkError
+from .generator import GenerationError, SUPPORTED_MODULES, generate, parse_modules, write_jsonl
+
+DEFAULT_DATASET = Path("benchmark/datasets/generated/synthetic_queries.jsonl")
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="astroakd-bench",
-        description="AstroAKD-Bench 0.1.0 local MCP qualification (read-only).",
+        description="AstroAKD-Bench 0.2.0 local MCP discovery and synthetic query generation.",
     )
     parser.add_argument("--version", action="version", version=__version__)
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--mcp-url", default=os.environ.get("ASTROAKD_MCP_URL", DEFAULT_MCP_URL))
     common.add_argument("--timeout", type=float, default=180.0,
                         help="Timeout per MCP operation, seconds (default: 180)")
-    common.add_argument("--output", type=Path, help="Save JSON report to this file")
     commands = parser.add_subparsers(dest="command", required=True)
+
     diag = commands.add_parser("doctor", parents=[common],
         help="Connection, tool catalog, module and signature checks")
+    diag.add_argument("--output", type=Path, help="Save JSON report to this file")
     diag.add_argument("--fast", action="store_true", help="Skip expensive function introspection")
     diag.add_argument("--smoke", action="store_true", help="Also run a live SIMBAD object query")
     diag.add_argument("--object", default="M31", help="SIMBAD object for --smoke (default: M31)")
-    commands.add_parser("tools", parents=[common], help="Discover MCP tool catalog")
-    commands.add_parser("modules", parents=[common], help="List available Astroquery modules")
+    for cmd, help_text in (
+        ("tools", "Discover MCP tool catalog"),
+        ("modules", "List available Astroquery modules"),
+    ):
+        sub = commands.add_parser(cmd, parents=[common], help=help_text)
+        sub.add_argument("--output", type=Path, help="Save JSON report to this file")
     funcs = commands.add_parser("functions", parents=[common], help="Discover functions in a module")
+    funcs.add_argument("--output", type=Path)
     funcs.add_argument("--module", default="simbad")
     info = commands.add_parser("info", parents=[common], help="Get one function's signature")
+    info.add_argument("--output", type=Path)
     info.add_argument("--module", default="simbad")
     info.add_argument("--function", default="query_object")
     smoke = commands.add_parser("simbad", parents=[common], help="Run a single live read-only SIMBAD query")
+    smoke.add_argument("--output", type=Path)
     smoke.add_argument("--object", default="M31")
+
+    gen = commands.add_parser("generate", parents=[common],
+                              help="Generate schema-checked candidates; NO archive queries")
+    gen.add_argument("--count", type=int, default=50, help="Number of candidates, 1..500 (default: 50)")
+    gen.add_argument("--seed", type=int, default=42, help="Deterministic seed (default: 42)")
+    gen.add_argument("--modules", default=",".join(SUPPORTED_MODULES),
+                     help="Comma-separated subset of simbad,mast,heasarc,gaia,vizier")
+    gen.add_argument("--output", type=Path, default=DEFAULT_DATASET,
+                     help="JSONL destination (default: %(default)s)")
+    gen.add_argument("--replace", action="store_true", help="Overwrite existing JSONL dataset")
+    gen.add_argument("--report", type=Path, help="Save JSON generation summary separately")
     return parser
 
 
@@ -51,6 +73,18 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
             args.mcp_url, timeout=args.timeout, fast=args.fast,
             smoke=args.smoke, object_name=args.object,
         )
+    if args.command == "generate":
+        if args.output.exists() and not args.replace:
+            raise GenerationError(f"Output exists: {args.output}; pass --replace to overwrite")
+        modules = parse_modules(args.modules)
+        candidates, summary = await generate(
+            args.mcp_url, count=args.count, seed=args.seed, modules=modules,
+            timeout=args.timeout,
+        )
+        summary["dataset_sha256"] = write_jsonl(args.output, candidates, replace=args.replace)
+        summary["output"] = str(args.output)
+        return summary
+
     async with AstroqueryMCPClient(args.mcp_url, timeout=args.timeout) as client:
         if args.command == "tools":
             result = await client.list_tools()
@@ -72,18 +106,19 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         payload = asyncio.run(_execute(args))
-    except (BenchmarkError, ValueError, OSError) as exc:
+    except (BenchmarkError, GenerationError, ValueError, OSError) as exc:
         payload = {"status": "FAIL", "command": args.command,
                    "endpoint": args.mcp_url, "error": {"type": type(exc).__name__,
                    "message": str(exc)}}
     output = json.dumps(payload, indent=2, ensure_ascii=False, allow_nan=False)
     print(output)
-    if args.output is not None:
+    report_destination = args.report if args.command == "generate" else args.output
+    if report_destination is not None:
         try:
-            args.output.parent.mkdir(parents=True, exist_ok=True)
-            args.output.write_text(output + "\n", encoding="utf-8")
+            report_destination.parent.mkdir(parents=True, exist_ok=True)
+            report_destination.write_text(output + "\n", encoding="utf-8")
         except OSError as exc:
-            print(f"Could not save {args.output}: {exc}", file=sys.stderr)
+            print(f"Could not save report {report_destination}: {exc}", file=sys.stderr)
             return 2
     return 0 if payload.get("status") == "PASS" else 1
 
