@@ -30,6 +30,7 @@ From the **AstroAKD-Bench** checkout:
 
 ```bash
 uv run python -m benchmark generate \
+  --backend template \
  --count 50 --seed 123 --modules simbad,mast,heasarc,gaia,vizier \
  --uniqueness archive-target --question-style answer-oriented \
  --output datasets/generated/diverse_063.jsonl \

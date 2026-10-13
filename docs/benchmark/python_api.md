@@ -38,6 +38,7 @@ from benchmark.api import AstroAKDBench
 async def main():
     bench = AstroAKDBench(root="experiments/pilot01")
     report = await bench.generate_queries(
+        backend="template",
         count=30, seed=123,
         modules=("simbad", "mast", "gaia"),
         report="datasets/generated/generation_report.json",
@@ -50,7 +51,7 @@ asyncio.run(main())
 
 `generate_queries` uses read-only tool discovery and the benchmark's
 signature-aware, allowlisted templates. `seed` controls repeatability.
-No OpenAI key is needed. The output JSONL uses one compact object per line.
+With `backend="template"`, no OpenAI key is needed. Since 0.6.4 the default backend is OpenAI; the output JSONL still uses one compact object per line.
 
 ### Use your own astronomical sources in a new experiment
 
@@ -66,6 +67,7 @@ custom_objects = (
 async def main():
     bench = AstroAKDBench(root="experiments/custom-objects")
     report = await bench.generate_queries(
+        backend="template",
         count=8, seed=2026, modules=("mast", "heasarc"),
         targets=custom_objects,
         output="datasets/generated/custom_tasks.jsonl",
@@ -207,7 +209,7 @@ independent review, not invented correctness labels.
 All API methods delegate to the same code paths used by the CLI. Example:
 
 ```bash
-uv run python -m benchmark generate --count 20 --seed 123 \
+uv run python -m benchmark generate --backend template --count 20 --seed 123 \
   --modules simbad,mast --output datasets/generated/pilot.jsonl
 uv run python -m benchmark build-fixtures --strict-accepted-020 \
   --output datasets/replay/local_061_fixtures.json
@@ -237,6 +239,7 @@ For generated queries:
 
 ```bash
 uv run python -m benchmark generate \
+  --backend template \
   --count 50 --seed 123 \
   --modules simbad,mast,heasarc,gaia,vizier \
   --output datasets/generated/my_50_queries.jsonl \
@@ -279,6 +282,7 @@ bench = AstroAKDBench(root=".", mcp_url="http://127.0.0.1:8000/mcp", timeout=30)
 
 async def main():
     await bench.generate_queries(
+        backend="template",
         count=50, seed=123,
         output="datasets/generated/my_50_queries.jsonl",
         csv_output="datasets/generated/my_50_queries.csv",

@@ -62,7 +62,7 @@ class Export062Tests(unittest.TestCase):
             return candidates, dict(report)
         with TemporaryDirectory() as d, patch('benchmark.generator.generate') as _:
             root=Path(d)
-            args=build_parser().parse_args(['generate','--count','5','--output',str(root/'a.jsonl'),
+            args=build_parser().parse_args(['generate','--backend','template','--count','5','--output',str(root/'a.jsonl'),
                                              '--csv-output',str(root/'a.csv'),
                                              '--pretty-output',str(root/'a_pretty.json')])
             with patch('benchmark.cli.generate',fake_generate):

@@ -111,7 +111,7 @@ class SemanticReplay061Tests(unittest.TestCase):
                 session=FixtureSession(url)
                 sessions.append(session)
                 return session
-            result=asyncio.run(api.generate_queries(count=10,seed=7,
+            result=asyncio.run(api.generate_queries(backend='template', count=10,seed=7,
                 modules=('simbad','mast'),report='datasets/generated/report.json',
                 session_factory=factory))
             self.assertEqual(result['status'],'PASS')
@@ -119,7 +119,7 @@ class SemanticReplay061Tests(unittest.TestCase):
             self.assertTrue(sessions[0].closed)
             self.assertTrue((Path(d)/'datasets/generated/report.json').is_file())
             with self.assertRaisesRegex(ValueError,'already exists'):
-                asyncio.run(api.generate_queries(count=10,seed=7,modules=('simbad','mast'),
+                asyncio.run(api.generate_queries(backend='template', count=10,seed=7,modules=('simbad','mast'),
                                                  session_factory=factory))
 
     def test_public_api_custom_targets_are_reproducible_and_separate(self):
@@ -129,7 +129,7 @@ class SemanticReplay061Tests(unittest.TestCase):
         for _ in range(2):
             with TemporaryDirectory() as d:
                 bench=AstroAKDBench(d)
-                result=asyncio.run(bench.generate_queries(count=4,seed=2026,
+                result=asyncio.run(bench.generate_queries(backend='template', count=4,seed=2026,
                     modules=('mast','heasarc'),targets=targets,
                     session_factory=FixtureSession))
                 hashes.append(result['dataset_sha256'])
@@ -143,7 +143,7 @@ class SemanticReplay061Tests(unittest.TestCase):
             for invalid in ((SkyTarget('x', float('nan'),1),),
                             (SkyTarget('dup',10,1),SkyTarget('dup',20,2))):
                 with self.assertRaisesRegex(ValueError,'coordinates|Duplicate'):
-                    asyncio.run(b.generate_queries(count=2,modules=('mast',),targets=invalid,
+                    asyncio.run(b.generate_queries(backend='template', count=2,modules=('mast',),targets=invalid,
                                                   session_factory=FixtureSession))
             self.assertFalse(b.tasks_path.exists())
 

@@ -32,7 +32,7 @@ class CLITests(unittest.TestCase):
         with TemporaryDirectory() as temp:
             path = Path(temp) / "cases.jsonl"
             metadata = Path(temp) / "report.json"
-            argv = ["generate", "--count", "50", "--seed", "42",
+            argv = ["generate", "--backend", "template", "--count", "50", "--seed", "42",
                     "--output", str(path), "--report", str(metadata)]
             with patch("benchmark.cli.generate", mocked_generate):
                 with contextlib.redirect_stdout(io.StringIO()) as stdout:

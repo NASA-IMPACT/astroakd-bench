@@ -4,7 +4,7 @@
 
 AstroAKD-Bench is an **independent Python repository** for developing and evaluating agents that discover astronomical data through the [NASA IMPACT Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp). That server is an **external service**, not this repository or the owner of this benchmark. AstroAKD-Bench generates natural-language astronomy tasks, executes reference archive queries via MCP, collects independent agent traces, and scores observable execution and a bounded set of claims.
 
-**Current version: 0.6.1 — SEMANTIC_REPLAY_ARGUMENT_CANONICALIZATION.** The benchmark works on a local laptop. The server normally runs at `http://127.0.0.1:8000/mcp`; only the agent execution mode `--agent openai` needs the OpenAI API. No OpenAI key is needed to generate, validate, inspect, or score saved runs.
+**Current version: 0.6.4 — LLM_ASSISTED_SYNTHETIC_QUERY_GENERATION.** The `generate` default now uses OpenAI with workbook-derived instructions and MCP discovery. For API-free deterministic generation, use `--backend template`. The no-MCP alternative uses OpenAI Responses hosted `web_search`. The external MCP server is independent.
 
 ## Status and scope
 
@@ -81,6 +81,7 @@ uv run python -m benchmark doctor --smoke --timeout 180 --json-format pretty
 
 ```bash
 uv run python -m benchmark generate \
+  --backend template \
   --count 50 --seed 42 \
   --modules simbad,mast,heasarc,gaia,vizier \
   --output datasets/generated/synthetic_queries.jsonl \
@@ -201,6 +202,7 @@ For generated queries:
 
 ```bash
 uv run python -m benchmark generate \
+  --backend template \
   --count 50 --seed 123 \
   --modules simbad,mast,heasarc,gaia,vizier \
   --output datasets/generated/my_50_queries.jsonl \

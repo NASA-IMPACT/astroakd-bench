@@ -19,7 +19,7 @@ from .validator import ValidationError, atomic_json
 CANDIDATE_COLUMNS = (
     "task_id", "module", "category", "intent", "target", "question", "expected_answer_type", "expected_columns", "answer_verification_status", "ra_deg", "dec_deg",
     "radius_arcmin", "catalog", "mcp_tool", "mcp_function", "mcp_parameters_json",
-    "validation_status",
+    "validation_status", "execution_track", "generation_backend", "web_search_sources",
 )
 REFERENCE_COLUMNS = (
     "task_id", "module", "question", "target", "intent", "expected_columns", "disposition", "reason",
@@ -64,7 +64,7 @@ def json_compact(value: Any) -> str:
 def candidate_csv_record(record: dict[str, Any]) -> dict[str, Any]:
     constraints = record.get("constraints", {})
     center = constraints.get("center_icrs", {})
-    args = record.get("reference_call", {}).get("arguments", {})
+    args = (record.get("reference_call") or {}).get("arguments", {})
     return dict(task_id=record.get("id"), module=record.get("module"),
                 category=record.get("category"), intent=record.get("intent", ""), target=record.get("target"),
                 question=record.get("question"),
@@ -75,10 +75,13 @@ def candidate_csv_record(record: dict[str, Any]) -> dict[str, Any]:
                 dec_deg=center.get("dec_deg", ""),
                 radius_arcmin=constraints.get("radius", {}).get("value", ""),
                 catalog=constraints.get("catalog", ""),
-                mcp_tool=record.get("reference_call", {}).get("tool"),
+                mcp_tool=(record.get("reference_call") or {}).get("tool"),
                 mcp_function=args.get("function_name"),
                 mcp_parameters_json=json_compact(args.get("params", {})),
-                validation_status=record.get("validation_status"))
+                validation_status=record.get("validation_status"),
+                execution_track=record.get("execution_track", "astroquery_mcp"),
+                generation_backend=record.get("provenance", {}).get("generation_backend", "template"),
+                web_search_sources=";".join(record.get("research_sources", [])))
 
 
 def reference_csv_record(record: dict[str, Any], task: dict[str, Any]) -> dict[str, Any]:

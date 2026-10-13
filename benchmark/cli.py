@@ -26,7 +26,7 @@ DEFAULT_DATASET = Path("datasets/generated/synthetic_queries.jsonl")
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="astroakd-bench",
-        description="AstroAKD-Bench 0.6.3 diversity-aware generation, auditing and scoring.",
+        description="AstroAKD-Bench 0.6.4 with optional OpenAI and MCP/web search generation.",
     )
     parser.add_argument("--version", action="version", version=__version__)
     common = argparse.ArgumentParser(add_help=False)
@@ -62,6 +62,17 @@ def build_parser() -> argparse.ArgumentParser:
 
     gen = commands.add_parser("generate", parents=[common],
                               help="Generate schema-checked candidates; NO archive queries")
+    gen.add_argument('--backend', choices=('openai','hybrid','template'), default='openai',
+                     help='Generation engine (default: openai; template is API-free legacy mode)')
+    gen.add_argument('--model', default='gpt-4.1-mini', help='OpenAI model for openai/hybrid modes')
+    gen.add_argument('--instructions', action=argparse.BooleanOptionalAction, default=True,
+                     help='Use V1 workbook-derived question-writing instructions (default: on)')
+    gen.add_argument('--instructions-file', type=Path, help='Optional custom instruction Markdown file')
+    gen.add_argument('--mcp', action=argparse.BooleanOptionalAction, default=True,
+                     help='Use MCP discovery/call schemas, else OpenAI Responses web_search (default: on)')
+    gen.add_argument('--quiet-progress', action='store_true', help='Hide OpenAI generation batch progress on stderr')
+    gen.add_argument('--batch-size', type=int, default=5,
+                     help='Questions per OpenAI call, 1..10 (default: 5)')
     gen.add_argument("--count", type=int, default=50, help="Number of candidates, 1..500 (default: 50)")
     gen.add_argument("--seed", type=int, default=42, help="Deterministic seed (default: 42)")
     gen.add_argument("--modules", default=",".join(SUPPORTED_MODULES),
@@ -230,11 +241,29 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
         if args.output.exists() and not args.replace:
             raise GenerationError(f"Output exists: {args.output}; pass --replace to overwrite")
         modules = parse_modules(args.modules)
-        candidates, summary = await generate(
-            args.mcp_url, count=args.count, seed=args.seed, modules=modules,
-            timeout=args.timeout, uniqueness=args.uniqueness,
-            question_style=args.question_style,
-        )
+        if args.backend == 'template':
+            if args.instructions_file is not None:
+                raise GenerationError('--instructions-file applies only to openai/hybrid backends')
+            if not args.mcp:
+                raise GenerationError('--backend template needs --mcp; use --backend openai --no-mcp for web search')
+            candidates, summary = await generate(
+                args.mcp_url, count=args.count, seed=args.seed, modules=modules,
+                timeout=args.timeout, uniqueness=args.uniqueness,
+                question_style=args.question_style,
+            )
+            summary.update({'generation_backend': 'template', 'use_instructions': False,
+                            'use_mcp': True, 'openai_requests': 0, 'web_search_calls': 0})
+        else:
+            from .llm_generation import generate_llm
+            candidates, summary = await generate_llm(
+                args.mcp_url, count=args.count, seed=args.seed, modules=modules,
+                timeout=args.timeout, uniqueness=args.uniqueness,
+                question_style=args.question_style, backend=args.backend,
+                model=args.model, use_instructions=args.instructions,
+                use_mcp=args.mcp, instructions_file=args.instructions_file,
+                batch_size=args.batch_size,
+                progress=(None if args.quiet_progress else lambda message: print(f'[AstroAKD-Bench generate] {message}', file=sys.stderr, flush=True)),
+            )
         summary["dataset_sha256"] = write_jsonl(args.output, candidates, replace=args.replace)
         summary["output"] = str(args.output)
         save_views(candidates, pretty=args.pretty_output, csv_path=args.csv_output,

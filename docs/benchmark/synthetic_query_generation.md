@@ -28,6 +28,7 @@ Then in Terminal B, from the separate AstroAKD-Bench checkout:
 ```bash
 uv run python -m benchmark doctor --fast
 uv run python -m benchmark generate \
+  --backend template \
   --count 50 \
   --seed 42 \
   --modules simbad,mast,heasarc,gaia,vizier \
@@ -145,6 +146,7 @@ For generated queries:
 
 ```bash
 uv run python -m benchmark generate \
+  --backend template \
   --count 50 --seed 123 \
   --modules simbad,mast,heasarc,gaia,vizier \
   --output datasets/generated/my_50_queries.jsonl \

@@ -5,13 +5,28 @@ here. This history is separate from the external `astroquery-mcp` project's
 releases: AstroAKD-Bench versions track benchmark capabilities, not versions
 of Astroquery or the MCP server.
 
-The current implemented benchmark version is **0.6.3**.
+The current implemented benchmark version is **0.6.4**.
 Dates are in UTC. Release statuses distinguish **offline implementation
 qualification** from **real laptop / live-service qualification**.
 
 ## [Unreleased]
 
 - Planned after 0.6.1: broader scientific claim verification, multi-archive workflows and frozen evaluation suites.
+
+## [0.6.4] - 2026-10-14
+
+### Added
+
+- **LLM_ASSISTED_SYNTHETIC_QUERY_GENERATION:** default `generate` backend is `openai`, with workbook-derived instructions (`--instructions`) and MCP signature discovery (`--mcp`). `--backend hybrid` conservatively rewrites template prompts, and `--backend template` preserves the deterministic, API-free 0.6.3 workflow.
+- `--no-instructions` for ablations, `--instructions-file` for reusable experimental instructions, and `--no-mcp` for the OpenAI Responses API hosted `web_search` alternative. A web-search call is **required and auditable** for each no-MCP batch; there is no network fallback to MCP.
+- The generated calls and constraints are locked to MCP-discovered signatures when MCP is enabled. In no-MCP mode, `reference_call=null`, candidates carry a research-only execution track, and the legacy MCP validator rejects them rather than treating guessed local method schemas as verified.
+- API facade accepts the same backend/instructions/MCP options, including injected fake clients for offline qualification. Source URLs are retained only if exposed by provider web-search tool metadata. New reports include generation engine, model, instruction hash, mode, number of model calls, number of observed web searches, and caveats about nondeterministic wording.
+- Added `docs/benchmark/llm_generation_instructions_v1.md` derived from three worksheets in *Astro Benchmark V1(1).xlsx*, emphasizing actual observation identifiers, proposals, instruments, exposure times, filters and timestamps while prohibiting unsupported detailed constraints or copied expected answers.
+- Updated standalone README, cumulative changelog, usage/qualification docs and expanded offline mocks for all four instructions/MCP combinations. Preserved historical frozen dataset bytes and reference fixture.
+
+### Qualification
+
+- Full offline test suite PASS (see `QUALIFICATION_0_6_4.md`); **live OpenAI Responses API + hosted web search and MCP laptop runs remain PENDING**. Mocked web-search calls are not presented as live external qualification.
 
 ## [0.6.3] - 2026-10-13
 

@@ -134,10 +134,18 @@ def check_dataset(records: list[dict[str, Any]]) -> tuple[str, tuple[str, ...]]:
         if module not in SAFE_METHODS:
             raise ValidationError(f"Unsafe/unsupported module in {ident}: {module}")
         modules.add(module)
+        if record.get('execution_track') == 'openai_web_search_research':
+            raise ValidationError(f'Task {ident} is a no-MCP web-search research candidate. '
+                                  'The validate command accepts only MCP executable tasks; '
+                                  'regenerate with --mcp to validate.')
         if record.get("validation_status") != "candidate_unvalidated":
             raise ValidationError(f"Task {ident} was not an unvalidated 0.2.0 candidate")
         call = record.get("reference_call")
         if not isinstance(call, dict) or call.get("tool") != "astroquery_execute":
+            if record.get('execution_track') == 'openai_web_search_research':
+                raise ValidationError(f"Task {ident} is a no-MCP web-search research candidate. "
+                                      "The validate command only accepts MCP-bound executable tasks; "
+                                      "regenerate with --mcp, then validate the new dataset.")
             raise ValidationError(f"Unexpected MCP operation for {ident}")
         args = call.get("arguments")
         if not isinstance(args, dict) or set(args) != {"module_name", "function_name", "params"}:

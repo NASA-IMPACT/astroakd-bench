@@ -38,7 +38,10 @@ def analyze_candidates(tasks: list[dict[str, Any]]) -> dict[str, Any]:
         module = task.get("module", "")
         target = _norm(task.get("target"))
         questions[_norm(task.get("question"))].append(ident)
-        calls[_digest(task.get("reference_call", {}))].append(ident)
+        # Research-only tasks have no executable MCP reference call.
+        # Do not misreport all their missing calls as duplicates.
+        if isinstance(task.get("reference_call"), dict):
+            calls[_digest(task["reference_call"])].append(ident)
         pairs[f"{module}|{target}"].append(ident)
         global_targets[target].append(ident)
         intents[str(task.get("intent", task.get("category", "unspecified")))]+=1

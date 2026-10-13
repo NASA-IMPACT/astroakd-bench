@@ -59,6 +59,12 @@ class AstroAKDBench:
                                targets: tuple[SkyTarget, ...] | None = None,
                                uniqueness: str = "archive-target",
                                question_style: str = "answer-oriented",
+                               backend: str = "openai", model: str = "gpt-4.1-mini",
+                               use_instructions: bool = True, use_mcp: bool = True,
+                               instructions_file: str | Path | None = None,
+                               batch_size: int = 5,
+                               openai_client_factory: Callable | None = None,
+                               progress: Callable[[str], None] | None = None,
                                ) -> dict[str, Any]:
         """Discover read-only signatures and save reproducible candidate JSONL."""
         destination = self.path(output) if output is not None else self.tasks_path
@@ -74,11 +80,29 @@ class AstroAKDBench:
             raise ValueError(f'Dataset already exists: {destination}; use replace=True')
         if report_path is not None and report_path.exists() and not replace:
             raise ValueError(f'Report already exists: {report_path}; use replace=True')
-        candidates, summary = await generate(self.mcp_url, count=count, seed=seed,
-                                             modules=parse_modules(modules),
-                                             timeout=self.timeout, session_factory=session_factory,
-                                             targets=targets, uniqueness=uniqueness,
-                                             question_style=question_style)
+        if backend == 'template':
+            if instructions_file is not None:
+                raise ValueError('Template backend does not use custom instructions')
+            if not use_mcp:
+                raise ValueError('Template backend requires MCP; use openai/hybrid with use_mcp=False')
+            candidates, summary = await generate(self.mcp_url, count=count, seed=seed,
+                                                 modules=parse_modules(modules),
+                                                 timeout=self.timeout, session_factory=session_factory,
+                                                 targets=targets, uniqueness=uniqueness,
+                                                 question_style=question_style)
+            summary.update({'generation_backend': 'template', 'use_instructions': False,
+                            'use_mcp': True, 'openai_requests': 0, 'web_search_calls': 0})
+        else:
+            from .llm_generation import generate_llm
+            candidates, summary = await generate_llm(self.mcp_url, count=count, seed=seed,
+                modules=parse_modules(modules), timeout=self.timeout,
+                session_factory=session_factory, targets=targets,
+                uniqueness=uniqueness, question_style=question_style,
+                backend=backend, model=model, use_instructions=use_instructions,
+                use_mcp=use_mcp,
+                instructions_file=self.path(instructions_file) if instructions_file is not None else None,
+                batch_size=batch_size, openai_client_factory=openai_client_factory,
+                progress=progress)
         summary['dataset_sha256'] = write_jsonl(destination, candidates, replace=replace)
         summary['output'] = str(destination)
         save_views(candidates, pretty=pretty_path, csv_path=csv_path,

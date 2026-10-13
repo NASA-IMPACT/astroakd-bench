@@ -4,7 +4,31 @@
 
 AstroAKD-Bench is an **independent Python repository** for developing and evaluating agents that discover astronomical data through the [NASA IMPACT Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp). That server is an **external service**, not this repository or the owner of this benchmark. AstroAKD-Bench generates natural-language astronomy tasks, executes reference archive queries via MCP, collects independent agent traces, and scores observable execution and a bounded set of claims.
 
-**Current version: 0.6.3 — QUERY_DIVERSITY_AND_DEDUPLICATION_CLOSURE.** The benchmark works on a local laptop. The server normally runs at `http://127.0.0.1:8000/mcp`; only the agent execution mode `--agent openai` needs the OpenAI API. No OpenAI key is needed to generate, validate, inspect, or score saved runs.
+**Current version: 0.6.4 — LLM_ASSISTED_SYNTHETIC_QUERY_GENERATION.** The default `generate` command now uses OpenAI to author diverse synthetic questions with workbook-derived instructions and the external Astroquery MCP server. `--backend template` retains the API-free legacy generator; `--no-mcp` uses OpenAI Responses `web_search` instead. OpenAI generation uses a separate API key/billing; offline audits and scoring do not.
+
+## 0.6.4 — OpenAI-generated questions: quick start
+
+OpenAI generation is now the default. To **reproduce the 0.6.3 template results**, specify `--backend template`; old reports and accepted dataset hashes are not changed. These model-authored questions are **unverified candidates**, not known scientific answers.
+
+**Default OpenAI + V1 instructions + Astroquery MCP** (MCP server started separately):
+
+```bash
+uv run --with openai python -m benchmark generate \
+  --count 50 --seed 123 --model gpt-4.1-mini \
+  --backend openai --instructions --mcp \
+  --modules simbad,mast,heasarc,gaia,vizier \
+  --uniqueness archive-target --question-style answer-oriented \
+  --output datasets/generated/llm_064_mcp.jsonl \
+  --pretty-output datasets/generated/llm_064_mcp_pretty.json \
+  --csv-output datasets/generated/llm_064_mcp.csv \
+  --report datasets/generated/llm_064_mcp_report.json --json-format pretty
+```
+
+**Use OpenAI hosted web search instead of MCP:** change to `--no-mcp` and use different filenames. This mode does not attempt to connect to MCP and **does not yield MCP-executable reference calls**; the existing `validate` command does not accept these research-only tasks.
+
+Toggle instructions with `--instructions` (default) and `--no-instructions`. Pass `--instructions-file path/to/prompt.md` for a custom prompt. `--backend hybrid` rewrites a template question conservatively, and `--backend template` uses no OpenAI API. Across all modes, question/target deduplication is retained, and `--pretty-output` + `--csv-output` produce inspection views.
+
+See [full 0.6.4 usage and comparison matrix](docs/benchmark/llm_generation_0_6_4.md) and [V1 workbook-derived instructions](docs/benchmark/llm_generation_instructions_v1.md). No historical workbook expected answers are imported as gold.
 
 ## Status and scope
 
@@ -21,6 +45,7 @@ AstroAKD-Bench is an **independent Python repository** for developing and evalua
 | **0.6.1 — SEMANTIC_REPLAY_ARGUMENT_CANONICALIZATION** | ICRS default-aware fixture lookup and public Python workflow API | **ACCEPT** (five-task laptop replay) |
 | **0.6.2 — READABLE_DATASET_EXPORT_AND_VALIDATION_PROGRESS** | Optional query/reference CSV and pretty JSON exports, progress messages and bounded validation waits | **Offline qualification; laptop live validation pending** |
 | **0.6.3 — QUERY_DIVERSITY_AND_DEDUPLICATION_CLOSURE** | Default archive-target uniqueness, optional global-target uniqueness, answer-oriented prompts, offline duplicate-return audit | **Offline qualification PASS; live laptop qualification pending** |
+| **0.6.4 — LLM_ASSISTED_SYNTHETIC_QUERY_GENERATION** | Default OpenAI+instructions+MCP, optional web_search without MCP, hybrid/template modes, optional custom prompt | **Offline mocks PASS; real OpenAI qualification pending** |
 
 **What the scores mean.** The weighted 0–100 **technical evidence score** assesses archive/function selection, argument alignment, successful execution, reference-result consistency, and *limited* automated answer-claim checks. It is **not a general scientific answer-accuracy score**. Truncated responses, changing public archives, and unverified scientific assertions are explicitly flagged for independent review. Reference acceptance establishes structurally valid MCP data, not independently proven astrophysical ground truth.
 
@@ -41,6 +66,7 @@ AstroAKD-Bench/                         # THIS repository
 │   ├── replay.py                         # Semantic ICRS-aware offline lookup
 │   ├── api.py                            # Reusable Python workflow facade
 │   ├── diversity.py                      # Diversity and returned-data audit
+│   ├── llm_generation.py                 # Responses API question generation + web search
 │   └── tests/
 ├── datasets/                            # Root-level output/input directory
 │   ├── generated/
@@ -74,6 +100,7 @@ objects are provided via the Python API.
 
 ```bash
 uv run python -m benchmark generate \
+  --backend template \
   --count 50 --seed 123 \
   --modules simbad,mast,heasarc,gaia,vizier \
   --uniqueness archive-target --question-style answer-oriented \
@@ -88,8 +115,8 @@ uv run python -m benchmark generate \
 reused archive-target combinations and (for `global-target`) repeated names
 across modules all cause candidates to be skipped; missing capacity raises a
 specific `GenerationError` rather than silently padding with radius variants.
-Custom seed names and coordinates must also be unique. Selection is deterministic
-for a given seed, modules, target pool and MCP function signatures.
+Custom seed names and coordinates must also be unique. Template selection is deterministic
+for a given seed, modules, target pool and MCP function signatures. OpenAI-authored wording is not byte-reproducible.
 
 **Answer-oriented tasks** draw on observed fields of SIMBAD, MAST, HEASARC,
 Gaia and the two supported VizieR catalogs: identifiers, coordinates,
