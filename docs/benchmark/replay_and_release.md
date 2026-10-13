@@ -1,4 +1,4 @@
-# AstroAKD-Bench 0.6.0 — MCP record, replay and benchmark release
+# AstroAKD-Bench 0.6.1 — MCP recording and semantic-safe replay
 
 ## Purpose
 
@@ -57,8 +57,15 @@ For a fully no-network experiment, supply a locally running agent via
 
 ## Invariants and interpretation
 
-- No HTTP/DNS fallback from `ReplayClient`: a missing exact tool/arguments
-  pair produces `OFFLINE_REPLAY_MISS` and a failed trace event.
+- No HTTP/DNS fallback from `ReplayClient`: a call not found by original exact
+  key or approved optional-ICRS-frame equivalence produces `OFFLINE_REPLAY_MISS`.
+- Original fixture SHA-256 and payloads are unchanged. A computed lookup index
+  equates omitted and explicit `"frame": "icrs"` only for the dedicated sky
+  coordinate parameter of MAST `query_region`, HEASARC `query_region`, Gaia
+  `query_object`, and VizieR `query_region`.
+- Changes to numeric RA/Dec, radius, catalog, max_rows, function/module, or
+  unknown parameters are **not** ignored. An ambiguous semantic collision is
+  rejected rather than replaying an arbitrary response.
 - The existing `TracedMCPGateway` validates each operation with the
   read-only allowlist before the fixture lookup, just like live execution.
 - The agent never receives expected task calls or reference records directly;
@@ -77,3 +84,27 @@ For a fully no-network experiment, supply a locally running agent via
 Run `uv run python -m unittest discover -s benchmark/tests -v` and inspect the
 included `QUALIFICATION_0_6_0.md`. The real-server integration test remains
 opt-in; offline tests must run with the MCP server completely stopped.
+
+## Example: validating semantic replay without an MCP server
+
+```python
+from benchmark.api import AstroAKDBench
+
+bench = AstroAKDBench()
+store = bench.load_fixtures("datasets/replay/reference_fixtures.json")
+response = store.lookup("astroquery_execute", {
+    "module_name": "mast", "function_name": "query_region",
+    "params": {
+        "coordinates": {"ra": 214.498, "dec": 25.1369},
+        "radius": {"unit": "arcmin", "value": 5},
+    },
+})
+print(response["success"])
+```
+
+This example omits the ICRS frame; the stored reference includes it. Replay
+returns the original serialized MCP response. A different radius or position
+still produces `OFFLINE_REPLAY_MISS` and never contacts the server.
+
+See [Python API](python_api.md) for complete query generation, validation,
+agent benchmark, scoring, replay and extension workflows.

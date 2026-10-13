@@ -10,6 +10,7 @@ from collections import Counter
 from dataclasses import dataclass
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import random
@@ -246,9 +247,10 @@ def _candidate(module: str, bound: BoundMethod, target: SkyTarget,
     }
 
 
-def _module_candidates(module: str, bound: BoundMethod, rng: random.Random) -> list[dict[str, Any]]:
+def _module_candidates(module: str, bound: BoundMethod, rng: random.Random,
+                       targets: tuple[SkyTarget, ...] = TARGETS) -> list[dict[str, Any]]:
     candidates = []
-    targets = list(TARGETS)
+    targets = list(targets)
     rng.shuffle(targets)
     # Rotate the radius order for each center, providing distinct constraints.
     radii = list((1, 2, 3) if module in ("gaia", "vizier") else RADII_ARCMIN)
@@ -268,14 +270,38 @@ def _module_candidates(module: str, bound: BoundMethod, rng: random.Random) -> l
     return candidates
 
 
+def _validate_targets(targets: tuple[SkyTarget, ...] | None) -> tuple[SkyTarget, ...]:
+    if targets is None:
+        return TARGETS
+    if not isinstance(targets, (list, tuple)) or not 1 <= len(targets) <= 500:
+        raise GenerationError('Custom targets must contain 1..500 SkyTarget objects')
+    seen = set()
+    for target in targets:
+        if not isinstance(target, SkyTarget) or not isinstance(target.name, str) or \
+                not 1 <= len(target.name.strip()) <= 64 or '\n' in target.name:
+            raise GenerationError('Custom targets require named SkyTarget objects')
+        if target.name.casefold() in seen:
+            raise GenerationError('Duplicate custom target name')
+        seen.add(target.name.casefold())
+        for v in (target.ra_deg, target.dec_deg):
+            if isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v):
+                raise GenerationError('Custom target coordinates must be finite degrees')
+        if not 0 <= target.ra_deg < 360 or not -90 <= target.dec_deg <= 90:
+            raise GenerationError('Custom target ICRS coordinates out of bounds')
+    return tuple(targets)
+
+
 def generate_candidates(bindings: dict[str, BoundMethod], *,
-                        count: int, seed: int, modules: tuple[str, ...]) -> list[dict[str, Any]]:
+                        count: int, seed: int, modules: tuple[str, ...],
+                        targets: tuple[SkyTarget, ...] | None = None) -> list[dict[str, Any]]:
     if isinstance(count, bool) or count < 1 or count > 500:
         raise GenerationError("--count must be between 1 and 500")
     if not modules:
         raise GenerationError("At least one module is required")
+    validated_targets = _validate_targets(targets)
     rng = random.Random(seed)
-    queues = {mod: _module_candidates(mod, bindings[mod], rng) for mod in modules}
+    queues = {mod: _module_candidates(mod, bindings[mod], rng, validated_targets)
+              for mod in modules}
     selected: list[dict[str, Any]] = []
     # Round robin across modules, guaranteeing near-equal coverage.
     for i in range(count):
@@ -296,17 +322,22 @@ def generate_candidates(bindings: dict[str, BoundMethod], *,
                          "signature_source": bindings[module].signature_source}
                 for module in modules}
     schema_sha256 = _sha256(snapshot)
+    custom_seed_hash = (_sha256([{'name': t.name, 'ra_deg': t.ra_deg, 'dec_deg': t.dec_deg}
+                                 for t in validated_targets]) if targets is not None else None)
     for i, candidate in enumerate(selected, start=1):
         candidate["id"] = f"ASTROAKD-020-{i:05d}"
         candidate["benchmark_version"] = __version__
         candidate["validation_status"] = "candidate_unvalidated"
         candidate["provenance"] = {
             "random_seed": seed,
-            "seed_catalog_version": SEED_CATALOG_VERSION,
+            "seed_catalog_version": (SEED_CATALOG_VERSION if custom_seed_hash is None
+                                      else "custom-0.6.1-" + custom_seed_hash[:12]),
             "discovered_schema_sha256": schema_sha256,
             "generation_index": i,
             "signature_source": bindings[candidate["module"]].signature_source,
         }
+        if custom_seed_hash is not None:
+            candidate["provenance"]["custom_seed_catalog_sha256"] = custom_seed_hash
     return selected
 
 
@@ -334,6 +365,7 @@ def write_jsonl(path: Path, candidates: list[dict[str, Any]], *, replace: bool =
 async def generate(url: str = DEFAULT_MCP_URL, *, count: int = 50, seed: int = 42,
                    modules: tuple[str, ...] = SUPPORTED_MODULES, timeout: float = 180,
                    session_factory: Callable[[str], Any] | None = None,
+                   targets: tuple[SkyTarget, ...] | None = None,
                    ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     modules = parse_modules(modules)
     if isinstance(seed, bool) or not isinstance(seed, int):
@@ -348,7 +380,8 @@ async def generate(url: str = DEFAULT_MCP_URL, *, count: int = 50, seed: int = 4
         if missing:
             raise GenerationError("Missing MCP discovery tool(s): " + ", ".join(sorted(missing)))
         bindings = await discover_bindings(client, modules)
-    candidates = generate_candidates(bindings, count=count, seed=seed, modules=modules)
+    candidates = generate_candidates(bindings, count=count, seed=seed, modules=modules,
+                                     targets=targets)
     summary = {
         "milestone": "0.2.0 — SYNTHETIC_QUERY_GENERATION",
         "benchmark_version": __version__,

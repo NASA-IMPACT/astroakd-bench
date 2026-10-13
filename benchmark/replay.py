@@ -1,4 +1,4 @@
-"""Offline MCP fixture construction, capture and deterministic replay (v0.6.0).
+"""Offline MCP fixture construction, capture and semantic-safe replay (v0.6.1).
 
 Only read-only, explicitly allowlisted Astroquery tool calls are stored. A
 replay miss never contacts a network server and never invents a response.
@@ -21,6 +21,42 @@ from .agent_runner import load_run_inputs, redact, validate_tool_args, ALLOWED_T
 FIXTURE_FORMAT = 'astroakd-bench-mcp-fixtures-v1'
 MAX_FIXTURE_BYTES = 512 * 1024 * 1024
 MAX_SINGLE_RESPONSE = 8 * 1024 * 1024
+SEMANTIC_MATCH_POLICY = 'optional_icrs_coordinate_frame_v1'
+# Only these actual Astroquery coordinate parameter paths carry an implicit
+# ICRS default in the benchmark's allowlisted query contract.  An omitted
+# frame is equivalent to explicitly declaring 'icrs'; all other arguments
+# (including numeric units, radius, catalogs, max_rows) remain exact.
+ICRS_COORDINATE_ARGUMENTS = {
+    ('mast', 'query_region'): 'coordinates',
+    ('heasarc', 'query_region'): 'position',
+    ('gaia', 'query_object'): 'coordinate',
+    ('vizier', 'query_region'): 'coordinates',
+}
+
+
+def semantic_arguments(tool: str, arguments: dict[str, Any]) -> dict[str, Any]:
+    """Return a validated, non-mutating canonical *lookup* representation.
+
+    This is deliberately not a general astronomical equivalence algorithm.
+    No coordinate conversion, rounding, catalog aliasing, default injection for
+    unrelated fields, or normalization of actual recorded payloads is done.
+    """
+    validate_tool_args(tool, arguments)
+    if tool != 'astroquery_execute':
+        return json.loads(json.dumps(arguments, ensure_ascii=False))
+    result = json.loads(json.dumps(arguments, ensure_ascii=False))
+    param = ICRS_COORDINATE_ARGUMENTS.get((result['module_name'], result['function_name']))
+    if param is not None:
+        coords = result['params'].get(param)
+        if isinstance(coords, dict) and coords.get('frame') == 'icrs':
+            del coords['frame']
+    return result
+
+
+def semantic_key_for(tool: str, arguments: dict[str, Any]) -> str:
+    """Stable fallback index independent of optional explicit ICRS frame."""
+    return hashlib.sha256(json_bytes({'tool': tool,
+                                     'arguments': semantic_arguments(tool, arguments)})).hexdigest()
 
 
 class ReplayError(ValidationError):
@@ -70,6 +106,9 @@ class FixtureStore:
         self.source = source
         self.dataset_sha256 = dataset_sha256
         self.entries: dict[str,dict[str,Any]] = {}
+        # Computed index only; never serialized. Old fixtures, keys, and their
+        # published integrity hashes stay byte-for-byte compatible.
+        self._semantic_index: dict[str, str] = {}
         for item in (entries or []):
             self.add_entry(item, validate=True)
 
@@ -124,7 +163,13 @@ class FixtureStore:
         previous=self.entries.get(key)
         if previous is not None and previous!=item:
             raise ReplayError('Conflicting fixture responses for same call')
+        semantic_key = semantic_key_for(tool, args)
+        existing_key = self._semantic_index.get(semantic_key)
+        if existing_key is not None and existing_key != key:
+            raise ReplayError('Ambiguous replay fixture: distinct recorded calls share '
+                              'the same semantic ICRS lookup identity')
         self.entries[key]=item
+        self._semantic_index[semantic_key]=key
 
     def record(self, tool:str, arguments:dict, payload:Any, *,outcome:str='ok') -> bool:
         clean=redact(payload)
@@ -143,6 +188,14 @@ class FixtureStore:
     def lookup(self,tool:str,arguments:dict)->Any:
         key=key_for(tool,arguments)
         entry=self.entries.get(key)
+        if entry is None:
+            # Fail closed unless the *only* change is explicitly tagged as
+            # optional ICRS-frame omission/inclusion in an approved coordinate
+            # argument. The recorded call and response are never altered.
+            semantic_key=semantic_key_for(tool, arguments)
+            matched_key=self._semantic_index.get(semantic_key)
+            if matched_key is not None:
+                entry=self.entries[matched_key]
         if entry is None:
             raise ReplayError(f'OFFLINE_REPLAY_MISS: no recorded fixture for {tool} '
                               f'and argument fingerprint {key[:16]}; no network fallback')
@@ -169,13 +222,13 @@ def build_reference_fixtures(tasks_path:Path, refs_path:Path, output:Path, *,
             raise ReplayError('Reference lacks successful serialized MCP response')
         store.record(call['tool'],call['arguments'],record['response'])
     digest=store.publish(output,replace=replace)
-    return {'milestone':'0.6.0 — REPLAY_AND_BENCHMARK_RELEASE','benchmark_version':__version__,
+    return {'milestone':'0.6.1 — SEMANTIC_REPLAY_ARGUMENT_CANONICALIZATION','benchmark_version':__version__,
             'mode':'build-fixtures','status':'PASS','network_calls':0,
             'candidate_dataset_sha256':dataset_hash,'reference_answers_sha256':refs_hash,
             'fixture_fingerprint':digest,'records':len(store.entries),
             'tools':len(store.catalog),'output':str(output),
             'note':'Frozen archive responses are structural references, not independently verified gold. '
-                   'Only exact recorded calls can be replayed; no network fallback.'}
+                   'Exact calls or equivalent optional ICRS-frame calls can be replayed; no network fallback.'}
 
 
 class ReplayClient:

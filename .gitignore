@@ -1,0 +1,24 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# LaTeX build/output files
+*.aux
+*.dvi
+*.log
+*.out
+*.pdf
+*.ps
+# *.eps
+*.synctex.gz
+*.toc
+
+# Sphinx build output
+_build/
+docs/_build/
+docs/sphinx/_build/
+# docs/generated/
+
+

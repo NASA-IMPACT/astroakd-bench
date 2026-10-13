@@ -1,13 +1,13 @@
 # AstroAKD-Bench 0.1.0 — LOCAL_MCP_CONNECTION
 
 **Scope:** Additive local FastMCP Streamable-HTTP client, tool/module/function discovery,
-read-only SIMBAD smoke query, structured diagnostics, and offline unit tests. This
-milestone does **not** yet implement synthetic-query generation, LLM evaluation,
-benchmark scoring, or fixture replay.
+read-only SIMBAD smoke query, structured diagnostics, and offline unit tests. This historical 0.1.0
+milestone did not yet implement synthetic-query generation, LLM evaluation,
+benchmark scoring, or fixture replay; these features now exist in 0.6.1.
 
 ## Installation
 
-From the **astroquery-mcp repository root**, start the server in terminal A:
+From the **separate astroquery-mcp repository root**, start the MCP server in terminal A:
 
 ```bash
 uv sync

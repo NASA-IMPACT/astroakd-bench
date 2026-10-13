@@ -3,8 +3,8 @@
 # AstroAKD-Bench 0.4.1 — Agent execution and MCP tracing
 
 `0.4.1` evaluates **how an independent agent behaves**, not whether its final answer
-is scientifically correct. It does not automatically score answers; scoring is
-planned for `0.5.0`.
+is scientifically correct. It does not itself score answers; offline scoring was introduced in `0.5.0` and
+is documented in [evaluation and scoring](evaluation_and_scoring.md).
 
 ## Input contract
 

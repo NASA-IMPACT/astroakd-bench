@@ -2,9 +2,11 @@
 
 This milestone executes the **accepted, unmodified 0.2.0 candidate dataset** through the
 same locally hosted Astroquery MCP HTTP server. It does **not** call the OpenAI API.
-The production server (`server.py`, `executor.py`, dependencies, and lockfiles) is unchanged.
+The external server (`server.py`, `executor.py`, dependencies, and lockfiles) is unchanged.
 
 ## Start the MCP server
+
+Run this from the **separate NASA IMPACT astroquery-mcp checkout**, not the standalone AstroAKD-Bench checkout:
 
 ```bash
 uv run fastmcp run server.py --transport http --host 127.0.0.1 --port 8000

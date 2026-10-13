@@ -5,13 +5,51 @@ here. This history is separate from the external `astroquery-mcp` project's
 releases: AstroAKD-Bench versions track benchmark capabilities, not versions
 of Astroquery or the MCP server.
 
-The current implemented benchmark version is **0.6.0**.
+The current implemented benchmark version is **0.6.1**.
 Dates are in UTC. Release statuses distinguish **offline implementation
 qualification** from **real laptop / live-service qualification**.
 
 ## [Unreleased]
 
-- Planned after 0.6.0: broader scientific claim verification, multi-archive workflows and frozen evaluation suites.
+- Planned after 0.6.1: broader scientific claim verification, multi-archive workflows and frozen evaluation suites.
+
+## [0.6.1] - 2026-10-13
+
+### Changed
+
+- `SEMANTIC_REPLAY_ARGUMENT_CANONICALIZATION`: replay first checks the original
+  exact tool/argument hash, then a narrowly restricted fallback for omitted
+  versus explicit `"frame": "icrs"` within the approved MAST, HEASARC, Gaia,
+  and VizieR coordinate parameter. No other arguments are canonicalized.
+- Added an ephemeral semantic lookup index without altering fixture JSON,
+  original per-call fingerprints, response payloads or fixture integrity SHA.
+  Ambiguous canonical aliases are rejected instead of selecting a response.
+- Added `benchmark.api.AstroAKDBench`, a documented, root-relative Python
+  facade for generation, validation, agent execution, offline scoring, fixture
+  construction, loading and replay. Python APIs call the existing CLI engines;
+  no parallel logic, upstream MCP-server modification, or OpenAI dependency
+  was introduced for query generation.
+- Expanded independent-project root README, replay guide, Python API examples,
+  usage/extension instructions, tests, and package version metadata.
+
+### Qualification
+
+- 0.6.0 live-record and replay of captured agent calls: **ACCEPT** on the
+  user's laptop for 5/5 tasks, with exact response SHA-256 equality and no
+  MCP network access during replay.
+- 0.6.0 reference-derived fixture replay had 1/5 successful because four
+  otherwise equivalent agent calls omitted an explicit ICRS coordinate frame.
+- 0.6.1 offline regressions verify all 50 original fixture entries replay with
+  omitted ICRS frame and that altered coordinates, radii, catalogs, top-level
+  limits, and unsafe operations cannot match. Frozen dataset and fixture hashes
+  remain unchanged. The full offline regression suite: **120 PASS, 1 SKIP**.
+  Real laptop 0.6.1 qualification is **PENDING**.
+
+### Limits
+
+- Offline replay freezes tool responses, not LLM behavior, model parameters or
+  final-answer scientific correctness. Semantic equivalence is intentionally
+  restricted to the documented default coordinate frame for allowlisted tools.
 
 ## [0.6.0] - 2026-10-13
 
@@ -51,7 +89,7 @@ qualification** from **real laptop / live-service qualification**.
   including the actual frozen 50-task fixture build, no-network agent replay,
   recorder capture, fingerprint tamper rejection, missing-call handling and
   fixture-file protection. The optional real MCP test remains skipped.
-- Real laptop 0.6.0 record/replay qualification: **PENDING**.
+- Real laptop 0.6.0 five-task record/replay (live-captured fixture): **ACCEPT**. Generic reference-derived replay had the ICRS mismatch corrected in 0.6.1.
 
 ### Limitations
 

@@ -4,7 +4,7 @@
 
 AstroAKD-Bench is an **independent Python repository** for developing and evaluating agents that discover astronomical data through the [NASA IMPACT Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp). That server is an **external service**, not this repository or the owner of this benchmark. AstroAKD-Bench generates natural-language astronomy tasks, executes reference archive queries via MCP, collects independent agent traces, and scores observable execution and a bounded set of claims.
 
-**Current version: 0.6.0 — REPLAY_AND_BENCHMARK_RELEASE.** The benchmark works on a local laptop. The server normally runs at `http://127.0.0.1:8000/mcp`; only the agent execution mode `--agent openai` needs the OpenAI API. No OpenAI key is needed to generate, validate, inspect, or score saved runs.
+**Current version: 0.6.1 — SEMANTIC_REPLAY_ARGUMENT_CANONICALIZATION.** The benchmark works on a local laptop. The server normally runs at `http://127.0.0.1:8000/mcp`; only the agent execution mode `--agent openai` needs the OpenAI API. No OpenAI key is needed to generate, validate, inspect, or score saved runs.
 
 ## Status and scope
 
@@ -17,7 +17,8 @@ AstroAKD-Bench is an **independent Python repository** for developing and evalua
 | 0.4.1 — AGENT_TOOL_SELECTION_AND_RECOVERY_CLOSURE | Question-derived archive routing, recovery and query-evidence checks | **ACCEPT** (five-task laptop pilot) |
 | **0.5.0 — AUTOMATED_EVALUATION_AND_SCORING** | Deterministic technical scoring, claim checks, readable JSON reports, root datasets | **Offline tests PASS; laptop requalification pending** |
 | **0.5.1 — PRETTY_SCORE_EXPORT_CLOSURE** | Optional saved, indented JSON array of every per-task score (`--pretty-output`) | **Offline tests PASS; user's saved 0.5.1 scores verified** |
-| **0.6.0 — REPLAY_AND_BENCHMARK_RELEASE** | Frozen offline MCP fixtures, live call recording, deterministic replay and benchmark integrity | **Offline qualification PASS; laptop recording/replay pending** |
+| **0.6.0 — REPLAY_AND_BENCHMARK_RELEASE** | Frozen offline MCP fixtures, live recording and reproducible replay | **5-task laptop live-record/replay ACCEPT; generic reference replay found an ICRS mismatch** |
+| **0.6.1 — SEMANTIC_REPLAY_ARGUMENT_CANONICALIZATION** | ICRS default-aware fixture lookup and public Python workflow API | **Offline qualification PASS; laptop replay pending** |
 
 **What the scores mean.** The weighted 0–100 **technical evidence score** assesses archive/function selection, argument alignment, successful execution, reference-result consistency, and *limited* automated answer-claim checks. It is **not a general scientific answer-accuracy score**. Truncated responses, changing public archives, and unverified scientific assertions are explicitly flagged for independent review. Reference acceptance establishes structurally valid MCP data, not independently proven astrophysical ground truth.
 
@@ -35,7 +36,8 @@ AstroAKD-Bench/                         # THIS repository
 │   ├── agent_runner.py
 │   ├── evaluator.py                      # NEW in 0.5.0
 │   ├── formatting.py
-│   ├── replay.py                         # NEW in 0.6.0
+│   ├── replay.py                         # Semantic ICRS-aware offline lookup
+│   ├── api.py                            # Reusable Python workflow facade
 │   └── tests/
 ├── datasets/                            # Root-level output/input directory
 │   ├── generated/
@@ -141,7 +143,7 @@ To score a new 0.5.1 run, set `--runs datasets/agent/openai_050_runs.jsonl` afte
 
 Scores are divided into archive selection (20), function selection (15), parameter correctness (25), successful MCP execution (15), reference row-count agreement (15) and limited answer-claim checks (10). Exact scientific correctness remains marked `INDEPENDENT_REVIEW_REQUIRED`. See [scoring details](docs/benchmark/evaluation_and_scoring.md).
 
-## Offline archive replay — 0.6.0
+## Offline archive replay — 0.6.1
 
 **No local MCP server or astronomical archive connection is needed to replay** a
 previously captured tool response. The OpenAI agent still requires its own API
@@ -167,15 +169,18 @@ uv run --with openai python -m benchmark run \
   --mcp-mode replay \
   --fixtures datasets/replay/reference_fixtures.json \
   --strict-accepted-020 --limit 5 \
-  --output datasets/agent/openai_060_replay_runs.jsonl \
-  --report datasets/agent/openai_060_replay_report.json \
+  --output datasets/agent/openai_061_replay_runs.jsonl \
+  --report datasets/agent/openai_061_replay_report.json \
   --json-format pretty
 ```
 
-**Exact-match rule:** fixtures replay only the original function and normalized
-JSON arguments. Calls to unseen functions or different arguments produce
-`OFFLINE_REPLAY_MISS` in the agent's audit trace; they never silently query
-live archives. This is essential to distinguish tool-selection failures from
+**Replay identity rule (0.6.1):** exact tool and argument matching is tried
+first. For allowlisted sky-coordinate query functions only, replay also treats
+an explicitly written `"frame": "icrs"` as equivalent to an omitted ICRS
+frame. Sky coordinates, search radius, catalog, function name, and all other
+arguments must remain identical; changed calls receive `OFFLINE_REPLAY_MISS`.
+This uses a lookup-only semantic index: it **does not rewrite original fixture
+keys, payloads or integrity hashes** and never queries live archives. This is essential to distinguish tool-selection failures from
 missing fixture coverage. The reference-derived bootstrap catalog describes
 safe tool schemas; it is not a captured, version-exact MCP server catalog.
 If an agent relies on method introspection or makes different calls, record a
@@ -206,6 +211,48 @@ breaking its integrity check. Neither fixture replay nor deterministic scoring
 makes LLM generation deterministic; fix the model/temperature/seed separately
 when supported by your agent provider.
 
+## Reusable Python API — 0.6.1
+
+AstroAKD-Bench has a supported programmatic entrypoint:
+
+```python
+import asyncio
+from benchmark.api import AstroAKDBench
+
+bench = AstroAKDBench(root=".", mcp_url="http://127.0.0.1:8000/mcp")
+
+async def main():
+    # Requires the separate NASA IMPACT Astroquery MCP server for discovery.
+    # Does NOT execute astronomical queries or require an LLM.
+    report = await bench.generate_queries(
+        count=20, seed=123, modules=("simbad", "mast"),
+        output="datasets/generated/my_questions.jsonl",
+        report="datasets/generated/my_generation_report.json",
+    )
+    print(report["dataset_sha256"])
+
+asyncio.run(main())
+
+# Fully offline: verify a saved fixture (no MCP server or LLM required).
+store = bench.load_fixtures("datasets/replay/reference_fixtures.json")
+print(len(store.entries), store.fingerprint)
+```
+
+The `AstroAKDBench` facade also provides `validate_queries(...)`,
+`run_agent(...)`, `evaluate_agent(...)`, `build_fixtures(...)`, and
+`load_records(...)`. It delegates to the same checked code paths as the CLI,
+with explicit output paths, non-overwriting defaults, independent agent
+traces and reference isolation. For notebook examples, custom seeds/templates,
+programmatic scoring, agent adapters, error handling and offline replay, see
+**[Python API and extension guide](docs/benchmark/python_api.md)**.
+
+**Custom synthetic questions:** the current generator uses curated seeds and
+read-only archive-specific templates; it is not an arbitrary text-to-Astroquery
+engine. To add a new template, update the seed/template definitions and
+corresponding safe signatures, add reproducibility tests, and then validate
+new candidates on live archives. Never modify the frozen 50-task accepted
+baseline just to create a new experiment.
+
 ## Readable JSON on a laptop
 
 Choose `--json-format compact` (default) or `--json-format pretty`. This changes the **console output and summary `.json` reports**. It does not change `.jsonl` files: they must contain exactly one compact JSON object per line to remain stream-friendly and to preserve accepted dataset hashes.
@@ -230,7 +277,7 @@ On 2026-10-13, 50 candidate queries were generated and 50 structurally accepted 
 - Accepted candidate SHA-256: `e6de68eedf2b38ea08dd684cac678edc80ee23abe51b7189f0adfb5e369c1fe9`
 - Accepted reference SHA-256: `1bfe4028f5533d3d7a1e5756bb26809e7e359f6a7640059ca07dcb295855da87`
 
-The accepted 0.4.1 five-task OpenAI pilot observed **five successful MCP executions and zero rejected calls**. Version 0.5.0/0.5.1 scoring of that recorded pilot gives **94/100 mean technical evidence**, with 3 technical PASS and 2 REVIEW (including truncated Gaia output). **This is not astrophysical answer accuracy**. The uploaded 0.5.1 scores and pretty export were checked on the laptop; replay 0.6.0 still requires host qualification.
+The accepted 0.4.1 five-task OpenAI pilot observed **five successful MCP executions and zero rejected calls**. Version 0.5.0/0.5.1 scoring of that recorded pilot gives **94/100 mean technical evidence**, with 3 technical PASS and 2 REVIEW (including truncated Gaia output). **This is not astrophysical answer accuracy**. The uploaded 0.5.1 scores and pretty export were checked on the laptop. Version 0.6.0 live-record/replay with a live-captured fixture was also verified (5/5 successful with identical recorded and replayed responses). Version 0.6.1 addresses the separate reference-derived fixture mismatch; its live-laptop acceptance is pending.
 
 ### Migrating an older checkout
 

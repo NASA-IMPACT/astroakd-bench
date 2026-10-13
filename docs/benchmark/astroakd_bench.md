@@ -4,7 +4,7 @@
 
 AstroAKD-Bench is an **independent Python repository** for developing and evaluating agents that discover astronomical data through the [NASA IMPACT Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp). That server is an **external service**, not this repository or the owner of this benchmark. AstroAKD-Bench generates natural-language astronomy tasks, executes reference archive queries via MCP, collects independent agent traces, and scores observable execution and a bounded set of claims.
 
-**Current version: 0.6.0 — REPLAY_AND_BENCHMARK_RELEASE.** The benchmark works on a local laptop. The server normally runs at `http://127.0.0.1:8000/mcp`; only the agent execution mode `--agent openai` needs the OpenAI API. No OpenAI key is needed to generate, validate, inspect, or score saved runs.
+**Current version: 0.6.1 — SEMANTIC_REPLAY_ARGUMENT_CANONICALIZATION.** The benchmark works on a local laptop. The server normally runs at `http://127.0.0.1:8000/mcp`; only the agent execution mode `--agent openai` needs the OpenAI API. No OpenAI key is needed to generate, validate, inspect, or score saved runs.
 
 ## Status and scope
 
@@ -16,7 +16,8 @@ AstroAKD-Bench is an **independent Python repository** for developing and evalua
 | 0.4.0 — AGENT_EXECUTION_AND_TRACING | Optional OpenAI/external-agent execution and MCP traces | Implemented; live pilot identified routing issues |
 | 0.4.1 — AGENT_TOOL_SELECTION_AND_RECOVERY_CLOSURE | Question-derived archive routing, recovery and query-evidence checks | **ACCEPT** (five-task laptop pilot) |
 | **0.5.0 — AUTOMATED_EVALUATION_AND_SCORING** | Deterministic technical scoring, claim checks, readable JSON reports, root datasets | **Offline tests PASS; laptop requalification pending** |
-| **0.6.0 — REPLAY_AND_BENCHMARK_RELEASE** | Offline read-only MCP fixture recording and replay | Offline tests PASS; laptop pending |
+| **0.6.0 — REPLAY_AND_BENCHMARK_RELEASE** | Offline fixture recording and replay | 5-task live-record/replay ACCEPT; ICRS mismatch found for reference fixture |
+| **0.6.1 — SEMANTIC_REPLAY_ARGUMENT_CANONICALIZATION** | Default ICRS-frame replay matching and reusable Python API | Offline qualification PASS; laptop pending |
 
 **What the scores mean.** The weighted 0–100 **technical evidence score** assesses archive/function selection, argument alignment, successful execution, reference-result consistency, and *limited* automated answer-claim checks. It is **not a general scientific answer-accuracy score**. Truncated responses, changing public archives, and unverified scientific assertions are explicitly flagged for independent review. Reference acceptance establishes structurally valid MCP data, not independently proven astrophysical ground truth.
 
@@ -182,6 +183,6 @@ The script **refuses to merge** when both directories exist. Move or reconcile t
 
 See [CHANGELOG.md](../../CHANGELOG.md) for cumulative release history and [docs/benchmark](./) for implementation details. **Every new release updates the root README, root CHANGELOG, package metadata, CLI examples, and relevant docs together.**
 
-## Replay and release (0.6.0)
+## Semantic replay and reusable Python API (0.6.1)
 
-See [0.6.0 MCP record/replay](replay_and_release.md) for the `build-fixtures` command, online capture, offline use and audit boundaries. The benchmark remains independent of the NASA IMPACT Astroquery MCP server repository.
+See [0.6.1 MCP record/replay](replay_and_release.md) and the [reusable Python API guide](python_api.md) for custom astronomical seed lists, programmatic query generation, reference validation, independent agent runs, scoring and offline replay. The benchmark remains independent of the NASA IMPACT Astroquery MCP server repository.
