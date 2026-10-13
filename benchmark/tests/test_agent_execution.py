@@ -1,4 +1,4 @@
-"""0.4.0 offline tests: agent receives only question, MCP interface traced."""
+"""0.4.1 offline tests: no gold leakage, routed tools, recovery, evidence."""
 from __future__ import annotations
 
 import asyncio
@@ -9,7 +9,7 @@ from types import SimpleNamespace
 import unittest
 
 from benchmark.agent_runner import (AgentRunError, EchoAgent, ExternalAgent, OpenAIAgent,
-                                    TracedMCPGateway, load_run_inputs,
+                                    TracedMCPGateway, load_run_inputs, explicit_question_archive,
                                     run_agents, validate_tool_args)
 from benchmark.tests.test_client import FakeSession
 from benchmark.tests.test_reference_validation import make_test_dataset
@@ -165,7 +165,10 @@ class AgentRunnerTests(unittest.TestCase):
             kwargs.pop('limit')
             whole = asyncio.run(run_agents(tasks, refs, out, report, resume=True, **kwargs))
             self.assertEqual(whole['status'], 'COMPLETE')
-            self.assertEqual(whole['quality_gate'], 'PASS')
+            # CountingAgent only lists modules and never executes an archive
+            # query; do not label that as scientific query evidence.
+            self.assertEqual(whole['quality_gate'], 'REVIEW')
+            self.assertEqual(whole['query_evidence']['missing'], len(records))
             self.assertEqual(whole['processed'], len(records))
             self.assertEqual(whole['total_mcp_calls'], len(records))
             evidence, hashval = load_jsonl(out)
@@ -237,7 +240,9 @@ class OpenAIAdapterTests(unittest.TestCase):
     def test_fake_openai_tool_call_then_answer(self):
         def toolcall(name, args):
             return SimpleNamespace(id='call_1', function=SimpleNamespace(name=name, arguments=json.dumps(args)))
-        m1 = SimpleNamespace(content=None, tool_calls=[toolcall('astroquery_list_modules', {})])
+        m1 = SimpleNamespace(content=None, tool_calls=[toolcall('astroquery_execute', {
+            'module_name': 'simbad', 'function_name': 'query_object',
+            'params': {'object_name': 'M31'}})])
         m2 = SimpleNamespace(content='Found archive modules.', tool_calls=[])
         responses = [SimpleNamespace(choices=[SimpleNamespace(message=m)],
                        usage=SimpleNamespace(prompt_tokens=11, completion_tokens=7,total_tokens=18))
@@ -268,3 +273,116 @@ class OpenAIAdapterTests(unittest.TestCase):
 
 if __name__=='__main__':
     unittest.main()
+
+
+class ArchiveRecovery041Tests(unittest.TestCase):
+    """Real pilot regression: HEASARC/Gaia misrouted to VizieR in 0.4.0."""
+
+    def test_explicit_archive_is_derived_only_from_question(self):
+        self.assertEqual(explicit_question_archive('Search the HEASARC xmmmaster catalog.'), 'heasarc')
+        self.assertEqual(explicit_question_archive('Query Gaia sources around NGC 253.'), 'gaia')
+        self.assertIsNone(explicit_question_archive('Search the region around M31.'))
+        self.assertIsNone(explicit_question_archive('Combine Gaia and HEASARC data.'))
+        self.assertEqual(explicit_question_archive('Using SIMBAD, query M31.'), 'simbad')
+
+    def test_wrong_archive_is_rejected_with_actionable_guidance(self):
+        async def go():
+            from benchmark.client import AstroqueryMCPClient
+            session = FakeSession('http://127.0.0.1:8000/mcp')
+            async with AstroqueryMCPClient(session_factory=lambda _: session) as client:
+                gate = TracedMCPGateway(client, question='Search the HEASARC xmmmaster catalog near M31.')
+                bad = await gate.call_tool('astroquery_execute', {
+                    'module_name':'vizier', 'function_name':'query_region', 'max_rows':20,
+                    'params':{'coordinates':{'ra':10.6847,'dec':41.2688},
+                              'radius':{'value':10,'unit':'arcmin'},'catalog':'II/246'}})
+                self.assertFalse(bad['ok'])
+                self.assertIn('HEASARC', bad['error']['message'])
+                self.assertIn('position', bad['error']['message'])
+                self.assertEqual(gate.successful_query_count, 0)
+                self.assertFalse(session.calls)
+                good = await gate.call_tool('astroquery_execute', {
+                    'module_name':'heasarc', 'function_name':'query_region',
+                    'params':{'position':{'ra':10.6847,'dec':41.2688},
+                              'radius':{'value':10,'unit':'arcmin'},'catalog':'xmmmaster'}})
+                self.assertTrue(good['ok'])
+                self.assertEqual(gate.successful_query_count, 1)
+                self.assertEqual([x['status'] for x in gate.events], ['rejected','ok'])
+        asyncio.run(go())
+
+    def test_gaia_uses_gaia_not_vizier_and_vizier_max_rows_recovery(self):
+        async def go():
+            from benchmark.client import AstroqueryMCPClient
+            async with AstroqueryMCPClient(session_factory=FakeSession) as client:
+                gate = TracedMCPGateway(client, question='Query Gaia sources within 3 arcmin of M31.')
+                bad = await gate.call_tool('astroquery_execute', {
+                    'module_name':'vizier', 'function_name':'query_region',
+                    'params':{'coordinates':{'ra':10,'dec':41},
+                              'radius':{'value':3,'unit':'arcmin'},'catalog':'II/246'}})
+                self.assertFalse(bad['ok'])
+                self.assertIn('gaia', bad['error']['message'])
+                correct = await gate.call_tool('astroquery_execute', {
+                    'module_name':'gaia', 'function_name':'query_object',
+                    'params':{'coordinate':{'ra':10,'dec':41},
+                              'radius':{'value':3,'unit':'arcmin'}}})
+                self.assertTrue(correct['ok'])
+                other = TracedMCPGateway(client, question='Query VizieR catalog II/246 near M31.')
+                wrong = await other.call_tool('astroquery_execute', {
+                    'module_name':'vizier', 'function_name':'query_region', 'max_rows':20,
+                    'params':{'coordinates':{'ra':10,'dec':41},
+                              'radius':{'value':2,'unit':'arcmin'},'catalog':'II/246'}})
+                self.assertFalse(wrong['ok'])
+                self.assertIn('remove', wrong['error']['message'])
+                self.assertTrue((await other.call_tool('astroquery_execute', {
+                    'module_name':'vizier', 'function_name':'query_region',
+                    'params':{'coordinates':{'ra':10,'dec':41},
+                              'radius':{'value':2,'unit':'arcmin'},'catalog':'II/246'}}))['ok'])
+        asyncio.run(go())
+
+    def test_openai_one_recovery_prompt_after_rejected_query(self):
+        from benchmark.client import AstroqueryMCPClient
+        def toolcall(key, name, args):
+            return SimpleNamespace(id=key, function=SimpleNamespace(name=name,
+                                      arguments=json.dumps(args)))
+        wrong = toolcall('c1', 'astroquery_execute', {
+            'module_name':'vizier', 'function_name':'query_region',
+            'params':{'coordinates':{'ra':10.6847, 'dec':41.2688},
+                      'radius':{'value':10,'unit':'arcmin'},'catalog':'II/246'}})
+        corrected = toolcall('c2', 'astroquery_execute', {
+            'module_name':'heasarc', 'function_name':'query_region',
+            'params':{'position':{'ra':10.6847, 'dec':41.2688},
+                      'radius':{'value':10,'unit':'arcmin'},'catalog':'xmmmaster'}})
+        replies = [SimpleNamespace(content=None,tool_calls=[wrong]),
+                   SimpleNamespace(content='I cannot perform this query.',tool_calls=[]),
+                   SimpleNamespace(content=None,tool_calls=[corrected]),
+                   SimpleNamespace(content='HEASARC returned the requested catalog.',tool_calls=[])]
+        class Chat:
+            def __init__(self):
+                self.requests = []
+            async def create(self, **kwargs):
+                self.requests.append(kwargs)
+                return SimpleNamespace(choices=[SimpleNamespace(message=replies.pop(0))], usage=None)
+        chat = Chat()
+        sdk=SimpleNamespace(chat=SimpleNamespace(completions=chat))
+        async def go():
+            async with AstroqueryMCPClient(session_factory=FakeSession) as client:
+                gate=TracedMCPGateway(client, available=await client.list_tools(),
+                                      question='Search HEASARC xmmmaster within 10 arcmin of M31.')
+                result=await OpenAIAgent('fake', sdk_client=sdk).run('Search HEASARC xmmmaster within 10 arcmin of M31.',gate,5)
+                self.assertIn('HEASARC returned', result['answer'])
+                self.assertEqual(result['turns'], 4)
+                self.assertEqual(gate.successful_query_count,1)
+                self.assertEqual(len(gate.events),2)
+                self.assertEqual(gate.events[0]['status'],'rejected')
+                self.assertEqual(gate.events[1]['status'],'ok')
+                self.assertNotIn('GOLD_SECRET_DO_NOT_LEAK', json.dumps(chat.requests))
+        asyncio.run(go())
+
+    def test_successful_transport_without_success_true_is_not_query_evidence(self):
+        class NoSuccess:
+            async def call(self, tool, args):
+                return {'result': {'data':[]}}
+        gate=TracedMCPGateway(NoSuccess())
+        asyncio.run(gate.call_tool('astroquery_execute', {'module_name':'simbad',
+            'function_name':'query_object', 'params':{'object_name':'M31'}}))
+        self.assertEqual(gate.successful_query_count,0)
+        self.assertFalse(gate.events[0]['response_success'])

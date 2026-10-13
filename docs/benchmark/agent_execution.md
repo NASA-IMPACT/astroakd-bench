@@ -1,6 +1,6 @@
-# AstroAKD-Bench 0.4.0 — Agent execution and MCP tracing
+# AstroAKD-Bench 0.4.1 — Agent execution and MCP tracing
 
-`0.4.0` evaluates **how an independent agent behaves**, not whether its final answer
+`0.4.1` evaluates **how an independent agent behaves**, not whether its final answer
 is scientifically correct. It does not automatically score answers; scoring is
 planned for `0.5.0`.
 
@@ -130,9 +130,21 @@ redacted, but **traces can still contain scientific data and potentially
 sensitive prompt text**, so inspect before sharing.
 
 The status `COMPLETE` means every benchmark task has an execution record;
-`quality_gate=PASS` means an actual adapter produced a nonempty answer for all
-questions, **not** that answers are scientifically correct. A completed run can
-still receive `quality_gate=REVIEW` if one or more tasks failed.
+`quality_gate=PASS` now also requires a successful `astroquery_execute` for
+**every** real-agent task, not just nonempty text. The `query_evidence`
+field reports whether archive execution evidence was observed. Even PASS is
+**not** proof of scientific correctness. `REVIEW` includes answered tasks whose
+MCP calls were all rejected. `HARNESS_ONLY` remains the echo disposition.
+
+0.4.1 uses question-derived routing only when a question explicitly names
+exactly one service. For HEASARC, Gaia and VizieR, the agent must use the
+specified module, not substitute another archive. Rejections include valid
+parameter guidance, and the OpenAI adapter offers one additional recovery
+prompt within budgets. `max_rows` is restricted to MAST.
+
+0.4.1 records its policy in the execution manifest, so an existing 0.4.0
+pilot cannot be resumed under a modified policy. Start a new output path or
+use `--replace` intentionally.
 
 ## Safety and limitations
 
@@ -144,8 +156,8 @@ still receive `quality_gate=REVIEW` if one or more tasks failed.
 - One agent task at a time with per-task timeout, max reasoning turns and tool
   calls, plus a max tool-response size.
 - A server/tool failure is captured as a trace event and returned to the agent.
-- The OpenAI LLM is optional and cannot be validated with live API requests in
-  this delivery environment. Its provider integration requires your laptop test.
+- The OpenAI LLM is optional. The 0.4.0 five-task laptop pilot exposed archive
+  misrouting; 0.4.1 needs a fresh live laptop qualification.
 - Future `0.5.0` will compare these traces and answers to independent reference
   checks, and `0.6.0` will implement deterministic offline archive replay.
 

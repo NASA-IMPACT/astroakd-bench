@@ -5,7 +5,7 @@ here. This history is separate from the upstream `astroquery-mcp` project's
 releases: AstroAKD-Bench versions track benchmark capabilities, not versions
 of Astroquery or the MCP server.
 
-The current implemented benchmark version is **0.4.0**.
+The current implemented benchmark version is **0.4.1**.
 Dates are in UTC. Release statuses distinguish **offline implementation
 qualification** from **real laptop / live-service qualification**.
 
@@ -14,6 +14,52 @@ qualification** from **real laptop / live-service qualification**.
 - No unreleased implementation changes are recorded.
 - Planned (not implemented): 0.5.0 automated evaluation and scientific
   scoring, and 0.6.0 offline record/replay and benchmark packaging.
+
+## [0.4.1] - 2026-10-13
+
+### Changed
+
+- `AGENT_TOOL_SELECTION_AND_RECOVERY_CLOSURE`: explicit, single-archive
+  references in natural-language questions now guide and constrain the agent's
+  MCP archive selection. The hint is derived **only** from the question text;
+  expected module, gold parameters and reference answers are never supplied.
+  Questions naming multiple archives remain unrestricted by this hint.
+- Strengthened tool-calling instructions and executable function descriptions:
+  SIMBAD `object_name`, MAST `coordinates`, HEASARC `position`, Gaia
+  `coordinate`, and VizieR `coordinates`. `max_rows` is MAST-only.
+- Rejection messages include actionable recovery guidance. The OpenAI adapter
+  can issue one additional prompt when a model produces an answer without a
+  successful astronomical MCP execution and turn/call budgets remain.
+- Added `query_evidence`, `successful_execute_count`, rejected/failed tool
+  counts in per-task records and aggregate reports. An agent answer without a
+  successful `astroquery_execute` is flagged for **REVIEW**; a successful
+  MCP response is still not scientifically verified correctness.
+- Versioned the routing policy in execution manifests, preventing resume of
+  0.4.0 journals under changed 0.4.1 behavior.
+- Corrected the root `README.md` to describe **AstroAKD-Bench** as the main
+  project, based on its previous 0.3.0 benchmark README. The Astroquery MCP
+  server is identified as a dependency, not as the benchmark project.
+  No upstream MCP-server contributors are attributed to AstroAKD-Bench.
+  Both complete root `README.md` and `CHANGELOG.md` ship in this release.
+
+### Qualification
+
+- Offline regression: **PASS**, 80 tests passed; one optional real-server
+  integration test skipped. Added HEASARC/Gaia routing, MAST-only argument,
+  real-trace reproduction, error-recovery and missing-execution-evidence tests.
+- 0.4.0 laptop pilot: five `gpt-4.1-mini` tasks produced answers, but only
+  three MCP executions succeeded; five calls were rejected, exposing the
+  routing defects addressed here.
+- 0.4.1 live laptop OpenAI regression: **PENDING**. No live OpenAI API
+  calls or remote archive execution performed in the delivery environment.
+
+### Limitations
+
+- `query_evidence=observed` only means a server `success=true` response,
+  **not** correctness of astronomy interpretations or final agent answers.
+- The lexical routing restriction applies only when exactly one supported
+  archive is explicitly named in the question; it is not a general
+  multi-archive planner. Scientific scoring remains planned for 0.5.0.
 
 ## [0.4.0] - 2026-10-13
 
@@ -32,9 +78,9 @@ qualification** from **real laptop / live-service qualification**.
   model/runtime provenance, completion/error reporting, and per-archive totals.
 - Independent agent prompts: reference calls/results never enter the agent's
   context. No automated science scoring until planned 0.5.0.
-- New `docs/benchmark/agent_execution.md`, updated project guide, and moved
-  cumulative changelog to the repository root. The existing root README is
-  **extended rather than overwritten**, preserving server documentation.
+- Added `docs/benchmark/agent_execution.md` and a cumulative root changelog.
+  The original 0.4.0 package omitted the full benchmark-focused root README;
+  0.4.1 corrects the documentation and packaging.
 
 ### Qualification
 
@@ -42,8 +88,10 @@ qualification** from **real laptop / live-service qualification**.
   test skipped. Includes mocked OpenAI tool-calling, resumed runs, reference
   isolation, unsafe tool rejection, and compatibility with the accepted
   0.2.0 dataset.
-- Real laptop MCP + actual agent API: **PENDING**. No live OpenAI API calls were
-  made in the delivery environment.
+- Real laptop OpenAI five-task pilot: **EXECUTED**, five final responses,
+  eight MCP calls, three successful archive executions, five rejected calls.
+  HEASARC and Gaia routing defects identified; milestone 0.4.0 did not
+  establish scientific correctness or full-run host acceptance.
 
 ### Limitations
 

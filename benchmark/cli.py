@@ -24,7 +24,7 @@ DEFAULT_DATASET = Path("benchmark/datasets/generated/synthetic_queries.jsonl")
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="astroakd-bench",
-        description="AstroAKD-Bench 0.4.0 local MCP, candidate generation, reference validation, agent tracing.",
+        description="AstroAKD-Bench 0.4.1 local MCP, candidate generation, reference validation, agent tracing and recovery.",
     )
     parser.add_argument("--version", action="version", version=__version__)
     common = argparse.ArgumentParser(add_help=False)
@@ -90,7 +90,7 @@ def build_parser() -> argparse.ArgumentParser:
     validation.add_argument("--strict-accepted-020", action="store_true",
         help="Require SHA256 of the formally accepted 50-task seed=42 dataset")
     run = commands.add_parser("run", parents=[common],
-        help="Execute independent agent on reference-accepted questions; record MCP traces (no scoring)")
+        help="Execute agent with question-derived archive routing, MCP traces and query evidence checks (no scientific scoring)")
     run.add_argument("--tasks", type=Path, default=DEFAULT_DATASET,
         help="0.2.0 generated candidate JSONL")
     run.add_argument("--references", type=Path,
