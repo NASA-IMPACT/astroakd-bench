@@ -14,12 +14,12 @@ In a second terminal (from the repository root), first run a **five-task pilot**
 
 ```bash
 uv run python -m benchmark validate \
-  --input benchmark/datasets/generated/synthetic_queries.jsonl \
+  --input datasets/generated/synthetic_queries.jsonl \
   --strict-accepted-020 \
   --limit 5 \
   --attempts 2 --delay 2 --timeout 180 \
-  --output benchmark/datasets/validated/reference_answers.jsonl \
-  --report benchmark/datasets/validated/validation_report.json
+  --output datasets/validated/reference_answers.jsonl \
+  --report datasets/validated/validation_report.json
 ```
 
 `--strict-accepted-020` verifies the SHA-256 of the accepted 50-task input dataset:
@@ -29,11 +29,11 @@ not publish an incomplete reference dataset. Continue with:
 
 ```bash
 uv run python -m benchmark validate \
-  --input benchmark/datasets/generated/synthetic_queries.jsonl \
+  --input datasets/generated/synthetic_queries.jsonl \
   --strict-accepted-020 --resume \
   --attempts 2 --delay 2 --timeout 180 \
-  --output benchmark/datasets/validated/reference_answers.jsonl \
-  --report benchmark/datasets/validated/validation_report.json
+  --output datasets/validated/reference_answers.jsonl \
+  --report datasets/validated/validation_report.json
 ```
 
 Alternatively, omit `--limit` to run all 50 tasks in one pass. Use `--replace`

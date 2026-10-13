@@ -450,7 +450,7 @@ async def run_agents(tasks_file: Path, reference_file: Path, output: Path, repor
                      max_calls: int = 12, max_tool_bytes: int = 65536,
                      task_timeout: float = 600, limit: int | None = None,
                      resume: bool = False, replace: bool = False,
-                     strict_accepted_020: bool = False,
+                     strict_accepted_020: bool = False, json_format: str = 'compact',
                      session_factory: Callable[[str], Any] | None = None,
                      agent_factory: Callable[[], Any] | None = None,
                      ) -> dict[str, Any]:
@@ -513,7 +513,7 @@ async def run_agents(tasks_file: Path, reference_file: Path, output: Path, repor
                 if replace:
                     for p in (output, report_path, journal, manifest):
                         p.unlink(missing_ok=True)
-                atomic_json(manifest, {'milestone':'0.4.1 — AGENT_TOOL_SELECTION_AND_RECOVERY_CLOSURE',
+                atomic_json(manifest, {'milestone':'0.5.0 — AUTOMATED_EVALUATION_AND_SCORING',
                                        'created_utc': now_utc(), 'context':context})
             for task in remaining:
                 gateway = TracedMCPGateway(client, max_calls=max_calls,
@@ -569,7 +569,7 @@ async def run_agents(tasks_file: Path, reference_file: Path, output: Path, repor
     evidence_tally = dict(sorted(Counter(x.get('query_evidence', 'missing') for x in ordered).items()))
     by_module = {mod: dict(Counter(x['status'] for x in ordered if x['module'] == mod))
                  for mod in dict.fromkeys(task['module'] for task in tasks)}
-    report = {'milestone': '0.4.1 — AGENT_TOOL_SELECTION_AND_RECOVERY_CLOSURE',
+    report = {'milestone': '0.5.0 — AUTOMATED_EVALUATION_AND_SCORING',
               'benchmark_version': __version__, 'timestamp_utc': now_utc(),
               'endpoint': url, 'agent': agent_name, 'model': model if agent_name == 'openai' else None,
               'input_dataset_sha256': dataset_hash, 'reference_answers_sha256': reference_hash,
@@ -591,11 +591,11 @@ async def run_agents(tasks_file: Path, reference_file: Path, output: Path, repor
               'notes': ['Agent sees only the question and allowlisted MCP tool schemas, not reference calls/results.',
                         'Explicit single-archive routing is derived from question text alone.',
                         'PASS requires a successful astronomical execute result per task, not just a final answer.',
-                        '0.4.1 captures execution evidence only; it does not score scientific correctness.',
+                        '0.5.0 run captures tool evidence; use evaluate separately for technical scoring and limited answer-claim checks.',
                         'Echo adapter is harness-only, not an astronomical agent.',
                         'External adapters must call gateway.call_tool for auditable MCP traces.']}
     if all_done:
         report['agent_runs_sha256'] = atomic_jsonl(output, ordered)
         report['output'] = str(output)
-    atomic_json(report_path, report)
+    atomic_json(report_path, report, style=json_format)
     return report

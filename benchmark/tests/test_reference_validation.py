@@ -219,7 +219,7 @@ class ReferenceCLITests(unittest.TestCase):
         from benchmark.cli import build_parser
         args = build_parser().parse_args(["validate", "--strict-accepted-020",
             "--limit", "5", "--attempts", "3", "--resume", "--max-rows", "15"])
-        self.assertEqual(args.input, Path("benchmark/datasets/generated/synthetic_queries.jsonl"))
+        self.assertEqual(args.input, Path("datasets/generated/synthetic_queries.jsonl"))
         self.assertEqual(args.attempts, 3)
         self.assertTrue(args.resume)
         self.assertTrue(args.strict_accepted_020)

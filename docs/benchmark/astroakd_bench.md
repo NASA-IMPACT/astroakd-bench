@@ -1,320 +1,183 @@
 # AstroAKD-Bench
 
-**Reproducible, MCP-native benchmarks for astronomical data-discovery agents.**
+**Reproducible synthetic astronomical queries and evidence-based evaluation of AI data-discovery agents.**
 
-AstroAKD-Bench generates astronomy research questions, constructs candidate MCP
-calls from a curated read-only set of Astroquery functions, executes those calls
-against astronomical archives, and records auditable reference responses. It is
-intended to evaluate agents such as **AstroAKD**, which use natural language to
-find and interpret astronomical archive data.
+AstroAKD-Bench is an **independent Python repository** for developing and evaluating agents that discover astronomical data through the [NASA IMPACT Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp). That server is an **external service**, not this repository or the owner of this benchmark. AstroAKD-Bench generates natural-language astronomy tasks, executes reference archive queries via MCP, collects independent agent traces, and scores observable execution and a bounded set of claims.
 
-The benchmark lives in the `benchmark/` directory of the
-[NASA IMPACT Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp).
-It is an **additive local client**: it communicates with the server over MCP HTTP
-and does not modify `server.py`, `executor.py`, or Astroquery itself.
+**Current version: 0.5.0 — AUTOMATED_EVALUATION_AND_SCORING.** The benchmark works on a local laptop. The server normally runs at `http://127.0.0.1:8000/mcp`; only the agent execution mode `--agent openai` needs the OpenAI API. No OpenAI key is needed to generate, validate, inspect, or score saved runs.
 
-**Current version: 0.4.1 (`AGENT_TOOL_SELECTION_AND_RECOVERY_CLOSURE`).**
-The benchmark implements local MCP discovery, deterministic candidate generation,
-live reference validation, and optional LLM/external-agent execution with auditable
-MCP traces. Version 0.4.1 improves explicit archive routing, rejection recovery,
-and query-evidence reporting. **Scientific answer scoring and offline record/replay
-remain planned** for 0.5.0 and 0.6.0.
+## Status and scope
 
-See [CHANGELOG.md](../../CHANGELOG.md) for release history and the documentation
-maintenance policy.
-
-## What it does
-
-| Version | Capability | Current status |
+| Milestone | Capability | Qualification |
 | --- | --- | --- |
-| 0.1.0 | Connect to a local MCP server, discover tools/functions, check SIMBAD access | Accepted on laptop |
-| 0.2.0 | Produce deterministic synthetic astronomy questions and candidate calls | Accepted on laptop |
-| 0.3.0 | Execute candidate calls, validate response structure, journal results, and resume interrupted runs | Accepted on laptop |
-| 0.4.0 | Submit questions to an AI agent and capture MCP call traces | Implemented; five-task live OpenAI pilot |
-| 0.4.1 | Improve archive selection, tool-call recovery, and success-evidence reporting | Offline qualified; laptop re-test pending |
-| 0.5.0 (planned) | Score tool selection, parameters, results, and task completion | Not implemented |
-| 0.6.0 (planned) | Record/replay archive responses for reproducible offline evaluation | Not implemented |
+| 0.1.0 — LOCAL_MCP_CONNECTION | FastMCP HTTP connectivity, discovery and SIMBAD smoke | **ACCEPT** (laptop) |
+| 0.2.0 — SYNTHETIC_QUERY_GENERATION | Deterministic 50-task dataset for five archives | **ACCEPT** (laptop) |
+| 0.3.0 — REFERENCE_VALIDATION | Query real archives; preserve references, error evidence and journals | **ACCEPT** (laptop) |
+| 0.4.0 — AGENT_EXECUTION_AND_TRACING | Optional OpenAI/external-agent execution and MCP traces | Implemented; live pilot identified routing issues |
+| 0.4.1 — AGENT_TOOL_SELECTION_AND_RECOVERY_CLOSURE | Question-derived archive routing, recovery and query-evidence checks | **ACCEPT** (five-task laptop pilot) |
+| **0.5.0 — AUTOMATED_EVALUATION_AND_SCORING** | Deterministic technical scoring, claim checks, readable JSON reports, root datasets | **Offline tests PASS; laptop requalification pending** |
+| 0.6.0 (planned) | Offline record/replay for controlled agent evaluation | Not implemented |
 
-The implemented workflow has **four distinct stages**:
+**What the scores mean.** The weighted 0–100 **technical evidence score** assesses archive/function selection, argument alignment, successful execution, reference-result consistency, and *limited* automated answer-claim checks. It is **not a general scientific answer-accuracy score**. Truncated responses, changing public archives, and unverified scientific assertions are explicitly flagged for independent review. Reference acceptance establishes structurally valid MCP data, not independently proven astrophysical ground truth.
+
+## Separate local repositories
 
 ```text
-Curated astronomical sources + question templates
-                       |
-                       v
-            0.2.0 generate -> 50 candidate tasks
-                       |
-                       v
-            0.3.0 validate -> MCP HTTP -> astronomical archives
-                       |
-                       v
-            Reference JSONL (kept separate from agent)
-                       |
-Natural-language questions only
-                       |
-                       v
-            0.4.1 agent run -> MCP tool traces + query evidence
-                       |
-                       v
-            0.5.0 scientific scoring (planned)
+AstroAKD-Bench/                         # THIS repository
+├── README.md                           # Benchmark project overview
+├── CHANGELOG.md                        # Benchmark versions only
+├── pyproject.toml
+├── benchmark/                          # Benchmark Python package
+│   ├── cli.py
+│   ├── generator.py
+│   ├── validator.py
+│   ├── agent_runner.py
+│   ├── evaluator.py                      # NEW in 0.5.0
+│   ├── formatting.py                     # NEW in 0.5.0
+│   └── tests/
+├── datasets/                            # Root-level output/input directory
+│   ├── generated/
+│   ├── validated/
+│   ├── agent/
+│   └── evaluation/
+├── scripts/
+│   └── migrate_datasets_0_5_0.py
+└── docs/benchmark/
+
+astroquery-mcp/                         # SEPARATE NASA IMPACT MCP service
+└── server.py
 ```
 
-**Terminology matters:** a *candidate* is a proposed task/call, not an answer;
-`accepted_nonempty` and `accepted_empty` indicate structurally valid serialized
-archive responses, not independently checked astrophysical ground truth.
-Additional scientific review is needed before treating them as gold answers.
+The release includes the accepted generated and validated datasets at **root-level `datasets/`**. No `benchmark/datasets/` path is used for new runs. The Python `benchmark/` directory contains implementation code only. The original accepted dataset bytes and SHA-256 hashes are unchanged by this move.
 
-## Requirements and local setup
+## Install and start
 
-- A checkout of `astroquery-mcp` with the `benchmark/` package installed.
-- The repository's Python and `uv` dependencies (including FastMCP).
-- A locally running Astroquery MCP HTTP server at
-  `http://127.0.0.1:8000/mcp` (or specify another URL).
-- Internet access **for live archive queries**. Candidate generation performs
-  MCP discovery only and does not execute archive searches.
-
-From the **repository root**, start the server in one terminal:
+Use Python 3.11+ and [uv](https://docs.astral.sh/uv/). In the **AstroAKD-Bench checkout**:
 
 ```bash
 uv sync
+uv run python -m benchmark --version
+uv run python -m unittest discover -s benchmark/tests -v
+```
+
+In a **different terminal, from the separate `astroquery-mcp` repository**, start its own server with its own environment:
+
+```bash
+cd /path/to/astroquery-mcp
 uv run fastmcp run server.py --transport http --host 127.0.0.1 --port 8000
 ```
 
-Run the commands below from the repository root in a **second terminal**.
-The URL may be overridden with `--mcp-url` on an individual command or with
-`ASTROAKD_MCP_URL` in the environment.
+Return to the **AstroAKD-Bench** directory for all following commands. Override `http://127.0.0.1:8000/mcp` with `--mcp-url` or `ASTROAKD_MCP_URL` if needed.
 
-### 1. Check connectivity (0.1.0)
+### Connection check — 0.1.0
 
 ```bash
-# MCP ping, tool catalog and module discovery
-uv run python -m benchmark doctor --fast
-
-# Full function discovery and signature introspection
-uv run python -m benchmark doctor --timeout 180
-
-# Optional end-to-end SIMBAD M31 query
-uv run python -m benchmark doctor --smoke --timeout 180
+uv run python -m benchmark doctor --fast --json-format pretty
+uv run python -m benchmark doctor --smoke --timeout 180 --json-format pretty
 ```
 
-Other discovery commands: `tools`, `modules`, `functions --module simbad`,
-`info --module simbad --function query_object`, and `simbad --object M31`.
-Use `uv run python -m benchmark --help` to see the installed CLI.
-
-### 2. Generate reproducible candidates (0.2.0)
+### Generate queries — 0.2.0
 
 ```bash
 uv run python -m benchmark generate \
-  --count 50 \
-  --seed 42 \
+  --count 50 --seed 42 \
   --modules simbad,mast,heasarc,gaia,vizier \
-  --timeout 180 \
-  --output benchmark/datasets/generated/synthetic_queries.jsonl \
-  --report benchmark/datasets/generated/generation_report.json
+  --output datasets/generated/synthetic_queries.jsonl \
+  --report datasets/generated/generation_report.json \
+  --json-format pretty
 ```
 
-The accepted 50-task dataset contains 10 questions per module and **zero
-archive executions**. Each task is marked `candidate_unvalidated`. Tasks use predefined templates, a curated object seed
-pool, and discovered or explicitly documented query signatures. The generator
-does **not** call an LLM or the OpenAI API. Generated files are not silently
-overwritten; pass `--replace` only when intentionally regenerating them.
+Only run this if intentionally regenerating a dataset. The distributed 50-task seed=42 dataset is already accepted; `--replace` would intentionally replace an existing file. Generation makes **no astronomy archive queries** and **no LLM calls**.
 
-### 3. Validate candidates with live archives (0.3.0)
-
-Run a five-task pilot:
+### Validate reference results — 0.3.0
 
 ```bash
 uv run python -m benchmark validate \
-  --input benchmark/datasets/generated/synthetic_queries.jsonl \
+  --input datasets/generated/synthetic_queries.jsonl \
   --strict-accepted-020 \
-  --limit 5 \
-  --attempts 2 --delay 2 --timeout 180 \
-  --output benchmark/datasets/validated/reference_answers.jsonl \
-  --report benchmark/datasets/validated/validation_report.json
+  --limit 5 --attempts 2 --delay 2 --timeout 180 \
+  --output datasets/validated/reference_answers.jsonl \
+  --report datasets/validated/validation_report.json \
+  --json-format pretty
 ```
 
-Resume the same run to process the remaining tasks:
+Resume an interrupted validation with `--resume` and without `--limit`. Existing accepted reference data is already included in the package, so **do not revalidate solely to run scoring**. Live validation requires network access to the archives.
 
-```bash
-uv run python -m benchmark validate \
-  --input benchmark/datasets/generated/synthetic_queries.jsonl \
-  --strict-accepted-020 --resume \
-  --attempts 2 --delay 2 --timeout 180 \
-  --output benchmark/datasets/validated/reference_answers.jsonl \
-  --report benchmark/datasets/validated/validation_report.json
-```
+### Execute the agent — 0.4.1 / 0.5.0
 
-The first command reports `PARTIAL` and journals every attempted task. The
-second resumes without rerunning completed IDs. On completion, the validator
-publishes `reference_answers.jsonl` and reports `COMPLETE` with a `quality_gate`.
-`COMPLETE` means all candidates received a disposition; `quality_gate=PASS`
-means all dispositions were structurally accepted. Neither proves scientific
-answer correctness.
-
-**Important:** `--replace` discards the previous validation state; do **not**
-use it for ordinary resumptions. The validator checks schema drift before
-executing calls and refuses mismatched accepted datasets when
-`--strict-accepted-020` is enabled.
-
-### 4. Run the agent and capture independent traces (0.4.1)
-
-For a five-task harness check without an LLM/API key:
-
-```bash
-uv run python -m benchmark run --agent echo \
-  --strict-accepted-020 --limit 5 \
-  --output benchmark/datasets/agent/echo_runs.jsonl \
-  --report benchmark/datasets/agent/echo_report.json
-```
-
-For an actual OpenAI tool-calling pilot (requires the optional OpenAI SDK and
-`OPENAI_API_KEY`; API charges may apply):
+An OpenAI agent is optional. Supply `OPENAI_API_KEY` privately through your shell environment and enable the optional SDK:
 
 ```bash
 uv run --with openai python -m benchmark run \
   --agent openai --model gpt-4.1-mini \
   --strict-accepted-020 --limit 5 \
   --max-turns 8 --max-calls 12 \
-  --output benchmark/datasets/agent/openai_041_runs.jsonl \
-  --report benchmark/datasets/agent/openai_041_report.json
+  --output datasets/agent/openai_050_runs.jsonl \
+  --report datasets/agent/openai_050_report.json \
+  --json-format pretty
 ```
 
-Use `--resume` to continue the **same** experiment (omit `--limit` to finish all
-50 tasks); use `--replace` only to intentionally discard/recreate existing
-artifacts. Because 0.4.1 changes the routing policy and records it in the
-manifest, do **not** resume a 0.4.0 journal using 0.4.1. Instead, select the new
-0.4.1 output names above or explicitly run `--replace` on old paths.
+Run a separate external AstroAKD implementation with `--agent external --adapter package.module:run`, provided the adapter routes calls through the tracing gateway. `--agent echo` tests only the harness, **not agent performance**. Existing runs are protected from overwrite: use `--resume` for a compatible incomplete run or `--replace` to discard it intentionally.
 
-For your own AstroAKD implementation, use `--agent external` with
-`--adapter package.module:async_function` and route every MCP request through
-the supplied traced gateway. The external adapter controls its own LLM provider.
+### Evaluate recorded agent evidence — 0.5.0
 
-**Tool recovery:** If the question explicitly names one archive, the runner
-routes calls to that archive *based only on the question text*. A rejected tool
-call returns actionable guidance. The OpenAI adapter can make one additional
-recovery prompt if the model tries to answer without a successful archive query.
-This does **not** disclose expected reference calls or scientific answers.
-
-**Interpreting runs:** `status=completed` means the agent produced a response;
-`query_evidence=observed` means an `astroquery_execute` call returned
-`success=true`. Runs with completed answers but no successful archive queries
-receive `quality_gate=REVIEW`, not PASS. Even `quality_gate=PASS` does **not**
-prove scientific answer correctness; that remains the purpose of 0.5.0.
-The `echo` mode is only a harness test (`HARNESS_ONLY`).
-
-## Generated files
-
-```text
-README.md                         # AstroAKD-Bench main project documentation
-CHANGELOG.md                      # Complete benchmark release history
-benchmark/
-  agent_runner.py                 # 0.4.1 agent and recovery implementation
-  datasets/
-    generated/
-      synthetic_queries.jsonl     # 0.2.0 candidate tasks
-      generation_report.json
-    validated/
-      reference_answers.jsonl     # 0.3.0 reference evidence
-      reference_answers.jsonl.progress.jsonl
-      reference_answers.jsonl.manifest.json
-      validation_report.json
-    agent/
-      openai_041_runs.jsonl       # published on full completion
-      openai_041_runs.jsonl.progress.jsonl
-      openai_041_runs.jsonl.manifest.json
-      openai_041_report.json
-```
-
-The persistent progress journal and manifest support recovery from interrupted
-validation. The response byte-size limit (default 8 MiB), delays, retries, and
-timeouts protect local storage and reduce load on external services. Only the
-MAST `query_region` server path currently honors `--max-rows`; other archives
-can return larger tables.
-
-### Supported reference query types (0.2.0 / 0.3.0)
-
-| Archive | Read-only operation | Example use |
-| --- | --- | --- |
-| SIMBAD | `query_object` | Resolve a named object |
-| MAST | `query_region` | Search observations near a sky position |
-| HEASARC | `query_region` | Search high-energy catalog rows in a region |
-| Gaia | `query_object` (async fallback if required) | Retrieve source data near an object |
-| VizieR | `query_region` | Search catalog records near a sky position |
-
-A strict method allowlist prevents arbitrary discovery results from becoming
-benchmark execution calls. The HEASARC generic `**kwargs` signature is handled
-as a variadic collector, not a required named argument. MAST and VizieR use
-explicitly labeled documented wrapper adapters where introspection cannot
-recover usable keyword signatures.
-
-## Accepted laptop qualification (2026-10-13)
-
-The local server was run at `http://127.0.0.1:8000/mcp`.
-
-| Check | Observed result |
-| --- | --- |
-| 0.1.0 doctor + live M31 smoke | PASS: 7 tools, 16 modules, SIMBAD M31 returned 1 row |
-| 0.2.0 synthetic generation | PASS: 50 distinct candidates, 10 per archive |
-| 0.3.0 five-task pilot | `PARTIAL`: 5/5 `accepted_nonempty` |
-| 0.3.0 completed validation | `COMPLETE`, `quality_gate=PASS`: 48 `accepted_nonempty`, 2 `accepted_empty` |
-| SIMBAD, MAST, Gaia, VizieR | 10 nonempty results each |
-| HEASARC | 8 nonempty, 2 valid empty results |
-| 0.4.0 OpenAI pilot (`gpt-4.1-mini`) | 5 agent answers, 8 attempted MCP calls; 3 successful executes and 5 rejections; HEASARC/Gaia misrouting identified |
-| 0.4.1 agent recovery | Offline tests pass; live laptop qualification pending |
-
-**Frozen accepted candidate dataset SHA-256:**
-`e6de68eedf2b38ea08dd684cac678edc80ee23abe51b7189f0adfb5e369c1fe9`
-
-**Observed reference dataset SHA-256:**
-`1bfe4028f5533d3d7a1e5756bb26809e7e359f6a7640059ca07dcb295855da87`
-
-These checksums were independently verified against the uploaded run artifacts.
-The accepted archive responses are **structurally validated references**; the
-next scientific-evaluation stage should independently review physical
-coordinates, catalog identity, units, observation IDs and expected constraints
-before assigning final answer-correctness labels.
-
-## Testing
+**Scoring does not call an LLM or MCP server.** This example scores the frozen five-task 0.4.1 OpenAI pilot included in the package:
 
 ```bash
-uv run python -m unittest discover -s benchmark/tests -v
+uv run python -m benchmark evaluate \
+  --strict-accepted-020 \
+  --runs datasets/agent/openai_041_runs.jsonl.progress.jsonl \
+  --output datasets/evaluation/openai_041_scores_recheck.jsonl \
+  --report datasets/evaluation/openai_041_report_recheck.json \
+  --csv datasets/evaluation/openai_041_scores_recheck.csv \
+  --json-format pretty
 ```
 
-The 0.4.1 offline regression recorded **80 passed and 1 skipped** (the optional
-live HTTP integration test). The 0.4.0 OpenAI pilot used a real model, but
-those five responses were not scientifically scored. A separate live integration test can be enabled
-when the local server and SIMBAD are reachable:
+To score a new 0.5.0 run, set `--runs datasets/agent/openai_050_runs.jsonl` after a completed run, or use its `.progress.jsonl` journal for a partial pilot. For repeated scoring of the same destination, add `--replace` only when intended.
+
+Scores are divided into archive selection (20), function selection (15), parameter correctness (25), successful MCP execution (15), reference row-count agreement (15) and limited answer-claim checks (10). Exact scientific correctness remains marked `INDEPENDENT_REVIEW_REQUIRED`. See [scoring details](evaluation_and_scoring.md).
+
+## Readable JSON on a laptop
+
+Choose `--json-format compact` (default) or `--json-format pretty` on the commands above. This changes the **console output and summary `.json` reports**. Machine-readable `.jsonl` datasets, trace journals, and score records remain **one compact JSON object per line**, preserving JSONL compatibility and the accepted input hashes.
+
+For an easy-to-read view of existing JSONL without modifying the original:
 
 ```bash
-ASTROAKD_TEST_LIVE=1 uv run python -m unittest benchmark.tests.test_live_connection -v
+uv run python -m benchmark inspect \
+  --input datasets/agent/openai_041_runs.jsonl.progress.jsonl \
+  --limit 1 --json-format pretty \
+  --output datasets/evaluation/pilot_inspection.json
 ```
 
-## Project boundaries and safety
+`inspect` converts a bounded preview into readable JSON with a `records` array; it does **not** reformat or overwrite source files. `--limit` is between 1 and 100. For large archive tables, use a small limit.
 
-- **OpenAI API is optional.** Versions 0.1.0–0.3.0 and the 0.4.1 `echo`
-  harness are API-free. `--agent openai` requires an API key and incurs usage;
-  external agents choose their own provider.
-- **No scientific agent scoring yet.** Neither a final answer nor a successful
-  MCP result proves a scientifically correct answer. 0.5.0 will implement this.
-- **Avoid public server exposure.** Bind FastMCP to `127.0.0.1` for laptop
-  evaluation; the upstream MCP server exposes dynamic Astroquery operations
-  and may access local authentication context.
-- **Respect archive services.** The validator is sequential by default, with
-  a 2-second query delay and bounded retries; external service availability
-  and result contents can change between runs.
-- **Treat traces as research artifacts.** Preserve versions, dataset hashes,
-  validation dispositions, and execution provenance. Review responses before
-  sharing if they may contain sensitive query details or credentials.
+## Dataset evidence and accepted baselines
 
-## Documentation and future releases
+On 2026-10-13, 50 candidate queries were generated and 50 structurally accepted MCP references were obtained: SIMBAD 10, MAST 10, Gaia 10, VizieR 10, HEASARC 8 nonempty plus 2 valid empty. The validated references consist of **48 nonempty and 2 empty results**. These outputs were checked on the user's laptop.
 
-Details and qualification constraints are maintained in
-[local MCP connection](local_mcp_connection.md),
-[synthetic query generation](synthetic_query_generation.md),
-[reference validation](reference_validation.md), and
-[agent execution and recovery](agent_execution.md).
+- Accepted candidate SHA-256: `e6de68eedf2b38ea08dd684cac678edc80ee23abe51b7189f0adfb5e369c1fe9`
+- Accepted reference SHA-256: `1bfe4028f5533d3d7a1e5756bb26809e7e359f6a7640059ca07dcb295855da87`
 
-**For every new AstroAKD-Bench version**, update this root README and the
-root [CHANGELOG.md](../../CHANGELOG.md), and include **both full files** directly at
-the root of the release archive. Update the detailed benchmark documentation
-together. Record offline and real-laptop qualification separately; do not
-promote a milestone based only on mocked tests.
+The accepted 0.4.1 five-task OpenAI pilot observed **five successful MCP executions and zero rejected calls**. Version 0.5.0's offline scoring of that recorded pilot gives **94/100 mean technical evidence**, with 3 technical PASS and 2 REVIEW (including truncated Gaia output). **This is not astrophysical answer accuracy**, and 0.5.0 has not yet been host-qualified on the user's laptop.
+
+### Migrating an older checkout
+
+If your older AstroAKD-Bench checkout has `benchmark/datasets/` and no root-level `datasets/`, execute:
+
+```bash
+uv run python scripts/migrate_datasets_0_5_0.py
+```
+
+The script **refuses to merge** when both directories exist. Move or reconcile those directories manually in that case; never overwrite the accepted input files accidentally. The migration checks known frozen SHA-256 values before moving accepted files.
+
+## Safety, reproducibility and limitations
+
+- Use the MCP server on `127.0.0.1` rather than exposing dynamic archive operations publicly.
+- Queries use an explicit read-only allowlist and conservative limits. Public archives can change or become unavailable.
+- Agent context excludes reference calls and reference answers; scores operate on previously saved artifacts.
+- A model answer plus successful MCP transport is not proof of astronomical correctness. Result truncation and possible archive drift are review conditions.
+- LLM-generated natural-language variations, comprehensive scientific statement verification, and offline MCP record/replay are **not yet implemented**.
+- AstroAKD-Bench does **not** claim authorship of the NASA IMPACT Astroquery MCP server or attribute its contributors to the benchmark.
+
+See [CHANGELOG.md](../../CHANGELOG.md) for cumulative release history and [docs/benchmark](./) for implementation details. **Every new release updates the root README, root CHANGELOG, package metadata, CLI examples, and relevant docs together.**

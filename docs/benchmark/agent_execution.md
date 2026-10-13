@@ -1,3 +1,5 @@
+> Historical 0.4.1 agent-execution documentation. In AstroAKD-Bench 0.5.0, evaluation is available with `python -m benchmark evaluate`; see [evaluation and scoring](evaluation_and_scoring.md). All examples below use the standalone benchmark repository and root-level `datasets/`.
+
 # AstroAKD-Bench 0.4.1 — Agent execution and MCP tracing
 
 `0.4.1` evaluates **how an independent agent behaves**, not whether its final answer
@@ -27,10 +29,10 @@ uv run fastmcp run server.py --transport http --host 127.0.0.1 --port 8000
 ```bash
 uv run python -m benchmark run \
   --agent echo --strict-accepted-020 --limit 5 \
-  --tasks benchmark/datasets/generated/synthetic_queries.jsonl \
-  --references benchmark/datasets/validated/reference_answers.jsonl \
-  --output benchmark/datasets/agent/echo_runs.jsonl \
-  --report benchmark/datasets/agent/echo_report.json
+  --tasks datasets/generated/synthetic_queries.jsonl \
+  --references datasets/validated/reference_answers.jsonl \
+  --output datasets/agent/echo_runs.jsonl \
+  --report datasets/agent/echo_report.json
 ```
 
 `echo` only echoes the question. It makes no archive calls, is intentionally
@@ -48,10 +50,10 @@ uv run --with openai python -m benchmark run \
   --agent openai --model gpt-4.1-mini \
   --strict-accepted-020 --limit 5 \
   --max-turns 8 --max-calls 12 \
-  --tasks benchmark/datasets/generated/synthetic_queries.jsonl \
-  --references benchmark/datasets/validated/reference_answers.jsonl \
-  --output benchmark/datasets/agent/openai_runs.jsonl \
-  --report benchmark/datasets/agent/openai_report.json
+  --tasks datasets/generated/synthetic_queries.jsonl \
+  --references datasets/validated/reference_answers.jsonl \
+  --output datasets/agent/openai_runs.jsonl \
+  --report datasets/agent/openai_report.json
 ```
 
 This option **uses the OpenAI API**, may incur model charges, and is not needed
@@ -88,8 +90,8 @@ For example, if your adapter is `my_astroakd.bench_adapter:run`:
 uv run python -m benchmark run \
   --agent external --adapter my_astroakd.bench_adapter:run \
   --strict-accepted-020 --limit 5 \
-  --output benchmark/datasets/agent/astroakd_runs.jsonl \
-  --report benchmark/datasets/agent/astroakd_report.json
+  --output datasets/agent/astroakd_runs.jsonl \
+  --report datasets/agent/astroakd_report.json
 ```
 
 ## Step 3: Resume the same experiment
@@ -100,8 +102,8 @@ Repeat the same arguments but replace `--limit 5` with `--resume`:
 uv run --with openai python -m benchmark run \
   --agent openai --model gpt-4.1-mini \
   --strict-accepted-020 --resume \
-  --output benchmark/datasets/agent/openai_runs.jsonl \
-  --report benchmark/datasets/agent/openai_report.json
+  --output datasets/agent/openai_runs.jsonl \
+  --report datasets/agent/openai_report.json
 ```
 
 The runner preserves journaled task results, even if an earlier task failed;
@@ -113,7 +115,7 @@ against the manifest before resuming. Outputs are not overwritten by default.
 ## Output files
 
 ```text
-benchmark/datasets/agent/
+datasets/agent/
   openai_runs.jsonl                      # completed runs, when all 50 processed
   openai_runs.jsonl.progress.jsonl       # fsynced results after each task
   openai_runs.jsonl.manifest.json        # immutable run configuration

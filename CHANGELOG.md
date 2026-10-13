@@ -1,19 +1,39 @@
 # AstroAKD-Bench Changelog
 
-All significant changes to the **AstroAKD-Bench subproject** are documented
-here. This history is separate from the upstream `astroquery-mcp` project's
+All significant changes to the **independent AstroAKD-Bench project** are documented
+here. This history is separate from the external `astroquery-mcp` project's
 releases: AstroAKD-Bench versions track benchmark capabilities, not versions
 of Astroquery or the MCP server.
 
-The current implemented benchmark version is **0.4.1**.
+The current implemented benchmark version is **0.5.0**.
 Dates are in UTC. Release statuses distinguish **offline implementation
 qualification** from **real laptop / live-service qualification**.
 
 ## [Unreleased]
 
-- No unreleased implementation changes are recorded.
-- Planned (not implemented): 0.5.0 automated evaluation and scientific
-  scoring, and 0.6.0 offline record/replay and benchmark packaging.
+- Planned: 0.6.0 offline MCP record/replay and expanded scientific claim verification.
+
+## [0.5.0] - 2026-10-13
+
+### Added
+
+- `AUTOMATED_EVALUATION_AND_SCORING`: new `benchmark/evaluator.py` and `benchmark evaluate` command score recorded agent tool selection, method selection, semantic parameter agreement, successful astronomical execution, reference-result agreement and a restricted set of answer claims. Scores are out of 100 and published as compact JSONL, CSV and JSON summary.
+- Distinct **technical evidence score** and `scientific_answer_gate=INDEPENDENT_REVIEW_REQUIRED`; no claim of comprehensive astrophysical accuracy. Report `REVIEW` for truncated Gaia-style payloads, row-count drift and unassessed claims, rather than silently granting accuracy credit.
+- MCP trace fingerprint checks, input coverage and hash validation, duplicate-ID rejection, no overwrite without `--replace`, and per-module aggregates.
+- `--json-format {compact,pretty}` on CLI commands for console and JSON summary reports; compact remains default. `.jsonl` remains canonical compact one-record-per-line. New `benchmark inspect` creates a bounded, readable view of `.jsonl` or `.json` without modifying input files.
+- Root-level `datasets/` layout for new generation, reference, agent and evaluation runs. Migration script refuses to merge existing roots and verifies frozen accepted dataset checksums. Accepted generated and reference files included in package with their original SHA-256.
+- Standalone-repository `pyproject.toml` with FastMCP dependency and optional OpenAI extra. Complete updated root `README.md`, `CHANGELOG.md` and `docs/benchmark/evaluation_and_scoring.md` included in archives.
+
+### Qualification
+
+- Offline: **PASS**; 94 tests passed and one optional live-server test skipped, including fourteen new 0.5.0 tests and the complete previous regression suite. Five-task historical 0.4.1 OpenAI trace scored against frozen 50-task reference set; mean technical evidence score **94/100**, three technical PASS and two REVIEW (including truncated Gaia). This is not a science-accuracy percentage.
+- Historical 0.4.1 laptop live pilot: **ACCEPT** for five-task execution/tracing (5/5 successful queries, zero rejected and zero failed MCP calls).
+- 0.5.0 real laptop end-to-end qualification: **PENDING**.
+
+### Boundaries
+
+- AstroAKD-Bench is a standalone repository built to work with the NASA IMPACT Astroquery MCP server; it is not included in that server's repository. No unrelated MCP-server contributor attributions are included.
+- Comprehensive scientific statement verification and MCP record/replay are future work, not 0.5.0 functionality.
 
 ## [0.4.1] - 2026-10-13
 
@@ -50,8 +70,7 @@ qualification** from **real laptop / live-service qualification**.
 - 0.4.0 laptop pilot: five `gpt-4.1-mini` tasks produced answers, but only
   three MCP executions succeeded; five calls were rejected, exposing the
   routing defects addressed here.
-- 0.4.1 live laptop OpenAI regression: **PENDING**. No live OpenAI API
-  calls or remote archive execution performed in the delivery environment.
+- 0.4.1 live laptop OpenAI regression: **ACCEPT** (five-task pilot, five successful MCP executions and zero rejected calls). Full 50-task agent run and scientific-answer correctness were not established.
 
 ### Limitations
 

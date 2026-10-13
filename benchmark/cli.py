@@ -17,20 +17,24 @@ from .errors import BenchmarkError
 from .generator import GenerationError, SUPPORTED_MODULES, generate, parse_modules, write_jsonl
 from .validator import ValidationError, validate, EXPECTED_ACCEPTED_020_SHA256
 from .agent_runner import AgentRunError, run_agents
+from .evaluator import EvaluationError, evaluate
+from .formatting import json_text, inspect_file
 
-DEFAULT_DATASET = Path("benchmark/datasets/generated/synthetic_queries.jsonl")
+DEFAULT_DATASET = Path("datasets/generated/synthetic_queries.jsonl")
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="astroakd-bench",
-        description="AstroAKD-Bench 0.4.1 local MCP, candidate generation, reference validation, agent tracing and recovery.",
+        description="AstroAKD-Bench 0.5.0 independent MCP benchmarking and deterministic scoring.",
     )
     parser.add_argument("--version", action="version", version=__version__)
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--mcp-url", default=os.environ.get("ASTROAKD_MCP_URL", DEFAULT_MCP_URL))
     common.add_argument("--timeout", type=float, default=180.0,
                         help="Timeout per MCP operation, seconds (default: 180)")
+    common.add_argument('--json-format', choices=('compact','pretty'), default='compact',
+                        help='JSON stdout and summary-report rendering (default: compact). JSONL stays one-record-per-line.')
     commands = parser.add_subparsers(dest="command", required=True)
 
     diag = commands.add_parser("doctor", parents=[common],
@@ -70,9 +74,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="Run accepted candidate calls through live MCP, retaining all outcomes")
     validation.add_argument("--input", type=Path, default=DEFAULT_DATASET,
         help="0.2.0 candidate JSONL dataset")
-    validation.add_argument("--output", type=Path, default=Path("benchmark/datasets/validated/reference_answers.jsonl"),
+    validation.add_argument("--output", type=Path, default=Path("datasets/validated/reference_answers.jsonl"),
         help="Validated reference JSONL destination")
-    validation.add_argument("--report", type=Path, default=Path("benchmark/datasets/validated/validation_report.json"),
+    validation.add_argument("--report", type=Path, default=Path("datasets/validated/validation_report.json"),
         help="Summary report path")
     validation.add_argument("--attempts", type=int, default=2,
         help="Maximum attempts per reference query (default: 2)")
@@ -90,17 +94,17 @@ def build_parser() -> argparse.ArgumentParser:
     validation.add_argument("--strict-accepted-020", action="store_true",
         help="Require SHA256 of the formally accepted 50-task seed=42 dataset")
     run = commands.add_parser("run", parents=[common],
-        help="Execute agent with question-derived archive routing, MCP traces and query evidence checks (no scientific scoring)")
+        help="Execute agent with question-derived routing and auditable MCP traces")
     run.add_argument("--tasks", type=Path, default=DEFAULT_DATASET,
         help="0.2.0 generated candidate JSONL")
     run.add_argument("--references", type=Path,
-        default=Path("benchmark/datasets/validated/reference_answers.jsonl"),
+        default=Path("datasets/validated/reference_answers.jsonl"),
         help="0.3.0 accepted reference JSONL (not passed to the agent)")
     run.add_argument("--output", type=Path,
-        default=Path("benchmark/datasets/agent/agent_runs.jsonl"),
+        default=Path("datasets/agent/agent_runs.jsonl"),
         help="Agent results and tool traces JSONL")
     run.add_argument("--report", type=Path,
-        default=Path("benchmark/datasets/agent/run_report.json"))
+        default=Path("datasets/agent/run_report.json"))
     run.add_argument("--agent", choices=("openai", "external", "echo"), default="openai",
         help="openai=real optional LLM, external=user adapter, echo=harness check ONLY")
     run.add_argument("--model", default="gpt-4.1-mini", help="OpenAI model name")
@@ -114,10 +118,31 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--replace", action="store_true")
     run.add_argument("--strict-accepted-020", action="store_true",
         help="Require frozen accepted 50-task candidate dataset")
+    score = commands.add_parser('evaluate', parents=[common],
+        help='Score recorded agent traces against validated reference responses; no API calls')
+    score.add_argument('--tasks', type=Path, default=DEFAULT_DATASET)
+    score.add_argument('--references', type=Path, default=Path('datasets/validated/reference_answers.jsonl'))
+    score.add_argument('--runs', type=Path, default=Path('datasets/agent/openai_041_runs.jsonl.progress.jsonl'))
+    score.add_argument('--output', type=Path, default=Path('datasets/evaluation/task_scores.jsonl'))
+    score.add_argument('--report', type=Path, default=Path('datasets/evaluation/evaluation_report.json'))
+    score.add_argument('--csv', type=Path, default=Path('datasets/evaluation/task_scores.csv'))
+    score.add_argument('--strict-accepted-020', action='store_true')
+    score.add_argument('--replace', action='store_true')
+    inspect = commands.add_parser('inspect', parents=[common],
+        help='Render a bounded JSONL sample or a JSON report for inspection')
+    inspect.add_argument('--input', required=True, type=Path)
+    inspect.add_argument('--limit', type=int, default=3)
+    inspect.add_argument('--output', type=Path)
     return parser
 
 
 async def _execute(args: argparse.Namespace) -> dict[str, Any]:
+    if args.command == 'inspect':
+        return inspect_file(args.input, args.limit)
+    if args.command == 'evaluate':
+        return evaluate(args.tasks,args.references,args.runs,args.output,args.report,
+                        csv_path=args.csv,strict_accepted_020=args.strict_accepted_020,
+                        json_format=args.json_format,replace=args.replace)
     if args.command == "doctor":
         return await doctor(
             args.mcp_url, timeout=args.timeout, fast=args.fast,
@@ -130,7 +155,7 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
             max_rows=args.max_rows, max_response_bytes=args.max_response_bytes,
             limit=args.limit, resume=args.resume, replace=args.replace,
             strict_sha256=(EXPECTED_ACCEPTED_020_SHA256
-                           if args.strict_accepted_020 else None),
+                           if args.strict_accepted_020 else None), json_format=args.json_format,
         )
     if args.command == "run":
         return await run_agents(
@@ -140,7 +165,7 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
             max_calls=args.max_calls, max_tool_bytes=args.max_tool_bytes,
             task_timeout=args.task_timeout, limit=args.limit,
             resume=args.resume, replace=args.replace,
-            strict_accepted_020=args.strict_accepted_020,
+            strict_accepted_020=args.strict_accepted_020, json_format=args.json_format,
         )
     if args.command == "generate":
         if args.output.exists() and not args.replace:
@@ -175,13 +200,13 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         payload = asyncio.run(_execute(args))
-    except (BenchmarkError, GenerationError, ValidationError, AgentRunError, ValueError, OSError) as exc:
+    except (BenchmarkError, GenerationError, ValidationError, AgentRunError, EvaluationError, ValueError, OSError) as exc:
         payload = {"status": "FAIL", "command": args.command,
                    "endpoint": args.mcp_url, "error": {"type": type(exc).__name__,
                    "message": str(exc)}}
-    output = json.dumps(payload, indent=2, ensure_ascii=False, allow_nan=False)
+    output = json_text(payload, args.json_format)
     print(output)
-    report_destination = (None if args.command in {"validate", "run"} else
+    report_destination = (None if args.command in {"validate", "run", "evaluate"} else
                           args.report if args.command == "generate" else args.output)
     if report_destination is not None:
         try:
@@ -190,7 +215,7 @@ def main(argv: list[str] | None = None) -> int:
         except OSError as exc:
             print(f"Could not save report {report_destination}: {exc}", file=sys.stderr)
             return 2
-    return 0 if payload.get("status") in {"PASS", "PARTIAL", "COMPLETE"} else 1
+    return 0 if payload.get("status") in {"PASS", "PARTIAL", "COMPLETE"} or (args.command == "inspect" and "data" in payload or args.command == "inspect" and "records" in payload) else 1
 
 
 if __name__ == "__main__":

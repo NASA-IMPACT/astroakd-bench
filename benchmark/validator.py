@@ -45,16 +45,17 @@ def digest(value: Any) -> str:
     return hashlib.sha256(json_bytes(value)).hexdigest()
 
 
-def atomic_json(path: Path, value: Any, *, replace: bool = True) -> None:
+def atomic_json(path: Path, value: Any, *, replace: bool = True, style: str = 'compact') -> None:
     if path.exists() and not replace:
         raise ValidationError(f"Output already exists: {path}")
+    from .formatting import json_text
     path.parent.mkdir(parents=True, exist_ok=True)
     temp = None
     try:
         with tempfile.NamedTemporaryFile(mode="wb", dir=path.parent, prefix=".astroakd-",
                                          suffix=".tmp", delete=False) as stream:
             temp = Path(stream.name)
-            stream.write(json.dumps(value, indent=2, ensure_ascii=False, allow_nan=False).encode() + b"\n")
+            stream.write(json_text(value, style).encode("utf-8") + b"\n")
             stream.flush()
             os.fsync(stream.fileno())
         if path.exists() and not replace:
@@ -383,7 +384,7 @@ async def validate(dataset: Path, output: Path, report_path: Path, *,
                    attempts: int = 2, delay: float = 2.0, max_rows: int = 20,
                    max_response_bytes: int = 8 * 1024 * 1024,
                    limit: int | None = None, resume: bool = False,
-                   replace: bool = False, strict_sha256: str | None = None,
+                   replace: bool = False, strict_sha256: str | None = None, json_format: str = 'compact',
                    session_factory: Callable[[str], Any] | None = None,
                    sleep: Callable[[float], Any] = asyncio.sleep,
                    ) -> dict[str, Any]:
@@ -490,5 +491,5 @@ async def validate(dataset: Path, output: Path, report_path: Path, *,
     if all_done:
         result["reference_answers_sha256"] = atomic_jsonl(output, ordered)
         result["output"] = str(output)
-    atomic_json(report_path, result)
+    atomic_json(report_path, result, style=json_format)
     return result

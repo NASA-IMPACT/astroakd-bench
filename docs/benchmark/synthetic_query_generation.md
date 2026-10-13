@@ -30,8 +30,8 @@ uv run python -m benchmark generate \
   --seed 42 \
   --modules simbad,mast,heasarc,gaia,vizier \
   --timeout 180 \
-  --output benchmark/datasets/generated/synthetic_queries.jsonl \
-  --report benchmark/datasets/generated/generation_report.json
+  --output datasets/generated/synthetic_queries.jsonl \
+  --report datasets/generated/generation_report.json
 ```
 
 For a subsequent run targeting the same output, pass `--replace` explicitly.
@@ -43,8 +43,8 @@ supported astroquery classes when requested.
 To inspect generated output:
 
 ```bash
-uv run python -m json.tool benchmark/datasets/generated/generation_report.json
-wc -l benchmark/datasets/generated/synthetic_queries.jsonl
+uv run python -m json.tool datasets/generated/generation_report.json
+wc -l datasets/generated/synthetic_queries.jsonl
 uv run python -m unittest discover -s benchmark/tests -v
 ```
 
