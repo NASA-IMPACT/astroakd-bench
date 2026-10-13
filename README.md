@@ -4,7 +4,7 @@
 
 AstroAKD-Bench is an **independent Python repository** for developing and evaluating agents that discover astronomical data through the [NASA IMPACT Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp). That server is an **external service**, not this repository or the owner of this benchmark. AstroAKD-Bench generates natural-language astronomy tasks, executes reference archive queries via MCP, collects independent agent traces, and scores observable execution and a bounded set of claims.
 
-**Current version: 0.6.2 — READABLE_DATASET_EXPORT_AND_VALIDATION_PROGRESS.** The benchmark works on a local laptop. The server normally runs at `http://127.0.0.1:8000/mcp`; only the agent execution mode `--agent openai` needs the OpenAI API. No OpenAI key is needed to generate, validate, inspect, or score saved runs.
+**Current version: 0.6.3 — QUERY_DIVERSITY_AND_DEDUPLICATION_CLOSURE.** The benchmark works on a local laptop. The server normally runs at `http://127.0.0.1:8000/mcp`; only the agent execution mode `--agent openai` needs the OpenAI API. No OpenAI key is needed to generate, validate, inspect, or score saved runs.
 
 ## Status and scope
 
@@ -20,6 +20,7 @@ AstroAKD-Bench is an **independent Python repository** for developing and evalua
 | **0.6.0 — REPLAY_AND_BENCHMARK_RELEASE** | Frozen offline MCP fixtures, live recording and reproducible replay | **5-task laptop live-record/replay ACCEPT; generic reference replay found an ICRS mismatch** |
 | **0.6.1 — SEMANTIC_REPLAY_ARGUMENT_CANONICALIZATION** | ICRS default-aware fixture lookup and public Python workflow API | **ACCEPT** (five-task laptop replay) |
 | **0.6.2 — READABLE_DATASET_EXPORT_AND_VALIDATION_PROGRESS** | Optional query/reference CSV and pretty JSON exports, progress messages and bounded validation waits | **Offline qualification; laptop live validation pending** |
+| **0.6.3 — QUERY_DIVERSITY_AND_DEDUPLICATION_CLOSURE** | Default archive-target uniqueness, optional global-target uniqueness, answer-oriented prompts, offline duplicate-return audit | **Offline qualification PASS; live laptop qualification pending** |
 
 **What the scores mean.** The weighted 0–100 **technical evidence score** assesses archive/function selection, argument alignment, successful execution, reference-result consistency, and *limited* automated answer-claim checks. It is **not a general scientific answer-accuracy score**. Truncated responses, changing public archives, and unverified scientific assertions are explicitly flagged for independent review. Reference acceptance establishes structurally valid MCP data, not independently proven astrophysical ground truth.
 
@@ -39,6 +40,7 @@ AstroAKD-Bench/                         # THIS repository
 │   ├── formatting.py
 │   ├── replay.py                         # Semantic ICRS-aware offline lookup
 │   ├── api.py                            # Reusable Python workflow facade
+│   ├── diversity.py                      # Diversity and returned-data audit
 │   └── tests/
 ├── datasets/                            # Root-level output/input directory
 │   ├── generated/
@@ -55,6 +57,87 @@ astroquery-mcp/                         # SEPARATE NASA IMPACT MCP service
 ```
 
 The release includes the accepted generated and validated datasets at **root-level `datasets/`**. No `benchmark/datasets/` path is used for new runs. The Python `benchmark/` directory contains implementation code only. The original accepted dataset bytes and SHA-256 hashes are unchanged by this move.
+
+## Diversity-aware task generation (0.6.3)
+
+Use `generate` for new synthetic tasks. **Do not overwrite the frozen accepted
+seed=42 baseline or the legacy seed=123 dataset** when starting a new study.
+The generator now uses `--uniqueness archive-target` by default: each archive
+receives **distinct astronomical targets before any possible reuse** (in fact
+repeated archive-target pairs are rejected altogether). The `--uniqueness
+global-target` alternative prevents target reuse across *all* archives.
+
+The bundled seed pool has **22 targets**. Fifty questions are possible under
+`archive-target` with ten per archive, but **global-target uniqueness for
+50 questions will fail explicitly** until at least 50 unique `SkyTarget`
+objects are provided via the Python API.
+
+```bash
+uv run python -m benchmark generate \
+  --count 50 --seed 123 \
+  --modules simbad,mast,heasarc,gaia,vizier \
+  --uniqueness archive-target --question-style answer-oriented \
+  --output datasets/generated/diverse_063.jsonl \
+  --csv-output datasets/generated/diverse_063.csv \
+  --pretty-output datasets/generated/diverse_063_pretty.json \
+  --report datasets/generated/diverse_063_report.json \
+  --json-format pretty
+```
+
+**Deduplication protections:** normalized question text, identical MCP calls,
+reused archive-target combinations and (for `global-target`) repeated names
+across modules all cause candidates to be skipped; missing capacity raises a
+specific `GenerationError` rather than silently padding with radius variants.
+Custom seed names and coordinates must also be unique. Selection is deterministic
+for a given seed, modules, target pool and MCP function signatures.
+
+**Answer-oriented tasks** draw on observed fields of SIMBAD, MAST, HEASARC,
+Gaia and the two supported VizieR catalogs: identifiers, coordinates,
+instruments, proposal IDs, exposure/duration, astrometry and photometry.
+The design draws on the question/expected-answer structure in the supplied
+*Astro Benchmark V1.xlsx*. It does **not** copy workbook expected answers or
+claim that the new questions have verified gold answers. The `intent` and
+`answer_spec.expected_columns` fields specify what a later validator/evaluator
+should check. Only fields actually returned by a given archive/catalog can
+support an answer. `--question-style discovery` retains the older general
+"search archive" style for comparison, with the new uniqueness policy still on.
+
+**Audit existing tasks without a server or API key:**
+
+```bash
+uv run python -m benchmark audit-diversity \
+  --input datasets/generated/diverse_063.jsonl \
+  --report datasets/generated/diverse_063_audit.json \
+  --json-format pretty
+```
+
+**Audit previously validated responses**, without requerying archives:
+
+```bash
+uv run python -m benchmark audit-diversity \
+  --input datasets/generated/synthetic_queries.jsonl \
+  --references datasets/validated/reference_answers.jsonl \
+  --report datasets/validated/reference_diversity_audit.json \
+  --json-format pretty
+```
+
+The audit separates duplicate wording, identical calls, reused targets and
+**identical returned table rows**. It excludes empty tables from return-data
+duplicate counts. Exact equality of the *returned subset* (especially a
+truncated MAST response) is an advisory duplication signal, not proof that
+underlying complete catalogs are identical. Cross-version reference datasets
+with unchanged calls but changed input file hashes are flagged as **not
+byte-exact reference provenance**. The `validate` summary now includes
+`returned_data_redundancy`, a separate `diversity_gate`, and a summary of
+answer-field availability; structural `quality_gate` is not silently conflated
+with query diversity.
+
+**Reusable Python API:** `AstroAKDBench.generate_queries(...,
+uniqueness="archive-target", question_style="answer-oriented")` and
+`AstroAKDBench.audit_diversity(tasks=..., references=...)`. For 50 globally
+unique objects, pass a tuple of 50 or more scientifically verified custom
+`SkyTarget` seeds. See [Diversity and deduplication](docs/benchmark/query_diversity_0_6_3.md)
+and [Python API](docs/benchmark/python_api.md).
 
 ## Install and start
 

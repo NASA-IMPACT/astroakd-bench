@@ -1,3 +1,5 @@
+> **Version 0.6.3:** For the current diversity-safe workflow and answer-oriented task styles, see [query_diversity_0_6_3.md](query_diversity_0_6_3.md). Legacy seed=42 artifacts below are frozen and must not be regenerated over.
+
 # AstroAKD-Bench 0.2.0 — SYNTHETIC_QUERY_GENERATION
 
 ## Scope and non-goals

@@ -1,3 +1,5 @@
+> **Version 0.6.3:** The validator now reports identical *returned subsets* and answer-column availability in a separate diversity audit. See [query_diversity_0_6_3.md](query_diversity_0_6_3.md).
+
 # AstroAKD-Bench 0.3.0 — Reference validation
 
 This milestone executes the **accepted, unmodified 0.2.0 candidate dataset** through the

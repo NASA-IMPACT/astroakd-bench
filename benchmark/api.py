@@ -57,6 +57,8 @@ class AstroAKDBench:
                                csv_output: str | Path | None = None,
                                pretty_output: str | Path | None = None,
                                targets: tuple[SkyTarget, ...] | None = None,
+                               uniqueness: str = "archive-target",
+                               question_style: str = "answer-oriented",
                                ) -> dict[str, Any]:
         """Discover read-only signatures and save reproducible candidate JSONL."""
         destination = self.path(output) if output is not None else self.tasks_path
@@ -75,7 +77,8 @@ class AstroAKDBench:
         candidates, summary = await generate(self.mcp_url, count=count, seed=seed,
                                              modules=parse_modules(modules),
                                              timeout=self.timeout, session_factory=session_factory,
-                                             targets=targets)
+                                             targets=targets, uniqueness=uniqueness,
+                                             question_style=question_style)
         summary['dataset_sha256'] = write_jsonl(destination, candidates, replace=replace)
         summary['output'] = str(destination)
         save_views(candidates, pretty=pretty_path, csv_path=csv_path,
@@ -157,6 +160,14 @@ class AstroAKDBench:
                         pretty_output=self.path(pretty_output) if pretty_output is not None else None,
                         strict_accepted_020=strict_accepted_020, replace=replace,
                         json_format=json_format)
+
+    def audit_diversity(self, *, tasks: str | Path | None = None,
+                        references: str | Path | None = None) -> dict[str, Any]:
+        """Audit repeated questions, archive-target combinations and returned tables offline."""
+        from .diversity import audit
+        cases = self.load_records(tasks if tasks is not None else self.tasks_path)
+        refs = self.load_records(references) if references is not None else None
+        return audit(cases, refs)
 
     def build_fixtures(self, *, tasks: str | Path | None = None,
                        references: str | Path | None = None,

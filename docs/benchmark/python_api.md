@@ -1,3 +1,5 @@
+> **Version 0.6.3:** `AstroAKDBench.generate_queries` accepts `uniqueness` and `question_style`; `AstroAKDBench.audit_diversity` audits saved tasks and responses entirely offline. See [query_diversity_0_6_3.md](query_diversity_0_6_3.md).
+
 # AstroAKD-Bench reusable Python API (0.6.1)
 
 AstroAKD-Bench is an **independent** synthetic astronomical query and

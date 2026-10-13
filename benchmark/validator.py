@@ -488,7 +488,7 @@ async def validate(dataset: Path, output: Path, report_path: Path, *,
         if replace:
             for path in (output, report_path, journal, manifest):
                 path.unlink(missing_ok=True)
-        atomic_json(manifest, {"milestone": "0.3.0 — REFERENCE_VALIDATION",
+        atomic_json(manifest, {"milestone": "0.6.3 — QUERY_DIVERSITY_AND_DEDUPLICATION_CLOSURE",
                                "created_utc": now_utc(), "context": context})
     if remaining:
         for index, task in enumerate(remaining):
@@ -516,7 +516,7 @@ async def validate(dataset: Path, output: Path, report_path: Path, *,
                                      if item["module"] == module)) for module in modules}
     all_done = len(ordered) == len(records)
     result: dict[str, Any] = {
-        "milestone": "0.3.0 — REFERENCE_VALIDATION", "benchmark_version": __version__,
+        "milestone": "0.6.3 — QUERY_DIVERSITY_AND_DEDUPLICATION_CLOSURE", "benchmark_version": __version__,
         "timestamp_utc": now_utc(), "endpoint": url,
         "input": str(dataset), "input_dataset_sha256": dataset_hash,
         "discovered_schema_sha256": schema_hash,
@@ -532,6 +532,19 @@ async def validate(dataset: Path, output: Path, report_path: Path, *,
                   "Only MAST query_region currently honors max_rows at the MCP server level.",
                   "Every attempted task is journaled, including errors and empty results."],
     }
+    # Advisory data-redundancy audit: do not treat identical returned subsets
+    # as independently verified identical astrophysical selections.
+    from .diversity import analyze_reference_redundancy, analyze_answerability
+    result["returned_data_redundancy"] = analyze_reference_redundancy(ordered, records)
+    result["answerability_advisory"] = {
+        key: value for key, value in analyze_answerability(records, ordered).items()
+        if key != "checks"
+    }
+    result["diversity_gate"] = (
+        "REVIEW" if result["returned_data_redundancy"]["redundant_returned_table_records"]
+        else "PASS"
+    )
+    result["notes"].append("Diversity REVIEW flags identical returned data subsets, not necessarily identical complete archive searches.")
     # Secondary human-readable views also work for --limit pilot runs. They are
     # rewritten on --resume, while the canonical JSONL is published on completion.
     if pretty_output is not None or csv_output is not None:

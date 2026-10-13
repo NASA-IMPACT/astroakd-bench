@@ -26,7 +26,7 @@ DEFAULT_DATASET = Path("datasets/generated/synthetic_queries.jsonl")
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="astroakd-bench",
-        description="AstroAKD-Bench 0.6.2 generation, readable exports, progress and scoring.",
+        description="AstroAKD-Bench 0.6.3 diversity-aware generation, auditing and scoring.",
     )
     parser.add_argument("--version", action="version", version=__version__)
     common = argparse.ArgumentParser(add_help=False)
@@ -72,6 +72,10 @@ def build_parser() -> argparse.ArgumentParser:
                      help="Optional human-readable CSV of all generated query fields")
     gen.add_argument("--pretty-output", type=Path,
                      help="Optional indented JSON array (.json) of all candidate records")
+    gen.add_argument("--uniqueness", choices=("archive-target", "global-target"),
+                     default="archive-target", help="Deduplication policy; default archive-target")
+    gen.add_argument("--question-style", choices=("answer-oriented", "discovery"),
+                     default="answer-oriented", help="Use answer-oriented archive field prompts by default")
     gen.add_argument("--replace", action="store_true", help="Overwrite existing dataset and exports")
     gen.add_argument("--report", type=Path, help="Save JSON generation summary separately")
     validation = commands.add_parser("validate", parents=[common],
@@ -132,6 +136,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Replay fixture JSON file; required for record and replay modes")
     run.add_argument("--strict-accepted-020", action="store_true",
         help="Require frozen accepted 50-task candidate dataset")
+    audit_parser = commands.add_parser('audit-diversity', parents=[common],
+        help='Offline candidate and optional reference-result duplicate audit; no MCP requests')
+    audit_parser.add_argument('--input', type=Path, default=DEFAULT_DATASET)
+    audit_parser.add_argument('--references', type=Path, help='Validated JSONL or partial .progress.jsonl')
+    audit_parser.add_argument('--report', type=Path, help='Optional JSON report destination')
     score = commands.add_parser('evaluate', parents=[common],
         help='Score recorded agent traces against validated reference responses; no API calls')
     score.add_argument('--tasks', type=Path, default=DEFAULT_DATASET)
@@ -177,6 +186,12 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
             args.mcp_url, timeout=args.timeout, fast=args.fast,
             smoke=args.smoke, object_name=args.object,
         )
+    if args.command == "audit-diversity":
+        from .validator import load_jsonl
+        from .diversity import audit
+        tasks, candidate_sha = load_jsonl(args.input)
+        references = load_jsonl(args.references, max_bytes=512 * 1024 * 1024)[0] if args.references else None
+        return audit(tasks, references, candidate_sha256=candidate_sha)
     if args.command == "validate":
         from .exports import check_destinations
         journal = args.output.with_name(args.output.name + ".progress.jsonl")
@@ -217,7 +232,8 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
         modules = parse_modules(args.modules)
         candidates, summary = await generate(
             args.mcp_url, count=args.count, seed=args.seed, modules=modules,
-            timeout=args.timeout,
+            timeout=args.timeout, uniqueness=args.uniqueness,
+            question_style=args.question_style,
         )
         summary["dataset_sha256"] = write_jsonl(args.output, candidates, replace=args.replace)
         summary["output"] = str(args.output)
@@ -257,7 +273,7 @@ def main(argv: list[str] | None = None) -> int:
     output = json_text(payload, args.json_format)
     print(output)
     report_destination = (None if args.command in {"validate", "run", "evaluate", "build-fixtures"} else
-                          args.report if args.command == "generate" else args.output)
+                          args.report if args.command in {"generate", "audit-diversity"} else args.output)
     if report_destination is not None:
         try:
             report_destination.parent.mkdir(parents=True, exist_ok=True)
@@ -265,7 +281,7 @@ def main(argv: list[str] | None = None) -> int:
         except OSError as exc:
             print(f"Could not save report {report_destination}: {exc}", file=sys.stderr)
             return 2
-    return 0 if payload.get("status") in {"PASS", "PARTIAL", "COMPLETE"} or (args.command == "inspect" and "data" in payload or args.command == "inspect" and "records" in payload) else 1
+    return 0 if payload.get("status") in {"PASS", "PARTIAL", "COMPLETE", "REVIEW"} or (args.command == "inspect" and "data" in payload or args.command == "inspect" and "records" in payload) else 1
 
 
 if __name__ == "__main__":

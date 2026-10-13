@@ -5,13 +5,60 @@ here. This history is separate from the external `astroquery-mcp` project's
 releases: AstroAKD-Bench versions track benchmark capabilities, not versions
 of Astroquery or the MCP server.
 
-The current implemented benchmark version is **0.6.2**.
+The current implemented benchmark version is **0.6.3**.
 Dates are in UTC. Release statuses distinguish **offline implementation
 qualification** from **real laptop / live-service qualification**.
 
 ## [Unreleased]
 
 - Planned after 0.6.1: broader scientific claim verification, multi-archive workflows and frozen evaluation suites.
+
+## [0.6.3] - 2026-10-13
+
+### Added and changed
+
+- **QUERY_DIVERSITY_AND_DEDUPLICATION_CLOSURE:** Default `generate
+  --uniqueness archive-target` prevents repeated source/target pairs within
+  each astronomical archive; `--uniqueness global-target` prevents reuse
+  across all archives. Both enforce distinct normalized question strings and
+  unique exact MCP calls. Deterministic round-robin archive balance retained.
+- Explicit seed-pool feasibility errors: the built-in 22-object seed pool
+  supports 50 archive-target-unique questions across five archives but cannot
+  supply 50 globally unique targets. Custom `SkyTarget` coordinates and names
+  must be unique; strict policy failures never trigger archive queries.
+- `--question-style answer-oriented` (new default), using observationally
+  documented candidate answer fields and archive-specific question intents
+  modeled on the user's *Astro Benchmark V1.xlsx*. Each task carries
+  `intent` and an **unverified** `answer_spec`; `--question-style discovery`
+  retains general historical search phrasing. No ungrounded gold answers.
+- `benchmark/diversity.py` and `audit-diversity` CLI: offline candidate
+  deduplication audit, exact returned table-data hashing, and advisory
+  answer-column availability checks, including distinct field contracts for
+  VizieR II/246 versus I/355 and HEASARC xmmmaster versus chanmaster.
+- Validation reports now include `returned_data_redundancy`,
+  `answerability_advisory` summary, and separate `diversity_gate`; empty
+  results and cross-archive similarities are not incorrectly counted as
+  duplicate astronomical records. Saved reference JSONL is unchanged.
+- Reusable `AstroAKDBench.generate_queries` selection options and
+  `AstroAKDBench.audit_diversity` API, updated README, usage docs, source
+  tests, qualification report and conversation handoff summary.
+
+### Scientific qualification and preserved baselines
+
+- Historical uploaded seed=123 dataset: 50 distinct strings, 50 distinct
+  exact MCP calls, but **28 reused archive-target pairs**; conservative
+  0.6.3 returned table audit found 10 redundant nonempty returned subsets
+  (five groups). Its 50 structurally accepted references are **not**
+  independent astrophysical gold and came from a different candidate-file
+  hash than the later 0.6.2 generation, despite equal calls.
+- Version 0.6.3 implementation and offline regression tests passed; live
+  MCP regeneration and validation of the new diverse batch remain pending.
+- Frozen accepted seed=42 candidate SHA-256
+  `e6de68eedf2b38ea08dd684cac678edc80ee23abe51b7189f0adfb5e369c1fe9`
+  and reference SHA-256
+  `1bfe4028f5533d3d7a1e5756bb26809e7e359f6a7640059ca07dcb295855da87`
+  remain untouched, as does the replay-fixture fingerprint
+  `31a8ae8644765e6a7a00995883415e32f4412fd9ce7669bf760515567b3522fe`.
 
 ## [0.6.2] - 2026-10-13
 

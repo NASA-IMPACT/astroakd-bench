@@ -17,12 +17,12 @@ from .validator import ValidationError, atomic_json
 
 
 CANDIDATE_COLUMNS = (
-    "task_id", "module", "category", "target", "question", "ra_deg", "dec_deg",
+    "task_id", "module", "category", "intent", "target", "question", "expected_answer_type", "expected_columns", "answer_verification_status", "ra_deg", "dec_deg",
     "radius_arcmin", "catalog", "mcp_tool", "mcp_function", "mcp_parameters_json",
     "validation_status",
 )
 REFERENCE_COLUMNS = (
-    "task_id", "module", "question", "target", "disposition", "reason",
+    "task_id", "module", "question", "target", "intent", "expected_columns", "disposition", "reason",
     "returned_rows", "reported_total_rows", "table_count", "truncated",
     "response_bytes", "response_sha256", "attempt_count", "error_message",
     "reference_call_json",
@@ -66,8 +66,12 @@ def candidate_csv_record(record: dict[str, Any]) -> dict[str, Any]:
     center = constraints.get("center_icrs", {})
     args = record.get("reference_call", {}).get("arguments", {})
     return dict(task_id=record.get("id"), module=record.get("module"),
-                category=record.get("category"), target=record.get("target"),
-                question=record.get("question"), ra_deg=center.get("ra_deg", ""),
+                category=record.get("category"), intent=record.get("intent", ""), target=record.get("target"),
+                question=record.get("question"),
+                expected_answer_type=record.get("answer_spec", {}).get("answer_type", ""),
+                expected_columns=";".join(record.get("answer_spec", {}).get("expected_columns", [])),
+                answer_verification_status=record.get("answer_spec", {}).get("expected_answer_status", ""),
+                ra_deg=center.get("ra_deg", ""),
                 dec_deg=center.get("dec_deg", ""),
                 radius_arcmin=constraints.get("radius", {}).get("value", ""),
                 catalog=constraints.get("catalog", ""),
@@ -83,6 +87,8 @@ def reference_csv_record(record: dict[str, Any], task: dict[str, Any]) -> dict[s
     last = attempts[-1] if attempts else {}
     return dict(task_id=record.get("task_id"), module=record.get("module"),
                 question=task.get("question"), target=task.get("target"),
+                intent=task.get("intent", ""),
+                expected_columns=";".join(task.get("answer_spec", {}).get("expected_columns", [])),
                 disposition=record.get("disposition"),
                 reason=record.get("evaluation", {}).get("reason", ""),
                 returned_rows=evidence.get("returned_rows", ""),

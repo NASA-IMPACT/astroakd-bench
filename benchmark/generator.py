@@ -24,6 +24,40 @@ from .seeds import (TARGETS, RADII_ARCMIN, HEASARC_CATALOGS,
 
 
 SUPPORTED_MODULES = ("simbad", "mast", "heasarc", "gaia", "vizier")
+UNIQUENESS_POLICIES = ("archive-target", "global-target")
+QUESTION_STYLES = ("answer-oriented", "discovery")
+# These fields were seen in user-supplied 0.6.1 MCP reference tables.
+# They are candidate answer fields, NOT verified expected-answer values.
+INTENT_SPECS = {
+    "simbad": (
+        ("main_identifier", ("main_id",), "What main identifier does SIMBAD return for {target}?"),
+        ("icrs_position", ("ra", "dec"), "What ICRS coordinates does SIMBAD report for {target}?"),
+        ("matched_identifier", ("matched_id",), "Which identifier matches {target} in SIMBAD?"),
+    ),
+    "mast": (
+        ("observation_ids", ("obs_id",), "Which observation IDs are returned by MAST within {radius} arcmin of {target} at {center}?"),
+        ("instruments", ("instrument_name",), "Which instruments appear in the MAST observations within {radius} arcmin of {target} at {center}?"),
+        ("proposal_ids", ("proposal_id",), "Which proposal IDs are listed by MAST within {radius} arcmin of {target} at {center}?"),
+        ("exposure_times", ("t_exptime",), "What exposure times are listed in the MAST observations within {radius} arcmin of {target} at {center}?"),
+    ),
+    "heasarc": (
+        ("observation_ids", ("obsid",), "Which observation IDs occur in the HEASARC {catalog} query within {radius} arcmin of {target} at {center}?"),
+        ("observation_status", ("status",), "What observation statuses does HEASARC {catalog} report within {radius} arcmin of {target} at {center}?"),
+        ("observation_duration", ("duration",), "What durations are listed in HEASARC {catalog} within {radius} arcmin of {target} at {center}?"),
+    ),
+    "gaia": (
+        ("gaia_source_ids", ("source_id",), "Which Gaia source IDs are returned within {radius} arcmin of {target} at {center}?"),
+        ("gaia_parallax", ("parallax",), "What parallaxes are listed for Gaia sources within {radius} arcmin of {target} at {center}?"),
+        ("gaia_proper_motion", ("pmra", "pmdec"), "What proper motions are reported for Gaia sources within {radius} arcmin of {target} at {center}?"),
+        ("gaia_g_magnitude", ("phot_g_mean_mag",), "What Gaia G-band magnitudes are listed within {radius} arcmin of {target} at {center}?"),
+    ),
+    "vizier": (
+        ("catalog_source_ids", ("2MASS",), "Which source identifiers appear in VizieR catalog {catalog} within {radius} arcmin of {target} at {center}?"),
+        ("catalog_positions", ("RAJ2000", "DEJ2000"), "What source coordinates does VizieR catalog {catalog} list within {radius} arcmin of {target} at {center}?"),
+        ("catalog_photometry", ("Jmag", "Hmag", "Kmag"), "What J, H, and K magnitudes are listed in VizieR catalog {catalog} within {radius} arcmin of {target} at {center}?"),
+    ),
+}
+
 # A strict whitelist of read-only operations. No dynamically discovered method
 # can extend this list, even if it begins with query_/get_/list_.
 SAFE_METHODS: dict[str, tuple[str, ...]] = {
@@ -213,8 +247,17 @@ def _description(module: str, target: SkyTarget, radius: int, catalog: str | Non
     raise GenerationError(f"Unknown module: {module}")
 
 
+VIZIER_I355_INTENTS = (
+    ("catalog_source_ids", ("Source",), "Which Gaia DR3 source identifiers appear in VizieR catalog {catalog} within {radius} arcmin of {target} at {center}?"),
+    ("catalog_positions", ("RA_ICRS", "DE_ICRS"), "What source coordinates are listed in VizieR catalog {catalog} within {radius} arcmin of {target} at {center}?"),
+    ("catalog_photometry", ("Gmag",), "What Gaia G magnitudes are listed by VizieR catalog {catalog} within {radius} arcmin of {target} at {center}?"),
+    ("catalog_parallax", ("Plx",), "What parallaxes are listed by VizieR catalog {catalog} within {radius} arcmin of {target} at {center}?"),
+)
+
+
 def _candidate(module: str, bound: BoundMethod, target: SkyTarget,
-               radius: int, catalog: str | None) -> dict[str, Any]:
+               radius: int, catalog: str | None, *,
+               question_style: str = "answer-oriented", intent_index: int = 0) -> dict[str, Any]:
     semantic = bound.semantic_parameters
     if module == "simbad":
         params: dict[str, Any] = {semantic["object"]: target.name}
@@ -233,8 +276,24 @@ def _candidate(module: str, bound: BoundMethod, target: SkyTarget,
         if catalog is not None:
             params[semantic["catalog"]] = catalog
             constraints["catalog"] = catalog
+    if question_style == "answer-oriented":
+        specs = (VIZIER_I355_INTENTS if module == "vizier" and catalog == "I/355"
+                 else tuple(spec for spec in INTENT_SPECS["heasarc"] if spec[0] != "observation_duration")
+                 + (("observation_exposure", ("exposure",),
+                     "What exposures does HEASARC {catalog} list within {radius} arcmin of {target} at {center}?"),)
+                 if module == "heasarc" and catalog == "chanmaster"
+                 else INTENT_SPECS[module])
+        intent, fields, template = specs[intent_index % len(specs)]
+        center = f"ICRS RA {target.ra_deg:.4f} deg, Dec {target.dec_deg:+.4f} deg"
+        question = template.format(target=target.name, radius=radius, center=center, catalog=catalog)
+    else:
+        intent, fields = kind, ()
+        question = _description(module, target, radius, catalog)
     return {
-        "question": _description(module, target, radius, catalog),
+        "question": question,
+        "intent": intent,
+        "answer_spec": {"expected_columns": list(fields), "expected_answer_status": "unverified_candidate",
+                        "answer_type": "archive_table_values" if fields else "archive_table"},
         "category": kind,
         "module": module,
         "target": target.name,
@@ -248,7 +307,8 @@ def _candidate(module: str, bound: BoundMethod, target: SkyTarget,
 
 
 def _module_candidates(module: str, bound: BoundMethod, rng: random.Random,
-                       targets: tuple[SkyTarget, ...] = TARGETS) -> list[dict[str, Any]]:
+                       targets: tuple[SkyTarget, ...] = TARGETS, *,
+                       question_style: str = "answer-oriented") -> list[dict[str, Any]]:
     candidates = []
     targets = list(targets)
     rng.shuffle(targets)
@@ -257,7 +317,8 @@ def _module_candidates(module: str, bound: BoundMethod, rng: random.Random,
     rng.shuffle(radii)
     for i, target in enumerate(targets):
         if module == "simbad":
-            candidates.append(_candidate(module, bound, target, radii[0], None))
+            candidates.append(_candidate(module, bound, target, radii[0], None,
+                                         question_style=question_style, intent_index=i))
             continue
         per_target_radii = radii[i % len(radii):] + radii[:i % len(radii)]
         for j, radius in enumerate(per_target_radii):
@@ -266,7 +327,8 @@ def _module_candidates(module: str, bound: BoundMethod, rng: random.Random,
                 catalog = HEASARC_CATALOGS[(i + j) % len(HEASARC_CATALOGS)]
             elif module == "vizier":
                 catalog = VIZIER_CATALOGS[(i + j) % len(VIZIER_CATALOGS)]
-            candidates.append(_candidate(module, bound, target, radius, catalog))
+            candidates.append(_candidate(module, bound, target, radius, catalog,
+                                         question_style=question_style, intent_index=i+j))
     return candidates
 
 
@@ -276,6 +338,7 @@ def _validate_targets(targets: tuple[SkyTarget, ...] | None) -> tuple[SkyTarget,
     if not isinstance(targets, (list, tuple)) or not 1 <= len(targets) <= 500:
         raise GenerationError('Custom targets must contain 1..500 SkyTarget objects')
     seen = set()
+    seen_coords = set()
     for target in targets:
         if not isinstance(target, SkyTarget) or not isinstance(target.name, str) or \
                 not 1 <= len(target.name.strip()) <= 64 or '\n' in target.name:
@@ -283,6 +346,10 @@ def _validate_targets(targets: tuple[SkyTarget, ...] | None) -> tuple[SkyTarget,
         if target.name.casefold() in seen:
             raise GenerationError('Duplicate custom target name')
         seen.add(target.name.casefold())
+        coordinate_key = (round(target.ra_deg, 7), round(target.dec_deg, 7))
+        if coordinate_key in seen_coords:
+            raise GenerationError('Duplicate custom target coordinates under different names')
+        seen_coords.add(coordinate_key)
         for v in (target.ra_deg, target.dec_deg):
             if isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v):
                 raise GenerationError('Custom target coordinates must be finite degrees')
@@ -293,23 +360,60 @@ def _validate_targets(targets: tuple[SkyTarget, ...] | None) -> tuple[SkyTarget,
 
 def generate_candidates(bindings: dict[str, BoundMethod], *,
                         count: int, seed: int, modules: tuple[str, ...],
-                        targets: tuple[SkyTarget, ...] | None = None) -> list[dict[str, Any]]:
-    if isinstance(count, bool) or count < 1 or count > 500:
+                        targets: tuple[SkyTarget, ...] | None = None,
+                        uniqueness: str = "archive-target",
+                        question_style: str = "answer-oriented") -> list[dict[str, Any]]:
+    if isinstance(count, bool) or not isinstance(count, int) or count < 1 or count > 500:
         raise GenerationError("--count must be between 1 and 500")
     if not modules:
         raise GenerationError("At least one module is required")
+    if uniqueness not in UNIQUENESS_POLICIES:
+        raise GenerationError(f"--uniqueness must be one of {UNIQUENESS_POLICIES}")
+    if question_style not in QUESTION_STYLES:
+        raise GenerationError(f"--question-style must be one of {QUESTION_STYLES}")
     validated_targets = _validate_targets(targets)
+    available = len(validated_targets) * (len(modules) if uniqueness == "archive-target" else 1)
+    if count > available:
+        raise GenerationError(f"Not enough unique targets: uniqueness policy '{uniqueness}' requires {count} distinct "
+                              f"{'archive-target pairs' if uniqueness == 'archive-target' else 'targets'}, "
+                              f"but only {available} available from {len(validated_targets)} seeds and "
+                              f"{len(modules)} module(s). Supply more SkyTarget seeds, "
+                              "reduce --count, or choose --uniqueness archive-target.")
     rng = random.Random(seed)
-    queues = {mod: _module_candidates(mod, bindings[mod], rng, validated_targets)
+    queues = {mod: _module_candidates(mod, bindings[mod], rng, validated_targets,
+                                       question_style=question_style)
               for mod in modules}
     selected: list[dict[str, Any]] = []
-    # Round robin across modules, guaranteeing near-equal coverage.
-    for i in range(count):
-        mod = modules[i % len(modules)]
-        if not queues[mod]:
-            raise GenerationError(f"Not enough unique seed combinations for {mod}; "
-                                  "reduce --count or restrict --modules")
-        selected.append(queues[mod].pop(0))
+    target_used: set[str] = set()
+    archive_targets_used: set[tuple[str, str]] = set()
+    seen_questions: set[str] = set()
+    seen_calls: set[str] = set()
+    # Round robin by archive, but NEVER exhaust variants for one target first.
+    # The policy is enforced across the full selection, including custom targets.
+    for index in range(count):
+        module = modules[index % len(modules)]
+        chosen = None
+        for candidate in queues[module]:
+            target_key = candidate["target"].strip().casefold()
+            pair = (module, target_key)
+            question_key = " ".join(candidate["question"].casefold().split())
+            call_key = _canonical_json(candidate["reference_call"])
+            if (pair in archive_targets_used or
+                    uniqueness == "global-target" and target_key in target_used or
+                    question_key in seen_questions or call_key in seen_calls):
+                continue
+            chosen = candidate
+            archive_targets_used.add(pair)
+            target_used.add(target_key)
+            seen_questions.add(question_key)
+            seen_calls.add(call_key)
+            break
+        if chosen is None:
+            raise GenerationError(f"Uniqueness policy '{uniqueness}' cannot fill task "
+                                  f"{index+1}/{count} for {module}; seeds or archive allocation "
+                                  "exhausted. Increase target diversity, reduce --count, "
+                                  "or choose a less restrictive policy.")
+        selected.append(chosen)
     # Fingerprint the *observed* method contracts, not local assumptions.
     # Hash the behavioral signature only. Avoid unstable repr(default) values
     # or long docstrings from introspection changing between identical runs.
@@ -335,6 +439,9 @@ def generate_candidates(bindings: dict[str, BoundMethod], *,
             "discovered_schema_sha256": schema_sha256,
             "generation_index": i,
             "signature_source": bindings[candidate["module"]].signature_source,
+            "uniqueness_policy": uniqueness,
+            "question_style": question_style,
+            "intent_template_version": "0.6.3",
         }
         if custom_seed_hash is not None:
             candidate["provenance"]["custom_seed_catalog_sha256"] = custom_seed_hash
@@ -366,6 +473,8 @@ async def generate(url: str = DEFAULT_MCP_URL, *, count: int = 50, seed: int = 4
                    modules: tuple[str, ...] = SUPPORTED_MODULES, timeout: float = 180,
                    session_factory: Callable[[str], Any] | None = None,
                    targets: tuple[SkyTarget, ...] | None = None,
+                   uniqueness: str = "archive-target",
+                   question_style: str = "answer-oriented",
                    ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     modules = parse_modules(modules)
     if isinstance(seed, bool) or not isinstance(seed, int):
@@ -381,9 +490,10 @@ async def generate(url: str = DEFAULT_MCP_URL, *, count: int = 50, seed: int = 4
             raise GenerationError("Missing MCP discovery tool(s): " + ", ".join(sorted(missing)))
         bindings = await discover_bindings(client, modules)
     candidates = generate_candidates(bindings, count=count, seed=seed, modules=modules,
-                                     targets=targets)
+                                     targets=targets, uniqueness=uniqueness,
+                                     question_style=question_style)
     summary = {
-        "milestone": "0.2.0 — SYNTHETIC_QUERY_GENERATION",
+        "milestone": "0.6.3 — QUERY_DIVERSITY_AND_DEDUPLICATION_CLOSURE",
         "benchmark_version": __version__,
         "endpoint": url,
         "seed": seed,
@@ -394,6 +504,12 @@ async def generate(url: str = DEFAULT_MCP_URL, *, count: int = 50, seed: int = 4
         "signature_sources": {mod: bindings[mod].signature_source for mod in modules},
         "discovered_schema_sha256": candidates[0]["provenance"]["discovered_schema_sha256"],
         "validation_status": "candidate_unvalidated",
+        "uniqueness_policy": uniqueness,
+        "question_style": question_style,
+        "distinct_archive_target_pairs": len({(t["module"], t["target"].casefold()) for t in candidates}),
+        "distinct_targets": len({t["target"].casefold() for t in candidates}),
+        "by_intent": dict(sorted(Counter(t["intent"] for t in candidates).items())),
+        "expected_answers_verified": 0,
         "archive_queries_executed": 0,
         "status": "PASS",
     }
