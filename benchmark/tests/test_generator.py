@@ -69,6 +69,8 @@ class FixtureSession:
             method = args["function_name"]
             pars = [param(n) for n in PARAMETERS[module][method]]
             pars += [param("verbose", required=False)]
+            if self.change.get("heasarc_kwargs") and module == "heasarc":
+                pars.append(param("kwargs", required=True))
             if self.change.get("unexpected_required") == module:
                 pars.append(param("password"))
             if self.change.get("missing_radius") == module:
@@ -148,6 +150,48 @@ class GeneratorTests(unittest.TestCase):
     def test_reject_unsupported_required_parameter(self):
         with self.assertRaisesRegex(GenerationError, "unsupported required"):
             run_fixture(change={"unexpected_required": "vizier"})
+
+    def test_generate_full_dataset_with_realistic_heasarc_kwargs(self):
+        (items, report), session = run_fixture(change={"heasarc_kwargs": True})
+        self.assertEqual(len(items), 50)
+        self.assertEqual(report["by_module"]["heasarc"], 10)
+        self.assertEqual(report["archive_queries_executed"], 0)
+        self.assertNotIn("astroquery_execute", [name for name, _ in session.calls])
+
+    def test_heasarc_documented_variadic_kwargs_is_not_required(self):
+        # On the real laptop astroquery-mcp reports HEASARC.query_region's
+        # **kwargs as required=True because introspection loses parameter kind.
+        info = {"module": "heasarc", "method": "query_region", "parameters": [
+            param("position", required=False),
+            param("catalog", required=False),
+            param("radius", required=False),
+            param("spatial", required=False),
+            param("maxrec", required=False),
+            param("kwargs", required=True),
+        ]}
+        bound = bind_signature("heasarc", "query_region", info)
+        self.assertEqual(bound.semantic_parameters, {
+            "coordinate": "position", "radius": "radius", "catalog": "catalog",
+        })
+        self.assertEqual(bound.signature_source, "introspection")
+        self.assertIn("kwargs", {p["name"] for p in bound.advertised_parameters})
+
+    def test_heasarc_other_unknown_required_still_rejected(self):
+        info = {"module": "heasarc", "method": "query_region", "parameters": [
+            param("position", required=False), param("catalog", required=False),
+            param("radius", required=False), param("kwargs", required=True),
+            param("token", required=True),
+        ]}
+        with self.assertRaisesRegex(GenerationError, "unsupported required.*token"):
+            bind_signature("heasarc", "query_region", info)
+
+    def test_other_module_kwargs_is_not_whitelisted(self):
+        info = {"module": "gaia", "method": "query_object", "parameters": [
+            param("coordinate"), param("radius", required=False),
+            param("kwargs", required=True),
+        ]}
+        with self.assertRaisesRegex(GenerationError, "unsupported required.*kwargs"):
+            bind_signature("gaia", "query_object", info)
 
     def test_reject_absent_radius(self):
         with self.assertRaisesRegex(GenerationError, "missing required template"):

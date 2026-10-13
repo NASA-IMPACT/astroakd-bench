@@ -142,14 +142,25 @@ def bind_signature(module: str, method: str, info: dict[str, Any]) -> BoundMetho
             raise GenerationError(f"{module}.{method} missing required template argument {semantic}: {aliases}")
         bound[semantic] = found
     selected = set(bound.values())
+    # astroquery-mcp serializes ``has_default=False`` as ``required=True``.
+    # For HEASARC.query_region, the documented ``**kwargs`` parameter is a
+    # variadic keyword collector, NOT an argument named "kwargs" the caller
+    # must provide. The MCP metadata does not currently expose parameter kind.
+    # Limit this exception to this single verified signature; do not silently
+    # ignore unexpected mandatory parameters on any other operation.
+    documented_variadic = ({"kwargs"} if (module, method) ==
+                           ("heasarc", "query_region") else set())
+    ignored_variadic = documented_variadic & set(mapped)
     unsupported_required = [name for name, spec in mapped.items()
-                            if spec.get("required") is True and name not in selected]
+                            if spec.get("required") is True
+                            and name not in selected and name not in ignored_variadic]
     if unsupported_required:
         raise GenerationError(f"{module}.{method} has unsupported required argument(s): "
                               + ", ".join(sorted(unsupported_required)))
     # Unknown 'required' value is rejected rather than assumed optional.
     unspecified = [name for name, spec in mapped.items()
-                   if name not in selected and not isinstance(spec.get("required"), bool)]
+                   if name not in selected and name not in ignored_variadic
+                   and not isinstance(spec.get("required"), bool)]
     if unspecified:
         raise GenerationError(f"{module}.{method} cannot establish optionality of: "
                               + ", ".join(sorted(unspecified)))
