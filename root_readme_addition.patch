@@ -1,0 +1,54 @@
+diff --git a/README.md b/README.md
+index 9f1487b..4793bb8 100644
+--- a/README.md
++++ b/README.md
+@@ -5,6 +5,49 @@ A Model Context Protocol (MCP) server that dynamically exposes all astroquery fu
+ > data-access backend for the [**AKD Astro Data Search Agent**](https://huggingface.co/spaces/ai-agents-for-science/astro-data-search-agent),
+ > a natural-language astrophysics dataset-discovery system, also packaged as a
+ > [Claude Code plugin](https://github.com/NASA-IMPACT/akd-plugins/tree/main/plugins/astro-data-search-assistant).
++
++## AstroAKD-Bench — local agent benchmark (optional)
++
++**AstroAKD-Bench** is an additive, MCP-native framework for generating
++astronomical archive-discovery questions, validating reference archive
++responses, and recording how an independent AI agent answers the questions
++using this same MCP server. It runs on your laptop against
++`http://127.0.0.1:8000/mcp`; existing `server.py` and `executor.py` are unchanged.
++
++The benchmark is maintained separately from the MCP server version. Its
++**current version is 0.4.0**, with local connectivity (0.1.0), synthetic query
++generation (0.2.0), live reference validation (0.3.0), and agent execution/MCP
++tracing (0.4.0). The first three milestones are accepted on the development
++laptop; 0.4.0 passes offline regression tests but still awaits live agent
++qualification. Scientific scoring (0.5.0) and offline replay (0.6.0) are planned.
++
++Start the existing MCP server:
++
++```bash
++uv run fastmcp run server.py --transport http --host 127.0.0.1 --port 8000
++```
++
++In another terminal, from this repository root:
++
++```bash
++uv run python -m benchmark doctor --smoke
++# With the completed 0.2.0 and 0.3.0 datasets already on disk:
++# No-model harness check ONLY; not a real agent performance measurement:
++uv run python -m benchmark run --agent echo --strict-accepted-020 --limit 5
++```
++
++Use `--agent openai` for optional OpenAI API tool calling, or `--agent external`
++with an importable async adapter for your existing AstroAKD agent. The OpenAI
++option requires a separately supplied API key and SDK; prior benchmark stages
++and the echo harness do **not** require an OpenAI API. Never interpret
++structurally accepted archive responses or completed agent runs as validated
++scientific answer accuracy.
++
++Full instructions: [AstroAKD-Bench guide](docs/benchmark/astroakd_bench.md)
++and [agent tracing](docs/benchmark/agent_execution.md). The **root
++[CHANGELOG.md](CHANGELOG.md)** records every AstroAKD-Bench milestone and its
++qualification status.
++
+ ## What is This?
+ 
+ This is a server.

@@ -1,20 +1,59 @@
 # AstroAKD-Bench Changelog
 
-All significant changes to the **`benchmark/` subproject** are documented
+All significant changes to the **AstroAKD-Bench subproject** are documented
 here. This history is separate from the upstream `astroquery-mcp` project's
 releases: AstroAKD-Bench versions track benchmark capabilities, not versions
 of Astroquery or the MCP server.
 
-The current implemented benchmark version is **0.3.0**.
+The current implemented benchmark version is **0.4.0**.
 Dates are in UTC. Release statuses distinguish **offline implementation
 qualification** from **real laptop / live-service qualification**.
 
 ## [Unreleased]
 
 - No unreleased implementation changes are recorded.
-- Planned (not implemented): 0.4.0 agent execution and MCP tracing, 0.5.0
-  automated evaluation and scoring, and 0.6.0 offline record/replay and
-  benchmark release packaging.
+- Planned (not implemented): 0.5.0 automated evaluation and scientific
+  scoring, and 0.6.0 offline record/replay and benchmark packaging.
+
+## [0.4.0] - 2026-10-13
+
+### Added
+
+- `AGENT_EXECUTION_AND_TRACING`: `uv run python -m benchmark run` loads the
+  accepted candidate and reference datasets, checks IDs, coverage and SHA-256,
+  and independently asks an agent each candidate question.
+- Bounded MCP tool proxy that captures attempted tools, arguments, outcomes,
+  elapsed times, SHA-256 response fingerprints, size/truncation, and output
+  excerpts; enforces an explicit read-only service/method and parameter policy.
+- Optional OpenAI Chat Completions tool-calling agent (`--agent openai`) and
+  pluggable external async AstroAKD adapter (`--agent external --adapter`).
+  `--agent echo` is a harness-only test and explicitly not an AI evaluation.
+- Durable per-task execution journal, `--resume`, `--replace`, output manifest,
+  model/runtime provenance, completion/error reporting, and per-archive totals.
+- Independent agent prompts: reference calls/results never enter the agent's
+  context. No automated science scoring until planned 0.5.0.
+- New `docs/benchmark/agent_execution.md`, updated project guide, and moved
+  cumulative changelog to the repository root. The existing root README is
+  **extended rather than overwritten**, preserving server documentation.
+
+### Qualification
+
+- Offline regression: **PASS**, 75 tests passed and one optional live-server
+  test skipped. Includes mocked OpenAI tool-calling, resumed runs, reference
+  isolation, unsafe tool rejection, and compatibility with the accepted
+  0.2.0 dataset.
+- Real laptop MCP + actual agent API: **PENDING**. No live OpenAI API calls were
+  made in the delivery environment.
+
+### Limitations
+
+- `COMPLETE` indicates all tasks have execution records, **not** accuracy.
+  The `echo` harness mode receives `quality_gate=HARNESS_ONLY`.
+- The OpenAI SDK/API is **optional**, and is used only when that adapter is
+  selected; previous generation and reference validation are API-free.
+- Existing AstroAKD agent integration needs an async adapter that calls the
+  traced gateway. Direct external MCP connections are not observed.
+- 0.5.0 will implement scoring; 0.6.0 will implement offline replay.
 
 ## [0.3.0] - 2026-10-13
 
@@ -115,7 +154,7 @@ For **every future AstroAKD-Bench version**, in the **same delivery**:
 
 1. Add a new version heading above older releases, documenting changes,
    compatibility fixes, tests, limitations and qualification status.
-2. Update `benchmark/README.md` with the implemented version, commands,
+2. Update the root `README.md` AstroAKD-Bench section and `docs/benchmark/astroakd_bench.md` with the implemented version, commands,
    feature table and supported workflow. Keep planned features clearly
    labeled as not implemented until they are tested.
 3. Keep `benchmark/__init__.py` version, command-line version reporting,
@@ -127,5 +166,6 @@ For **every future AstroAKD-Bench version**, in the **same delivery**:
 5. Preserve accepted input artifacts and their hashes. If inputs or schemas
    change, document the impact on reproducibility and replay compatibility.
 
-This 0.3.0 documentation update adds the README/changelog without changing
-benchmark runtime behavior or the accepted version number.
+Starting in 0.4.0, the root `README.md` retains the original MCP server
+documentation, and the root `CHANGELOG.md` maintains AstroAKD-Bench history.
+Both will be updated with every new benchmark version.
