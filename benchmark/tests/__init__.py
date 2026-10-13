@@ -1,0 +1,1 @@
+"""AstroAKD-Bench local tests."""

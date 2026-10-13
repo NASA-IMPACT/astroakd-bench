@@ -1,0 +1,92 @@
+"""Command-line entry point for local MCP connection qualification."""
+
+from __future__ import annotations
+
+import argparse
+import asyncio
+import json
+import os
+from pathlib import Path
+import sys
+from typing import Any
+
+from . import DEFAULT_MCP_URL, __version__
+from .client import AstroqueryMCPClient, normalize
+from .diagnostics import doctor
+from .errors import BenchmarkError
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="astroakd-bench",
+        description="AstroAKD-Bench 0.1.0 local MCP qualification (read-only).",
+    )
+    parser.add_argument("--version", action="version", version=__version__)
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--mcp-url", default=os.environ.get("ASTROAKD_MCP_URL", DEFAULT_MCP_URL))
+    common.add_argument("--timeout", type=float, default=180.0,
+                        help="Timeout per MCP operation, seconds (default: 180)")
+    common.add_argument("--output", type=Path, help="Save JSON report to this file")
+    commands = parser.add_subparsers(dest="command", required=True)
+    diag = commands.add_parser("doctor", parents=[common],
+        help="Connection, tool catalog, module and signature checks")
+    diag.add_argument("--fast", action="store_true", help="Skip expensive function introspection")
+    diag.add_argument("--smoke", action="store_true", help="Also run a live SIMBAD object query")
+    diag.add_argument("--object", default="M31", help="SIMBAD object for --smoke (default: M31)")
+    commands.add_parser("tools", parents=[common], help="Discover MCP tool catalog")
+    commands.add_parser("modules", parents=[common], help="List available Astroquery modules")
+    funcs = commands.add_parser("functions", parents=[common], help="Discover functions in a module")
+    funcs.add_argument("--module", default="simbad")
+    info = commands.add_parser("info", parents=[common], help="Get one function's signature")
+    info.add_argument("--module", default="simbad")
+    info.add_argument("--function", default="query_object")
+    smoke = commands.add_parser("simbad", parents=[common], help="Run a single live read-only SIMBAD query")
+    smoke.add_argument("--object", default="M31")
+    return parser
+
+
+async def _execute(args: argparse.Namespace) -> dict[str, Any]:
+    if args.command == "doctor":
+        return await doctor(
+            args.mcp_url, timeout=args.timeout, fast=args.fast,
+            smoke=args.smoke, object_name=args.object,
+        )
+    async with AstroqueryMCPClient(args.mcp_url, timeout=args.timeout) as client:
+        if args.command == "tools":
+            result = await client.list_tools()
+        elif args.command == "modules":
+            result = await client.list_modules()
+        elif args.command == "functions":
+            result = await client.list_functions(args.module)
+        elif args.command == "info":
+            result = await client.function_info(args.module, args.function)
+        elif args.command == "simbad":
+            result = await client.simbad_object(args.object)
+        else:
+            raise ValueError(f"Unknown command: {args.command}")
+    return {"status": "PASS", "endpoint": args.mcp_url,
+            "command": args.command, "data": normalize(result)}
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    try:
+        payload = asyncio.run(_execute(args))
+    except (BenchmarkError, ValueError, OSError) as exc:
+        payload = {"status": "FAIL", "command": args.command,
+                   "endpoint": args.mcp_url, "error": {"type": type(exc).__name__,
+                   "message": str(exc)}}
+    output = json.dumps(payload, indent=2, ensure_ascii=False, allow_nan=False)
+    print(output)
+    if args.output is not None:
+        try:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(output + "\n", encoding="utf-8")
+        except OSError as exc:
+            print(f"Could not save {args.output}: {exc}", file=sys.stderr)
+            return 2
+    return 0 if payload.get("status") == "PASS" else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
