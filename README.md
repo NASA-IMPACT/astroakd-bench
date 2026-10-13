@@ -4,7 +4,7 @@
 
 AstroAKD-Bench is an **independent Python repository** for developing and evaluating agents that discover astronomical data through the [NASA IMPACT Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp). That server is an **external service**, not this repository or the owner of this benchmark. AstroAKD-Bench generates natural-language astronomy tasks, executes reference archive queries via MCP, collects independent agent traces, and scores observable execution and a bounded set of claims.
 
-**Current version: 0.5.0 — AUTOMATED_EVALUATION_AND_SCORING.** The benchmark works on a local laptop. The server normally runs at `http://127.0.0.1:8000/mcp`; only the agent execution mode `--agent openai` needs the OpenAI API. No OpenAI key is needed to generate, validate, inspect, or score saved runs.
+**Current version: 0.5.1 — PRETTY_SCORE_EXPORT_CLOSURE.** The benchmark works on a local laptop. The server normally runs at `http://127.0.0.1:8000/mcp`; only the agent execution mode `--agent openai` needs the OpenAI API. No OpenAI key is needed to generate, validate, inspect, or score saved runs.
 
 ## Status and scope
 
@@ -16,6 +16,7 @@ AstroAKD-Bench is an **independent Python repository** for developing and evalua
 | 0.4.0 — AGENT_EXECUTION_AND_TRACING | Optional OpenAI/external-agent execution and MCP traces | Implemented; live pilot identified routing issues |
 | 0.4.1 — AGENT_TOOL_SELECTION_AND_RECOVERY_CLOSURE | Question-derived archive routing, recovery and query-evidence checks | **ACCEPT** (five-task laptop pilot) |
 | **0.5.0 — AUTOMATED_EVALUATION_AND_SCORING** | Deterministic technical scoring, claim checks, readable JSON reports, root datasets | **Offline tests PASS; laptop requalification pending** |
+| **0.5.1 — PRETTY_SCORE_EXPORT_CLOSURE** | Optional saved, indented JSON array of every per-task score (`--pretty-output`) | **Offline tests PASS; laptop requalification pending** |
 | 0.6.0 (planned) | Offline record/replay for controlled agent evaluation | Not implemented |
 
 **What the scores mean.** The weighted 0–100 **technical evidence score** assesses archive/function selection, argument alignment, successful execution, reference-result consistency, and *limited* automated answer-claim checks. It is **not a general scientific answer-accuracy score**. Truncated responses, changing public archives, and unverified scientific assertions are explicitly flagged for independent review. Reference acceptance establishes structurally valid MCP data, not independently proven astrophysical ground truth.
@@ -119,7 +120,7 @@ uv run --with openai python -m benchmark run \
 
 Run a separate external AstroAKD implementation with `--agent external --adapter package.module:run`, provided the adapter routes calls through the tracing gateway. `--agent echo` tests only the harness, **not agent performance**. Existing runs are protected from overwrite: use `--resume` for a compatible incomplete run or `--replace` to discard it intentionally.
 
-### Evaluate recorded agent evidence — 0.5.0
+### Evaluate recorded agent evidence — 0.5.1
 
 **Scoring does not call an LLM or MCP server.** This example scores the frozen five-task 0.4.1 OpenAI pilot included in the package:
 
@@ -130,16 +131,19 @@ uv run python -m benchmark evaluate \
   --output datasets/evaluation/openai_041_scores_recheck.jsonl \
   --report datasets/evaluation/openai_041_report_recheck.json \
   --csv datasets/evaluation/openai_041_scores_recheck.csv \
+  --pretty-output datasets/evaluation/openai_041_scores_recheck_pretty.json \
   --json-format pretty
 ```
 
-To score a new 0.5.0 run, set `--runs datasets/agent/openai_050_runs.jsonl` after a completed run, or use its `.progress.jsonl` journal for a partial pilot. For repeated scoring of the same destination, add `--replace` only when intended.
+To score a new 0.5.1 run, set `--runs datasets/agent/openai_050_runs.jsonl` after a completed run, or use its `.progress.jsonl` journal for a partial pilot. For repeated scoring of the same destination, add `--replace` only when intended.
 
 Scores are divided into archive selection (20), function selection (15), parameter correctness (25), successful MCP execution (15), reference row-count agreement (15) and limited answer-claim checks (10). Exact scientific correctness remains marked `INDEPENDENT_REVIEW_REQUIRED`. See [scoring details](docs/benchmark/evaluation_and_scoring.md).
 
 ## Readable JSON on a laptop
 
-Choose `--json-format compact` (default) or `--json-format pretty` on the commands above. This changes the **console output and summary `.json` reports**. Machine-readable `.jsonl` datasets, trace journals, and score records remain **one compact JSON object per line**, preserving JSONL compatibility and the accepted input hashes.
+Choose `--json-format compact` (default) or `--json-format pretty`. This changes the **console output and summary `.json` reports**. It does not change `.jsonl` files: they must contain exactly one compact JSON object per line to remain stream-friendly and to preserve accepted dataset hashes.
+
+**New in 0.5.1:** `benchmark evaluate --pretty-output datasets/evaluation/scores_pretty.json` writes an **additional, complete, indented JSON array** of the same per-task score objects, saved on disk. This works with either `--json-format compact` or `--json-format pretty` and does not call a server or an LLM. The pretty output path must end in `.json`, be distinct from all other input/output paths, and will not be overwritten unless you explicitly provide `--replace`. The resulting `.json` is separate from the normal summary `.json` report and the canonical `.jsonl` score stream.
 
 For an easy-to-read view of existing JSONL without modifying the original:
 
@@ -159,7 +163,7 @@ On 2026-10-13, 50 candidate queries were generated and 50 structurally accepted 
 - Accepted candidate SHA-256: `e6de68eedf2b38ea08dd684cac678edc80ee23abe51b7189f0adfb5e369c1fe9`
 - Accepted reference SHA-256: `1bfe4028f5533d3d7a1e5756bb26809e7e359f6a7640059ca07dcb295855da87`
 
-The accepted 0.4.1 five-task OpenAI pilot observed **five successful MCP executions and zero rejected calls**. Version 0.5.0's offline scoring of that recorded pilot gives **94/100 mean technical evidence**, with 3 technical PASS and 2 REVIEW (including truncated Gaia output). **This is not astrophysical answer accuracy**, and 0.5.0 has not yet been host-qualified on the user's laptop.
+The accepted 0.4.1 five-task OpenAI pilot observed **five successful MCP executions and zero rejected calls**. Version 0.5.0/0.5.1 offline scoring of that recorded pilot gives **94/100 mean technical evidence**, with 3 technical PASS and 2 REVIEW (including truncated Gaia output). **This is not astrophysical answer accuracy**, and 0.5.1 has not yet been host-qualified on the user's laptop.
 
 ### Migrating an older checkout
 

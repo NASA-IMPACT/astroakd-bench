@@ -1,6 +1,6 @@
 # AstroAKD-Bench 0.5.0: deterministic evaluation and readable JSON
 
-0.5.0 scores **saved** MCP agent traces against the accepted candidate and reference datasets. No OpenAI API key or running MCP server is needed for this stage. Evaluation reads the full reference set but sends none of it to the agent.
+0.5.0 introduced scoring of **saved** MCP agent traces against the accepted candidate and reference datasets. No OpenAI API key or running MCP server is needed for this stage. Evaluation reads the full reference set but sends none of it to the agent.
 
 ```bash
 uv run python -m benchmark evaluate \
@@ -9,6 +9,7 @@ uv run python -m benchmark evaluate \
   --output datasets/evaluation/openai_041_scores_recheck.jsonl \
   --report datasets/evaluation/openai_041_report_recheck.json \
   --csv datasets/evaluation/openai_041_scores_recheck.csv \
+  --pretty-output datasets/evaluation/openai_041_scores_recheck_pretty.json \
   --json-format pretty
 ```
 
@@ -29,7 +30,9 @@ If an upstream archive's row count changes, report `ARCHIVE_DRIFT_OR_MISMATCH`, 
 
 ## JSON formatting
 
-`--json-format compact` is the default, optimized for pipelines. `--json-format pretty` renders human-readable CLI JSON and `.json` reports with indentation. JSONL records remain compact (one per line) in both modes to preserve streaming and the accepted dataset fingerprints.
+`--json-format compact` is the default, optimized for pipelines. `--json-format pretty` renders human-readable CLI JSON and `.json` **summary reports** with indentation. JSONL records remain compact (one per line) in both modes to preserve streaming and the accepted dataset fingerprints.
+
+**0.5.1 saved pretty scores:** add `--pretty-output datasets/evaluation/scores_pretty.json` to `benchmark evaluate`. It writes a complete indented JSON **array**, not JSONL and not a limited preview. It has exactly the same per-task data and ordering as the canonical `.jsonl`. This option is independent of `--json-format`, optional by default, and safeguards against output/input path collisions and unintended overwrites. The report records `pretty_output` and `pretty_output_format` when enabled. To rerun using existing paths, explicitly provide `--replace`.
 
 ```bash
 uv run python -m benchmark inspect \

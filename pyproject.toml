@@ -1,6 +1,6 @@
 [project]
 name = "astroakd-bench"
-version = "0.5.0"
+version = "0.5.1"
 description = "Reproducible MCP-native benchmarks for astronomical archive-discovery agents"
 readme = "README.md"
 requires-python = ">=3.11"

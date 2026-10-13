@@ -26,7 +26,7 @@ DEFAULT_DATASET = Path("datasets/generated/synthetic_queries.jsonl")
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="astroakd-bench",
-        description="AstroAKD-Bench 0.5.0 independent MCP benchmarking and deterministic scoring.",
+        description="AstroAKD-Bench 0.5.1 independent MCP benchmarking, scoring, and readable exports.",
     )
     parser.add_argument("--version", action="version", version=__version__)
     common = argparse.ArgumentParser(add_help=False)
@@ -126,6 +126,8 @@ def build_parser() -> argparse.ArgumentParser:
     score.add_argument('--output', type=Path, default=Path('datasets/evaluation/task_scores.jsonl'))
     score.add_argument('--report', type=Path, default=Path('datasets/evaluation/evaluation_report.json'))
     score.add_argument('--csv', type=Path, default=Path('datasets/evaluation/task_scores.csv'))
+    score.add_argument('--pretty-output', type=Path,
+        help='Save all per-task scores as an indented JSON array (.json) alongside compact JSONL')
     score.add_argument('--strict-accepted-020', action='store_true')
     score.add_argument('--replace', action='store_true')
     inspect = commands.add_parser('inspect', parents=[common],
@@ -141,7 +143,8 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
         return inspect_file(args.input, args.limit)
     if args.command == 'evaluate':
         return evaluate(args.tasks,args.references,args.runs,args.output,args.report,
-                        csv_path=args.csv,strict_accepted_020=args.strict_accepted_020,
+                        csv_path=args.csv,pretty_output=args.pretty_output,
+                        strict_accepted_020=args.strict_accepted_020,
                         json_format=args.json_format,replace=args.replace)
     if args.command == "doctor":
         return await doctor(

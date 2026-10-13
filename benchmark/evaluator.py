@@ -1,4 +1,4 @@
-"""0.5.0 deterministic, auditable scoring of recorded MCP agent runs.
+"""0.5.1 deterministic, auditable scoring of recorded MCP agent runs.
 
 Scoring verifies observable archive/function/parameter execution, reference
 structure and a restricted set of answer claims. It DOES NOT establish general
@@ -21,7 +21,7 @@ from .formatting import json_text
 from .validator import (ValidationError, atomic_json, atomic_jsonl, load_jsonl,
                         now_utc, EXPECTED_ACCEPTED_020_SHA256)
 
-MILESTONE = '0.5.0 — AUTOMATED_EVALUATION_AND_SCORING'
+MILESTONE = '0.5.1 — PRETTY_SCORE_EXPORT_CLOSURE'
 WEIGHTS = {'archive_selection': 20, 'function_selection': 15,
            'parameter_correctness': 25, 'successful_execution': 15,
            'reference_result_agreement': 15, 'answer_claim_check': 10}
@@ -218,11 +218,14 @@ def score_task(task: dict, reference: dict, run: dict) -> dict:
 
 
 def evaluate(tasks_path: Path, reference_path: Path, runs_path: Path, output: Path,
-             report_path: Path, *, csv_path: Path | None = None, strict_accepted_020: bool = False,
+             report_path: Path, *, csv_path: Path | None = None,
+             pretty_output: Path | None = None, strict_accepted_020: bool = False,
              json_format: str = 'compact', replace: bool = False) -> dict:
     if json_format not in ('compact','pretty'):
         raise EvaluationError('Invalid JSON format')
-    destinations=[output,report_path]+([csv_path] if csv_path else [])
+    if pretty_output is not None and pretty_output.suffix.lower() != '.json':
+        raise EvaluationError('--pretty-output must be a .json path (not .jsonl)')
+    destinations=[output,report_path]+([csv_path] if csv_path else [])+([pretty_output] if pretty_output else [])
     inputs=[tasks_path,reference_path,runs_path]
     if len({p.resolve() for p in destinations + inputs}) != len(destinations+inputs):
         raise EvaluationError('Input and output paths must all be distinct')
@@ -286,6 +289,9 @@ def evaluate(tasks_path: Path, reference_path: Path, runs_path: Path, output: Pa
             'output':str(output),'report':str(report_path)}
     if csv_path:
         report['csv']=str(csv_path)
+    if pretty_output is not None:
+        report['pretty_output']=str(pretty_output)
+        report['pretty_output_format']='json_array_indented'
     # Compute all evidence and serialize before publishing any outputs.
     output.parent.mkdir(parents=True,exist_ok=True)
     atomic_jsonl(output,scored,replace=replace)
@@ -302,5 +308,9 @@ def evaluate(tasks_path: Path, reference_path: Path, runs_path: Path, output: Pa
                 s=x['metric_scores']
                 writer.writerow([x['task_id'],x['module'],x['score'],x['technical_gate'],x['result_agreement'],
                                  x['answer_claim_check']['status'],*(s[k] for k in WEIGHTS)])
+    if pretty_output is not None:
+        # Export the exact scored dictionaries in input-task order. Do not
+        # modify canonical JSONL, dataset hashes, or scientific judgments.
+        atomic_json(pretty_output,scored,style='pretty',replace=replace)
     atomic_json(report_path,report,style=json_format)
     return report

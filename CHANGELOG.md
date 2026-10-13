@@ -5,13 +5,29 @@ here. This history is separate from the external `astroquery-mcp` project's
 releases: AstroAKD-Bench versions track benchmark capabilities, not versions
 of Astroquery or the MCP server.
 
-The current implemented benchmark version is **0.5.0**.
+The current implemented benchmark version is **0.5.1**.
 Dates are in UTC. Release statuses distinguish **offline implementation
 qualification** from **real laptop / live-service qualification**.
 
 ## [Unreleased]
 
 - Planned: 0.6.0 offline MCP record/replay and expanded scientific claim verification.
+
+## [0.5.1] - 2026-10-13
+
+### Added
+
+- `PRETTY_SCORE_EXPORT_CLOSURE`: `benchmark evaluate --pretty-output PATH.json` writes **all** per-task scoring records as an indented JSON array to a separate saved file. The ordinary compact, streaming-friendly `.jsonl` and CSV files are still emitted as before.
+- `--pretty-output` is independent of `--json-format {compact,pretty}` (the latter continues to control console and summary-report formatting only). The new output is always pretty-formatted.
+- Reject `.jsonl` pretty-export destinations, collisions with any input/output path, and existing artifacts without an explicit `--replace`. Individual JSON output is published via atomic rename.
+- Added regression tests for saved-file contents, equality with compact JSONL, CLI integration, destination safety, unchanged accepted data fingerprints, and optional export behavior.
+- Updated the root `README.md`, `CHANGELOG.md`, detailed scoring documentation, installation guide, package version, and release archives. AstroAKD-Bench remains an independent repository; the NASA IMPACT Astroquery MCP server is an external dependency.
+
+### Qualification
+
+- Offline: **PASS** — 100 executed tests passed; one optional live MCP test skipped. The historical five-task 0.4.1 OpenAI trace scored identically to version 0.5.0 (technical mean 94/100, three PASS and two REVIEW).
+- Frozen accepted candidate/reference SHA-256 fingerprints preserved. No new archive queries or OpenAI API calls were made.
+- Real-laptop 0.5.1 qualification: **PENDING**. Score outputs do not certify astrophysical correctness.
 
 ## [0.5.0] - 2026-10-13
 
