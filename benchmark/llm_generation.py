@@ -135,13 +135,46 @@ def _slots_prompt(tasks: list[dict[str, Any]], *, mode: str, use_mcp: bool) -> s
     )
 
 
+# Routing is derived from text in the question, not from hidden reference answers.
+# The archive itself, however, was already selected before asking the model.
+ARCHIVE_DISPLAY_NAMES = {
+    'simbad': 'SIMBAD', 'mast': 'MAST', 'heasarc': 'HEASARC',
+    'gaia': 'Gaia', 'vizier': 'VizieR',
+}
+_ARCHIVE_NAME_PATTERN = re.compile(r'\b(?:simbad|mast|heasarc|gaia|vizier)\b', re.I)
+
+
+def _ensure_named_archive(question: str, task: dict[str, Any]) -> tuple[str, bool]:
+    """Supply the prebound archive label when a model simply omitted it.
+
+    This only edits question wording, never MCP tool/params, expected fields,
+    constraints, reference answers, or validation status. Fail closed if the
+    model explicitly names another archive: prefixing would be misleading.
+    """
+    module = task['module']
+    named = {m.group(0).casefold() for m in _ARCHIVE_NAME_PATTERN.finditer(question)}
+    if named - {module}:
+        raise GenerationError(
+            f'OpenAI question {task["id"]} names conflicting archive(s) '
+            f'{", ".join(sorted(named - {module}))}; expected {module}'
+        )
+    if module in named:
+        return question, False
+    # Adding this neutral prefix is semantically transparent: the archive is
+    # an already frozen, MCP-discovered query constraint for this task.
+    return f'Using {ARCHIVE_DISPLAY_NAMES[module]}, {question[0].lower() + question[1:]}', True
+
+
 def _guard_question(question: Any, task: dict[str, Any], *, use_mcp: bool) -> str:
     if not isinstance(question, str) or not 20 <= len(question) <= 450 or '\n' in question:
         raise GenerationError(f'Invalid question for {task["id"]}: must be 20..450 chars, single line')
     if task['target'].casefold() not in question.casefold():
         raise GenerationError(f'OpenAI question {task["id"]} omits target {task["target"]}')
-    if task['module'] not in question.casefold():
-        raise GenerationError(f'OpenAI question {task["id"]} omits named archive {task["module"]}')
+    # Repair of a missing named archive belongs to the controlled authoring
+    # boundary; this guard still rejects missing/ambiguous archive labels.
+    found_archives = {m.group(0).casefold() for m in _ARCHIVE_NAME_PATTERN.finditer(question)}
+    if found_archives != {task['module']}:
+        raise GenerationError(f'OpenAI question {task["id"]} does not uniquely name archive {task["module"]}')
     if not question.strip().endswith('?'):
         raise GenerationError(f'OpenAI question {task["id"]} must be a question')
     if use_mcp:
@@ -217,6 +250,7 @@ async def generate_llm(url: str = DEFAULT_MCP_URL, *, count: int = 50, seed: int
     system = (BASE_SYSTEM if use_mcp else WEB_SYSTEM) + ('\n' + instructions if instructions else '')
     model_calls = web_calls = 0
     seen_questions: set[str] = set()
+    archive_name_repairs = 0
     for i in range(0, len(tasks), batch_size):
         batch = tasks[i:i + batch_size]
         opts: dict[str, Any] = {'model': model,
@@ -252,7 +286,24 @@ async def generate_llm(url: str = DEFAULT_MCP_URL, *, count: int = 50, seed: int
             raise GenerationError('OpenAI changed or omitted task IDs')
         for task in batch:
             row = indexed[task['id']]
-            question = _guard_question(row.get('question'), task, use_mcp=use_mcp)
+            raw_question = row.get('question')
+            if not isinstance(raw_question, str):
+                raise GenerationError(f'OpenAI question {task["id"]} is not text')
+            # Only repair an omitted archive after the model has provided a
+            # syntactically plausible question and the mandatory target name.
+            # This avoids turning malformed output into an accepted task.
+            if not 20 <= len(raw_question) <= 450 or '\n' in raw_question or \
+                    not raw_question.strip().endswith('?') or \
+                    task['target'].casefold() not in raw_question.casefold():
+                question = _guard_question(raw_question, task, use_mcp=use_mcp)
+                repaired = False
+            else:
+                candidate, repaired = _ensure_named_archive(raw_question.strip(), task)
+                question = _guard_question(candidate, task, use_mcp=use_mcp)
+            if repaired:
+                archive_name_repairs += 1
+                if progress is not None:
+                    progress(f'OpenAI normalized missing archive name for {task["id"]} ({task["module"]})')
             key = ' '.join(question.casefold().split())
             if key in seen_questions:
                 raise GenerationError('OpenAI generated a duplicate question; change seed/model/batch')
@@ -265,6 +316,8 @@ async def generate_llm(url: str = DEFAULT_MCP_URL, *, count: int = 50, seed: int
                                'instructions_sha256': hashlib.sha256(instructions.encode()).hexdigest()
                                if use_instructions else None,
                                'mcp_enabled': use_mcp,
+                               'archive_name_repaired': repaired,
+                               'original_llm_question': raw_question.strip() if repaired else None,
                                'search_tool': 'none' if use_mcp else 'openai_web_search',
                                'model_generation_reproducibility': 'best_effort_nondeterministic'})
             if not use_mcp:
@@ -285,11 +338,12 @@ async def generate_llm(url: str = DEFAULT_MCP_URL, *, count: int = 50, seed: int
     check = analyze_candidates(tasks)
     if any(check['counts'].values()):
         raise GenerationError('Generated questions fail diversity audit')
-    summary.update({'milestone': '0.6.4 — LLM_ASSISTED_SYNTHETIC_QUERY_GENERATION',
+    summary.update({'milestone': '0.6.4.1 — OPENAI_ARCHIVE_NAME_NORMALIZATION',
                     'benchmark_version': __version__, 'status': 'PASS',
                     'generation_backend': backend, 'model': model, 'use_instructions': use_instructions,
                     'use_mcp': use_mcp, 'instructions_sha256': hashlib.sha256(instructions.encode()).hexdigest() if instructions else None, 'research_tool': 'none' if use_mcp else 'openai_web_search',
                     'openai_requests': model_calls, 'web_search_calls': web_calls,
+                    'archive_name_repairs': archive_name_repairs,
                     'scientific_truth_verified': False,
                     'expected_answers_verified': 0,
                     'archive_queries_executed': 0,
@@ -297,6 +351,7 @@ async def generate_llm(url: str = DEFAULT_MCP_URL, *, count: int = 50, seed: int
                     'distinct_archive_target_pairs': check['distinct_archive_target_pairs'],
                     'by_intent': check['by_intent'],
                     'notes': ['The model writes questions, never a gold answer.',
+                              'Missing single-archive names may be inserted deterministically; each repair is audited.',
                               'OpenAI results are not guaranteed byte-reproducible even with fixed seed.',
                               'No-MCP tasks require a future adapter/validation track; benchmark validate uses MCP.']})
     return tasks, summary

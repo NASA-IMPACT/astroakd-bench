@@ -1,6 +1,14 @@
-# OpenAI-assisted synthetic query generation (0.6.4)
+# OpenAI-assisted synthetic query generation (0.6.4 / 0.6.4.1)
 
 AstroAKD-Bench and the [NASA IMPACT Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp) are **separate** repositories. The benchmark does not alter the MCP server. This optional LLM generator uses the **OpenAI Responses API** to author questions; it never reads the answers in `Astro Benchmark V1.xlsx` as gold.
+
+## 0.6.4.1 correction: omitted archive name
+
+The first live OpenAI + MCP generation on version 0.6.4 stopped after the first five tasks because model question `ASTROAKD-020-00005` did not explicitly say *VizieR*. The strict question-derived archive router requires an unambiguous archive name. Version 0.6.4.1 adds a neutral `Using VizieR, ...` prefix **only if** the model omitted all supported archive names and retained its assigned target. Its MCP tool arguments remain prebound and unchanged.
+
+Questions explicitly naming a different archive (or more than one), omitting their astronomical target, asking for unsupported fields, or adding unbound years still fail. The report contains `archive_name_repairs`; per-task `provenance` includes `archive_name_repaired` and (only when repaired) `original_llm_question`. This is an auditable correction of wording, **not a claim of scientific validity**.
+
+To retry after a failed 0.6.4 run, use fresh output/report paths, for example change `llm_064_*` to `llm_0641_*` in the command below. An existing failed generation summary report may block a retry using the exact same paths without `--replace`.
 
 ## Three generation backends
 

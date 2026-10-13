@@ -4,9 +4,9 @@
 
 AstroAKD-Bench is an **independent Python repository** for developing and evaluating agents that discover astronomical data through the [NASA IMPACT Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp). That server is an **external service**, not this repository or the owner of this benchmark. AstroAKD-Bench generates natural-language astronomy tasks, executes reference archive queries via MCP, collects independent agent traces, and scores observable execution and a bounded set of claims.
 
-**Current version: 0.6.4 — LLM_ASSISTED_SYNTHETIC_QUERY_GENERATION.** The default `generate` command now uses OpenAI to author diverse synthetic questions with workbook-derived instructions and the external Astroquery MCP server. `--backend template` retains the API-free legacy generator; `--no-mcp` uses OpenAI Responses `web_search` instead. OpenAI generation uses a separate API key/billing; offline audits and scoring do not.
+**Current version: 0.6.4.1 — OPENAI_ARCHIVE_NAME_NORMALIZATION.** The default `generate` command now uses OpenAI to author diverse synthetic questions with workbook-derived instructions and the external Astroquery MCP server. `--backend template` retains the API-free legacy generator; `--no-mcp` uses OpenAI Responses `web_search` instead. OpenAI generation uses a separate API key/billing; offline audits and scoring do not.
 
-## 0.6.4 — OpenAI-generated questions: quick start
+## 0.6.4.1 — OpenAI-generated questions: quick start
 
 OpenAI generation is now the default. To **reproduce the 0.6.3 template results**, specify `--backend template`; old reports and accepted dataset hashes are not changed. These model-authored questions are **unverified candidates**, not known scientific answers.
 
@@ -28,6 +28,8 @@ uv run --with openai python -m benchmark generate \
 
 Toggle instructions with `--instructions` (default) and `--no-instructions`. Pass `--instructions-file path/to/prompt.md` for a custom prompt. `--backend hybrid` rewrites a template question conservatively, and `--backend template` uses no OpenAI API. Across all modes, question/target deduplication is retained, and `--pretty-output` + `--csv-output` produce inspection views.
 
+**0.6.4.1 hotfix:** The generator now safely normalizes *omitted* archive names in model-authored questions (for example, adds `Using VizieR,` to a question already bound to VizieR). It refuses questions naming another archive, inventing years, omitting a target, or requesting unsupported fields. Each normalization appears in task provenance (`archive_name_repaired`, `original_llm_question`) and the report count (`archive_name_repairs`). The prebound MCP query is never modified. The 0.6.4 laptop pilot failed after its first OpenAI batch due to a missing VizieR name; real 0.6.4.1 live qualification remains pending. If retrying after that failure, use new output/report names or explicitly `--replace`.
+
 See [full 0.6.4 usage and comparison matrix](docs/benchmark/llm_generation_0_6_4.md) and [V1 workbook-derived instructions](docs/benchmark/llm_generation_instructions_v1.md). No historical workbook expected answers are imported as gold.
 
 ## Status and scope
@@ -45,6 +47,7 @@ See [full 0.6.4 usage and comparison matrix](docs/benchmark/llm_generation_0_6_4
 | **0.6.1 — SEMANTIC_REPLAY_ARGUMENT_CANONICALIZATION** | ICRS default-aware fixture lookup and public Python workflow API | **ACCEPT** (five-task laptop replay) |
 | **0.6.2 — READABLE_DATASET_EXPORT_AND_VALIDATION_PROGRESS** | Optional query/reference CSV and pretty JSON exports, progress messages and bounded validation waits | **Offline qualification; laptop live validation pending** |
 | **0.6.3 — QUERY_DIVERSITY_AND_DEDUPLICATION_CLOSURE** | Default archive-target uniqueness, optional global-target uniqueness, answer-oriented prompts, offline duplicate-return audit | **Offline qualification PASS; live laptop qualification pending** |
+| **0.6.4.1 — OPENAI_ARCHIVE_NAME_NORMALIZATION** | Deterministic missing-archive wording normalization, explicit provenance, original MCP calls preserved | **Offline focused PASS; real OpenAI retry pending** |
 | **0.6.4 — LLM_ASSISTED_SYNTHETIC_QUERY_GENERATION** | Default OpenAI+instructions+MCP, optional web_search without MCP, hybrid/template modes, optional custom prompt | **Offline mocks PASS; real OpenAI qualification pending** |
 
 **What the scores mean.** The weighted 0–100 **technical evidence score** assesses archive/function selection, argument alignment, successful execution, reference-result consistency, and *limited* automated answer-claim checks. It is **not a general scientific answer-accuracy score**. Truncated responses, changing public archives, and unverified scientific assertions are explicitly flagged for independent review. Reference acceptance establishes structurally valid MCP data, not independently proven astrophysical ground truth.
@@ -440,7 +443,7 @@ The script **refuses to merge** when both directories exist. Move or reconcile t
 - Queries use an explicit read-only allowlist and conservative limits. Public archives can change or become unavailable.
 - Agent context excludes reference calls and reference answers; scores operate on previously saved artifacts.
 - A model answer plus successful MCP transport is not proof of astronomical correctness. Result truncation and possible archive drift are review conditions.
-- LLM-generated natural-language variations and comprehensive scientific statement verification are **not yet implemented**. Offline MCP replay is implemented, but unsupported calls fail closed and the LLM itself is not necessarily offline.
+- Comprehensive scientific statement verification is **not yet implemented**; LLM-generated variations have been available since 0.6.4. Offline MCP replay is implemented, but unsupported calls fail closed and the LLM itself is not necessarily offline.
 - AstroAKD-Bench does **not** claim authorship of the NASA IMPACT Astroquery MCP server or attribute its contributors to the benchmark.
 
 See [CHANGELOG.md](CHANGELOG.md) for cumulative release history and [docs/benchmark](docs/benchmark/) for implementation details. **Every new release updates the root README, root CHANGELOG, package metadata, CLI examples, and relevant docs together.**

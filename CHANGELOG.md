@@ -5,13 +5,27 @@ here. This history is separate from the external `astroquery-mcp` project's
 releases: AstroAKD-Bench versions track benchmark capabilities, not versions
 of Astroquery or the MCP server.
 
-The current implemented benchmark version is **0.6.4**.
+The current implemented benchmark version is **0.6.4.1**.
 Dates are in UTC. Release statuses distinguish **offline implementation
 qualification** from **real laptop / live-service qualification**.
 
 ## [Unreleased]
 
 - Planned after 0.6.1: broader scientific claim verification, multi-archive workflows and frozen evaluation suites.
+
+## [0.6.4.1] - 2026-10-14
+
+### Fixed — OPENAI_ARCHIVE_NAME_NORMALIZATION
+
+- First real OpenAI+instructions+MCP generation pilot failed after batch 1/10: task `ASTROAKD-020-00005` omitted the explicit name `VizieR`. Version 0.6.4 rejected the entire batch even when the question otherwise matched the already-bound target/intent.
+- When a *valid question* mentions its target but no known astronomical archive, insert the prebound archive name as a neutral question prefix. Do not modify tool name, parameters, target, scientific constraints, answer spec, reference response, or validation outcome.
+- Reject conflicting archive names; retain existing restrictions on malformed questions, invented date/year constraints, and fields not supported by MCP reference calls. Record each wording correction in question `provenance` (`archive_name_repaired`, `original_llm_question`) and `archive_name_repairs` in the run summary.
+- Added mock regression replicating missing VizieR in the first 5-task OpenAI batch of a 50-task generation. The 50 frozen MCP calls remained byte-equivalent under the same seed/discovery fixture. Documentation explains retry destinations and live qualification status.
+
+### Qualification
+
+- Focused LLM tests and affected generation, diversity, exports, evaluator, validator and replay subgroups PASS offline. Some legacy integration-like modules stalled in this environment; full standalone suite not claimed. **Real laptop 0.6.4.1 OpenAI retry: PENDING.**
+- Historical accepted candidate, reference dataset and replay fixture preserved.
 
 ## [0.6.4] - 2026-10-14
 

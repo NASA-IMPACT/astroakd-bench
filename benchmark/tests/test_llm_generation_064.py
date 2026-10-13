@@ -123,7 +123,7 @@ class LLM064Tests(unittest.TestCase):
                 instruction_text(enabled=True,path=Path(td)/'missing.md')
         t={'id':'id1','target':'M31','module':'mast','question':'What observation IDs are available near M31?',
            'answer_spec':{'expected_columns':['obs_id']}}
-        with self.assertRaisesRegex(GenerationError,'omits named archive'):
+        with self.assertRaisesRegex(GenerationError,'does not uniquely name archive'):
             _guard_question('For M31, what are the observation IDs?',t,use_mcp=True)
         with self.assertRaisesRegex(GenerationError,'invented a year'):
             _guard_question('Which MAST observation IDs exist for M31 in 2017?',t,use_mcp=True)
