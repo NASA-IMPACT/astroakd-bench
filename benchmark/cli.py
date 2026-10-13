@@ -15,6 +15,7 @@ from .client import AstroqueryMCPClient, normalize
 from .diagnostics import doctor
 from .errors import BenchmarkError
 from .generator import GenerationError, SUPPORTED_MODULES, generate, parse_modules, write_jsonl
+from .validator import ValidationError, validate, EXPECTED_ACCEPTED_020_SHA256
 
 DEFAULT_DATASET = Path("benchmark/datasets/generated/synthetic_queries.jsonl")
 
@@ -22,7 +23,7 @@ DEFAULT_DATASET = Path("benchmark/datasets/generated/synthetic_queries.jsonl")
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="astroakd-bench",
-        description="AstroAKD-Bench 0.2.0 local MCP discovery and synthetic query generation.",
+        description="AstroAKD-Bench 0.3.0 local MCP discovery, generation and reference validation.",
     )
     parser.add_argument("--version", action="version", version=__version__)
     common = argparse.ArgumentParser(add_help=False)
@@ -64,6 +65,29 @@ def build_parser() -> argparse.ArgumentParser:
                      help="JSONL destination (default: %(default)s)")
     gen.add_argument("--replace", action="store_true", help="Overwrite existing JSONL dataset")
     gen.add_argument("--report", type=Path, help="Save JSON generation summary separately")
+    validation = commands.add_parser("validate", parents=[common],
+        help="Run accepted candidate calls through live MCP, retaining all outcomes")
+    validation.add_argument("--input", type=Path, default=DEFAULT_DATASET,
+        help="0.2.0 candidate JSONL dataset")
+    validation.add_argument("--output", type=Path, default=Path("benchmark/datasets/validated/reference_answers.jsonl"),
+        help="Validated reference JSONL destination")
+    validation.add_argument("--report", type=Path, default=Path("benchmark/datasets/validated/validation_report.json"),
+        help="Summary report path")
+    validation.add_argument("--attempts", type=int, default=2,
+        help="Maximum attempts per reference query (default: 2)")
+    validation.add_argument("--delay", type=float, default=2.0,
+        help="Seconds between queries, exponential between retries (default: 2)")
+    validation.add_argument("--max-rows", type=int, default=20,
+        help="Limit rows returned by MAST query_region (default: 20)")
+    validation.add_argument("--max-response-bytes", type=int, default=8 * 1024 * 1024)
+    validation.add_argument("--limit", type=int,
+        help="Process at most N remaining tasks in this invocation")
+    validation.add_argument("--resume", action="store_true",
+        help="Continue from fsynced per-task journal; do not re-execute completed IDs")
+    validation.add_argument("--replace", action="store_true",
+        help="Discard previous output and journal, and start a new run")
+    validation.add_argument("--strict-accepted-020", action="store_true",
+        help="Require SHA256 of the formally accepted 50-task seed=42 dataset")
     return parser
 
 
@@ -72,6 +96,15 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
         return await doctor(
             args.mcp_url, timeout=args.timeout, fast=args.fast,
             smoke=args.smoke, object_name=args.object,
+        )
+    if args.command == "validate":
+        return await validate(
+            args.input, args.output, args.report, url=args.mcp_url,
+            timeout=args.timeout, attempts=args.attempts, delay=args.delay,
+            max_rows=args.max_rows, max_response_bytes=args.max_response_bytes,
+            limit=args.limit, resume=args.resume, replace=args.replace,
+            strict_sha256=(EXPECTED_ACCEPTED_020_SHA256
+                           if args.strict_accepted_020 else None),
         )
     if args.command == "generate":
         if args.output.exists() and not args.replace:
@@ -106,13 +139,14 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         payload = asyncio.run(_execute(args))
-    except (BenchmarkError, GenerationError, ValueError, OSError) as exc:
+    except (BenchmarkError, GenerationError, ValidationError, ValueError, OSError) as exc:
         payload = {"status": "FAIL", "command": args.command,
                    "endpoint": args.mcp_url, "error": {"type": type(exc).__name__,
                    "message": str(exc)}}
     output = json.dumps(payload, indent=2, ensure_ascii=False, allow_nan=False)
     print(output)
-    report_destination = args.report if args.command == "generate" else args.output
+    report_destination = (None if args.command == "validate" else
+                          args.report if args.command == "generate" else args.output)
     if report_destination is not None:
         try:
             report_destination.parent.mkdir(parents=True, exist_ok=True)
@@ -120,7 +154,7 @@ def main(argv: list[str] | None = None) -> int:
         except OSError as exc:
             print(f"Could not save report {report_destination}: {exc}", file=sys.stderr)
             return 2
-    return 0 if payload.get("status") == "PASS" else 1
+    return 0 if payload.get("status") in {"PASS", "PARTIAL", "COMPLETE"} else 1
 
 
 if __name__ == "__main__":
