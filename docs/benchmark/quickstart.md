@@ -1,4 +1,4 @@
-# Current workflow — AstroAKD-Bench 0.6.7.5
+# Current workflow — AstroAKD-Bench 0.6.7.6
 
 This is the **current command guide**. Versioned documentation under `docs/benchmark/`
 may illustrate earlier behavior. Execute all commands from the **repository root**.
@@ -170,9 +170,9 @@ See [experimental interpretation](experimental_methods.md),
 ## Build the HTML documentation
 
 ```bash
-make html
+make -C docs/sphinx html
 # Output: docs/_build/html/index.html
-make clean
+make -C docs/sphinx clean
 ```
 
 See the [Sphinx build guide](documentation_build.md).

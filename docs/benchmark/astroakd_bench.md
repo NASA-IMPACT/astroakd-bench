@@ -184,7 +184,7 @@ The script **refuses to merge** when both directories exist. Move or reconcile t
 - LLM-generated natural-language variations, comprehensive scientific statement verification, and offline MCP record/replay are **not yet implemented**.
 - AstroAKD-Bench does **not** claim authorship of the NASA IMPACT Astroquery MCP server or attribute its contributors to the benchmark.
 
-See [CHANGELOG.md](../../CHANGELOG.md) for cumulative release history and [docs/benchmark](./) for implementation details. **Every new release updates the root README, root CHANGELOG, package metadata, CLI examples, and relevant docs together.**
+See repository `CHANGELOG.md` for cumulative release history and `docs/benchmark/` for implementation details. **Every new release updates the root README, root CHANGELOG, package metadata, CLI examples, and relevant docs together.**
 
 ## Semantic replay and reusable Python API (0.6.1)
 

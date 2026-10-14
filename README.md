@@ -10,7 +10,7 @@ agents and exports reproducible answer comparisons, scores and performance plots
 **AstroAKD** is the *agent being evaluated*; **AstroAKD-Bench** is the *benchmark*;
 **astroquery-mcp** is a *separate MCP service*. They are not interchangeable.
 
-**Current version: `0.6.7.5` — named benchmark instruction and Sphinx HTML documentation.**
+**Current version: `0.6.7.6` — Read the Docs theme and documentation-build layout.**
 [Documentation index](docs/index.md) · [Current quick-start](docs/benchmark/quickstart.md)
 · [Change history](CHANGELOG.md) · [Instruction layout](instructions/README.md)
 
@@ -58,12 +58,12 @@ AstroAKD-Bench/
 │   └── astroakd_bench/
 │       └── AstroAKD-Bench_Instruction.md       # Synthetic-question authoring
 ├── docs/                              # Sphinx/MyST documentation sources
+│   ├── sphinx/Makefile                 # Build documentation from any directory
 │   ├── conf.py                        # Sphinx configuration
 │   ├── index.md                       # Documentation home
 │   ├── benchmark/                     # Current and versioned technical guides
 │   └── history/                       # Archived historical README
 ├── scripts/                           # Supporting utilities
-├── Makefile                            # make html, make clean
 ├── README.md                           # Concise current landing page
 ├── CHANGELOG.md                        # Benchmark release history
 └── pyproject.toml
@@ -208,13 +208,13 @@ mean-runtime and total-token bar plots in PNG and SVG. Reference matches are
 From the repository root, build all current and historical Markdown guides:
 
 ```bash
-make html
+make -C docs/sphinx html
 ```
 
 This installs the optional documentation dependencies through `uv` and writes
-`docs/_build/html/index.html`. Run `make clean` to delete build outputs. If
-Sphinx is already installed, use `make html SPHINXBUILD=sphinx-build`.
-The source configuration lives in `docs/conf.py`; see the
+`docs/_build/html/index.html`. Run `make -C docs/sphinx clean` to delete build outputs. If
+Sphinx is already installed, use `make -C docs/sphinx html SPHINXBUILD=sphinx-build`.
+The build Makefile lives at `docs/sphinx/Makefile`; the Sphinx configuration lives in `docs/conf.py`; see the
 [documentation build guide](docs/benchmark/documentation_build.md).
 
 ## Synthetic questions, evidence and scientific qualification

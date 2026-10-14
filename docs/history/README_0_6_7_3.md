@@ -1,4 +1,4 @@
-> **Historical archive:** This is the 0.6.7.3 README preserved for background. For supported 0.6.7.4 commands and instruction paths, start at [the current README](../../README.md) or [documentation index](../index.md). Commands/paths below may be superseded.
+> **Historical archive:** This is the 0.6.7.3 README preserved for background. For supported 0.6.7.4 commands and instruction paths, start at `the current README` (repository file `README.md`) or [documentation index](../index.md). Commands/paths below may be superseded.
 
 # AstroAKD-Bench
 
@@ -35,7 +35,7 @@ The `build-scorable` command derives **new**, narrowly answerable one-field ques
 
 All three AstroAKD arms now default to **`gpt-5.2`**. Use `run-three-arm` with `--model gpt-5.2`; then `score-scorable` exports the question, reference-snapshot answer, all three actual agent answers (including wrong and free-text answers), and per-arm reference-match percentages. **These percentages compare to frozen archive snapshot values and are not independently verified scientific gold accuracy.** The original 32/10/8 Gold mixed dataset remains unchanged: this new 50-question objective pilot excludes multistep literature questions until their separate ADS/archival scientific references are approved.
 
-Offline qualification: **197 passed, 1 optional live test skipped, 26 subtests passed**. See [full instructions](../benchmark/reference_anchored_scorable_0_6_7.md), [install guide](../../INSTALL_ASTROAKD_BENCH_0_6_7.md), and [qualification record](../../QUALIFICATION_0_6_7.md).
+Offline qualification: **197 passed, 1 optional live test skipped, 26 subtests passed**. See [full instructions](../benchmark/reference_anchored_scorable_0_6_7.md), `install guide` (repository file `INSTALL_ASTROAKD_BENCH_0_6_7.md`), and `qualification record` (repository file `QUALIFICATION_0_6_7.md`).
 
 ## 0.6.6.1 — Export all benchmark questions, answers and success rates to CSV
 
@@ -68,7 +68,7 @@ See [Answer inspection guide](../benchmark/answer_inspection_and_success_rates_0
 
 The 50-task native Gold mixed generation is now **real-host PASS**, but all 50 reference answers remain scientifically **unverified**. A five-task reference validation pilot (5/42 single-call tasks) was accepted structurally, and the original journal is preserved for `validate --resume`. 0.6.6 adds human-reviewed `gold-draft` / `gold-finalize` and independent `run-three-arm` / `score-three-arm` workflows. The three arms are **MCP only (no domain instruction)**, **MCP + AstroAKD agent instruction**, and **web search only (no MCP)**. The benchmark question-generation prompt is a separate artifact and is **not** used in the agent experiment.
 
-See [0.6.6 full protocol and commands](../benchmark/gold_reference_and_three_arm_0_6_6.md) and [current qualification](../../QUALIFICATION_0_6_6.md). Offline suite: **186 passed; 1 optional live skipped**. Actual gold science and three-arm run still pending.
+See [0.6.6 full protocol and commands](../benchmark/gold_reference_and_three_arm_0_6_6.md) and `current qualification` (repository file `QUALIFICATION_0_6_6.md`). Offline suite: **186 passed; 1 optional live skipped**. Actual gold science and three-arm run still pending.
 
 ## 0.6.5 — Native Gold-inspired mixed generation
 
@@ -116,7 +116,7 @@ Toggle instructions with `--instructions` (default) and `--no-instructions`. Pas
 
 **0.6.4.2 ID reconciliation:** A second live pilot stopped at batch 6/10 with `OpenAI changed or omitted task IDs`. OpenAI may rewrite the artificial slot labels; these are *never* authoritative. The benchmark now maps questions to frozen task IDs only when target/archive/question constraints determine a unique assignment, records `task_id_repaired` and `original_llm_task_id` per repaired record, and reports `task_id_repairs`. Unsafe/ambiguous responses are retried once (`openai_batch_retries`) and rejected if still unresolved. No MCP call, scientific constraint, or reference fixture is mutated. An API batch retry incurs an extra model request. A 50-question live OpenAI generation subsequently succeeded in 0.6.4.2.
 
-See [full 0.6.4 usage and comparison matrix](../benchmark/llm_generation_0_6_4.md) and [V1 workbook-derived instructions](../benchmark/llm_generation_instructions_v1.md). No historical workbook expected answers are imported as gold.
+See [full 0.6.4 usage and comparison matrix](../benchmark/llm_generation_0_6_4.md) and historical V1 workbook-derived instructions (now at `instructions/astroakd_bench/AstroAKD-Bench_Instruction.md`). No historical workbook expected answers are imported as gold.
 
 ## Literature search and ADS fallback (0.6.4.4)
 
@@ -566,7 +566,7 @@ The script **refuses to merge** when both directories exist. Move or reconcile t
 - Comprehensive scientific statement verification is **not yet implemented**; LLM-generated variations have been available since 0.6.4. Offline MCP replay is implemented, but unsupported calls fail closed and the LLM itself is not necessarily offline.
 - AstroAKD-Bench does **not** claim authorship of the NASA IMPACT Astroquery MCP server or attribute its contributors to the benchmark.
 
-See [CHANGELOG.md](../../CHANGELOG.md) for cumulative release history and [docs/benchmark](docs/benchmark/) for implementation details. **Every new release updates the root README, root CHANGELOG, package metadata, CLI examples, and relevant docs together.**
+See `CHANGELOG.md` (repository file `CHANGELOG.md`) for cumulative release history and `docs/benchmark/` for implementation details. **Every new release updates the root README, root CHANGELOG, package metadata, CLI examples, and relevant docs together.**
 
 ## Gold Benchmark task families and ADS literature fallback (0.6.4.3)
 
@@ -614,7 +614,7 @@ matches, not independently verified scientific gold accuracy.** Per-arm resource
 use can only be compared fairly across the same attempted question set.
 
 See [0.6.7.1 reporting guide](../benchmark/three_arm_detailed_reporting_0_6_7_1.md)
-and [installation instructions](../../INSTALL_ASTROAKD_BENCH_0_6_7_1.md).
+and `installation instructions` (repository file `INSTALL_ASTROAKD_BENCH_0_6_7_1.md`).
 
 ## 0.6.6 — Scientific gold references and AstroAKD three-arm evaluation
 
@@ -622,7 +622,7 @@ and [installation instructions](../../INSTALL_ASTROAKD_BENCH_0_6_7_1.md).
 
 This release adds four native commands: `gold-draft`, `gold-finalize`, `run-three-arm`, and `score-three-arm`. The gold lifecycle **never equates MCP reference-table structural acceptance with scientific truth**. The three arms use: (A) MCP only without detailed AstroAKD agent instructions; (B) MCP plus the full AstroAKD agent instructions; (C) OpenAI hosted web search only, without MCP. All receive the same question set and model. The approved gold answers and reference journal are never supplied to the agents. Auditable runs include per-task tool traces, source URLs, model usage, latency, and structured answer extraction.
 
-Your real laptop dataset's 50 mixed tasks (32 archive / 10 coordinate / 8 literature) and the five completed single-call reference records are carried forward **unchanged**. No true gold answers have been approved yet. To continue the current 5/42 reference collection without restarting it, use `validate --resume` with the same `.jsonl` output and report names. See [0.6.6 Gold and three-arm guide](../benchmark/gold_reference_and_three_arm_0_6_6.md), [host installation and qualification](../../INSTALL_ASTROAKD_BENCH_0_6_6.md), and [full conversation handoff](../../CONVERSATION_HANDOFF_THROUGH_0_6_6.md).
+Your real laptop dataset's 50 mixed tasks (32 archive / 10 coordinate / 8 literature) and the five completed single-call reference records are carried forward **unchanged**. No true gold answers have been approved yet. To continue the current 5/42 reference collection without restarting it, use `validate --resume` with the same `.jsonl` output and report names. See [0.6.6 Gold and three-arm guide](../benchmark/gold_reference_and_three_arm_0_6_6.md), `host installation and qualification` (repository file `INSTALL_ASTROAKD_BENCH_0_6_6.md`), and `full conversation handoff` (repository file `CONVERSATION_HANDOFF_THROUGH_0_6_6.md`).
 
 ### 0.6.7.2 resume compatibility
 

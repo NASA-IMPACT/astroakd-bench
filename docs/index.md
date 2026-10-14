@@ -2,13 +2,13 @@
 
 Documentation explains **how to use, interpret and reproduce AstroAKD-Bench**.
 Historical machine-readable audit evidence lives under `datasets/evaluation/`, not in `docs/`.
-Executable instructions are under [`../instructions/`](../instructions/README.md),
+Executable instructions are under the repository `instructions/` directory,
 not under `docs/`.
 
-Start with [the repository README](../README.md) for an overview, or the
+Start with the repository `README.md` for an overview, or the
 [current quick-start](benchmark/quickstart.md) for tested commands.
 
-## Current guides (0.6.7.5)
+## Current guides (0.6.7.6)
 
 | Topic | Guide |
 | --- | --- |
@@ -37,12 +37,12 @@ Use the quick-start above as the authority for current commands. These include:
 [historical README snapshot](history/README_0_6_7_3.md).
 
 For release-by-release changes and migration decisions, use
-[CHANGELOG.md](../CHANGELOG.md).
+the repository `CHANGELOG.md`.
 
 ## Documentation versus instructions
 
-- [`instructions/astroakd/AstroAKD_Instruction.md`](../instructions/astroakd/AstroAKD_Instruction.md) is the **evaluated AstroAKD agent's** specialist prompt, used only by arm B.
-- [`instructions/astroakd_bench/AstroAKD-Bench_Instruction.md`](../instructions/astroakd_bench/AstroAKD-Bench_Instruction.md) guides **synthetic question generation**. It is never supplied to the evaluated agent.
+- `instructions/astroakd/AstroAKD_Instruction.md` is the **evaluated AstroAKD agent's** specialist prompt, used only by arm B.
+- `instructions/astroakd_bench/AstroAKD-Bench_Instruction.md` guides **synthetic question generation**. It is never supplied to the evaluated agent.
 - The 50-task reference answer oracle under `datasets/gold/` is **hidden from the agent** and only read by offline scoring.
 - Both instruction contents are preserved byte-for-byte from 0.6.7.3 so frozen benchmark hashes remain valid.
 

@@ -5,9 +5,17 @@ here. This history is separate from the external `astroquery-mcp` project's
 releases: AstroAKD-Bench versions track benchmark capabilities, not versions
 of Astroquery or the MCP server.
 
-The current implemented benchmark version is **0.6.7.5**.
+The current implemented benchmark version is **0.6.7.6**.
 Dates are in UTC. Release statuses distinguish **offline implementation
 qualification** from **real laptop / live-service qualification**.
+
+## [0.6.7.6] — SPHINX_RTD_THEME_AND_MAKEFILE_LAYOUT (offline qualified; host RTD build pending) — 2026-10-14
+
+- Inspected the user-provided 0.6.7.5 `html.tar.gz`: 22 documentation pages, plus search and index, successfully generated with Sphinx 9.1.0/MyST 5.1.0 using the **Alabaster** theme. Three historic Markdown links rendered as dangling fragment anchors; no current guide page was missing. Host Make clock-skew warning concerned future timestamps, not the Sphinx build.
+- Match the XSTAR-Tools documentation design using the official `sphinx_rtd_theme` 3.1+ (`docs/conf.py`, optional `docs` dependencies); enable responsive left navigation, built-in search, and a stable sidebar. The new-theme HTML render requires a host Sphinx install and is tracked separately from the user-proven original Alabaster build.
+- Move the documentation-only root `Makefile` to `docs/sphinx/Makefile`. Canonical build is `make -C docs/sphinx html` (or `cd docs/sphinx && make html`); output remains `docs/_build/html/index.html`. `clean` and `linkcheck` remain. Use rooted paths so `make -f docs/sphinx/Makefile html` is also valid.
+- Update current README, quick-start, documentation-build guide, docs index, installation, and source-level regression expectations; adjust three obsolete archive-only links and remove misleading external-to-source Sphinx links. Preserve the agent and benchmark instruction file contents, frozen datasets, answer oracle, live GPT-5.2 journal, and resume context.
+- Add a 0.6.7.6 standalone handoff and checks for Makefile relocation, theme configuration, documentation paths, instruction hashes, and command dry-runs. No new model execution or MCP archive calls.
 
 ## [0.6.7.5] — SPHINX_HTML_AND_INSTRUCTION_NAMING (offline qualified; HTML host build pending) — 2026-10-14
 

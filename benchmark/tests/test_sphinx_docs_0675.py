@@ -31,12 +31,12 @@ class SphinxDocumentationTests(unittest.TestCase):
         self.assertIn("sphinx>=8.2", (ROOT / "pyproject.toml").read_text())
 
     def test_makefile_html_command(self):
-        result = subprocess.run(["make", "-n", "html"], cwd=ROOT,
+        result = subprocess.run(["make", "-n", "html"], cwd=ROOT / "docs/sphinx",
                                 text=True, stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE, check=True)
-        self.assertIn("uv run --extra docs sphinx-build -b html", result.stdout)
-        self.assertIn("docs docs/_build/html", result.stdout)
-        self.assertIn("make clean", (ROOT / "README.md").read_text())
+        self.assertIn("--extra docs sphinx-build -b html", result.stdout)
+        self.assertIn("docs/_build/html", result.stdout)
+        self.assertIn("make -C docs/sphinx clean", (ROOT / "README.md").read_text())
 
     def test_sphinx_toc_targets_exist(self):
         index = ROOT / "docs/index.md"
@@ -62,13 +62,13 @@ class SphinxDocumentationTests(unittest.TestCase):
         self.assertIn("Pilot run (`--limit 5`)", text)
         self.assertIn("Resume a partial pilot (`--resume`)", text)
         self.assertIn("Score and generate CSV reports / plots", text)
-        self.assertIn("make html", text)
+        self.assertIn("make -C docs/sphinx html", text)
         self.assertIn("AstroAKD-Bench_Instruction.md", text)
         self.assertNotIn("Re-score and regenerate CSV reports / plots", text)
 
     def test_qualification_records_no_live_build(self):
         self.assertIn("HTML", (ROOT / "CHANGELOG.md").read_text())
-        self.assertIn("0.6.7.5", (ROOT / "benchmark/__init__.py").read_text())
+        self.assertIn("0.6.7.6", (ROOT / "benchmark/__init__.py").read_text())
 
 if __name__ == "__main__":
     unittest.main()

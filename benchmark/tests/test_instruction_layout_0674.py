@@ -32,7 +32,7 @@ class InstructionLayoutTests(unittest.TestCase):
         self.assertTrue((ROOT/'docs/index.md').is_file())
         self.assertTrue((ROOT/'instructions/README.md').is_file())
         self.assertTrue(all(
-            p.suffix == '.md' or p == ROOT/'docs/conf.py'
+            p.suffix == '.md' or p == ROOT/'docs/conf.py' or p == ROOT/'docs/sphinx/Makefile'
             for p in (ROOT/'docs').rglob('*')
             if p.is_file() and '_build' not in p.parts
             and '__pycache__' not in p.parts
@@ -54,7 +54,7 @@ class InstructionLayoutTests(unittest.TestCase):
             content=path.read_text(encoding='utf-8')
             self.assertIn('instructions/astroakd/AstroAKD_Instruction.md',content)
             self.assertIn('instructions/astroakd_bench/AstroAKD-Bench_Instruction.md',content)
-        self.assertIn('0.6.7.5',(ROOT/'pyproject.toml').read_text())
+        self.assertIn('0.6.7.6',(ROOT/'pyproject.toml').read_text())
 
 
 if __name__=='__main__':
