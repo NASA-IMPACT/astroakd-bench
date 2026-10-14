@@ -5,9 +5,15 @@ here. This history is separate from the external `astroquery-mcp` project's
 releases: AstroAKD-Bench versions track benchmark capabilities, not versions
 of Astroquery or the MCP server.
 
-The current implemented benchmark version is **0.6.7.1**.
+The current implemented benchmark version is **0.6.7.2**.
 Dates are in UTC. Release statuses distinguish **offline implementation
 qualification** from **real laptop / live-service qualification**.
+
+## [0.6.7.2] — THREE_ARM_RESUME_MANIFEST_JSON_CLOSURE (offline-qualified; real host resume pending) — 2026-10-14
+
+- Fix a persisted-manifest type mismatch in `run-three-arm --resume`: Python tuple `ARMS` serialized to a JSON array (list), causing an unequal comparison despite identical settings and rejecting every valid resume with `Resume context differs; refuse data mixing`. New contexts use `list(ARMS)`, preserving the same serialized JSON bytes and all existing pilot manifests.
+- Retain the existing dataset hash, instruction hash, GPT-5.2 model, MCP endpoint and resource-budget checks. Genuine mismatches must still reject. No changes to agent scientific behavior, tools, prompts, frozen reference keys, scoring algorithms, saved journals, or completed GPT-5.2 runs.
+- Add an offline regression exercising two-task/three-arm partial execution, an intentionally invalid changed-model resume, and successful continuation to six unique arm records without re-running the first three. Real user 45-task continuation remains **PENDING**.
 
 ## [0.6.7.1] — THREE_ARM_DETAILED_ANSWER_PERFORMANCE_PLOTS (offline-qualified; live pilot files analyzed) — 2026-10-14
 

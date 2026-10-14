@@ -91,7 +91,7 @@ async def run_three_arm(tasks_path:Path, instruction_file:Path, output:Path, rep
     instr_hash=hashlib.sha256(instructions.encode()).hexdigest()
     context={'tasks_sha256':dataset_hash,'agent_instruction_sha256':instr_hash,'model':model,
              'mcp_url':url,'max_turns':max_turns,'max_calls':max_calls,'max_tool_bytes':max_tool_bytes,
-             'task_timeout':task_timeout,'mcp_timeout':timeout,'arms':ARMS}
+             'task_timeout':task_timeout,'mcp_timeout':timeout,'arms':list(ARMS)}
     journal=output.with_name(output.name+'.progress.jsonl')
     manifest=output.with_name(output.name+'.manifest.json')
     if resume:
