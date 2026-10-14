@@ -25,7 +25,7 @@ class AstroAKDBench:
     """Reusable local benchmark workflows and defaults rooted in *root*.
 
     Methods never overwrite generated artifacts unless ``replace=True``.
-    ``generate_queries`` only uses MCP discovery, not archive queries or an LLM.
+    ``generate_queries`` supports OpenAI, template, and native Gold mixed generation.
     ``evaluate_agent`` and ``build_fixtures`` require no external service.
     """
 
@@ -63,6 +63,9 @@ class AstroAKDBench:
                                use_instructions: bool = True, use_mcp: bool = True,
                                instructions_file: str | Path | None = None,
                                batch_size: int = 5,
+                               task_mix: str | None = None,
+                               single_call_output: str | Path | None = None,
+                               literature_output: str | Path | None = None,
                                openai_client_factory: Callable | None = None,
                                progress: Callable[[str], None] | None = None,
                                ) -> dict[str, Any]:
@@ -74,13 +77,32 @@ class AstroAKDBench:
         from .exports import check_destinations, save_views
         csv_path = self.path(csv_output) if csv_output is not None else None
         pretty_path = self.path(pretty_output) if pretty_output is not None else None
+        from .mixed_generation import parse_task_mix
+        mix = parse_task_mix(task_mix, count=count)
+        ordinary_path = self.path(single_call_output) if single_call_output is not None else None
+        literature_path = self.path(literature_output) if literature_output is not None else None
+        split_paths = tuple(p for p in (ordinary_path,literature_path) if p is not None)
+        if split_paths and mix is None:
+            raise ValueError('Split outputs require task_mix')
         check_destinations(None, destination, report_path,
-                           pretty_path, csv_path, replace=replace)
+                           pretty_path, csv_path, replace=replace, extras=split_paths)
+        for p in split_paths:
+            if p.exists() and not replace:
+                raise ValueError(f'Split output exists: {p}')
         if destination.exists() and not replace:
             raise ValueError(f'Dataset already exists: {destination}; use replace=True')
         if report_path is not None and report_path.exists() and not replace:
             raise ValueError(f'Report already exists: {report_path}; use replace=True')
-        if backend == 'template':
+        if mix is not None:
+            from .mixed_generation import generate_mixed
+            candidates, summary = await generate_mixed(self.mcp_url, count=count, seed=seed,
+                modules=parse_modules(modules), mix=mix, timeout=self.timeout,
+                uniqueness=uniqueness, backend=backend, model=model,
+                use_instructions=use_instructions, use_mcp=use_mcp,
+                instructions_file=self.path(instructions_file) if instructions_file is not None else None,
+                batch_size=batch_size, session_factory=session_factory,
+                progress=progress, openai_client_factory=openai_client_factory)
+        elif backend == 'template':
             if instructions_file is not None:
                 raise ValueError('Template backend does not use custom instructions')
             if not use_mcp:
@@ -103,6 +125,15 @@ class AstroAKDBench:
                 instructions_file=self.path(instructions_file) if instructions_file is not None else None,
                 batch_size=batch_size, openai_client_factory=openai_client_factory,
                 progress=progress)
+        if mix is not None:
+            if ordinary_path is not None:
+                summary['single_call_sha256'] = write_jsonl(ordinary_path,
+                    [t for t in candidates if t['task_type'] != 'literature_driven'], replace=replace)
+                summary['single_call_output'] = str(ordinary_path)
+            if literature_path is not None:
+                summary['literature_sha256'] = write_jsonl(literature_path,
+                    [t for t in candidates if t['task_type'] == 'literature_driven'], replace=replace)
+                summary['literature_output'] = str(literature_path)
         summary['dataset_sha256'] = write_jsonl(destination, candidates, replace=replace)
         summary['output'] = str(destination)
         save_views(candidates, pretty=pretty_path, csv_path=csv_path,

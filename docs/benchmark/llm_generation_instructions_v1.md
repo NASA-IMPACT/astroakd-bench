@@ -86,3 +86,15 @@ intent/target/archive combinations. Do not simply replace one ObsID or quasar
 name with a fictional value. Distinguish requests for a complete list from
 results truncated by a server's `max_rows` limit. Keep expected answers *unverified*
 until independent reference validation.
+
+## Native Gold mixed generation (0.6.5)
+
+Generate the three distinct **task types** within the same benchmark workflow:
+
+- **`archive_driven`:** Start from a named object, and request a specific archive field supported by its discovered MCP call (IDs, exposure, proposal, instrument, catalog measurement). Do not claim a broad table search enforces publication dates, HETGS, or other filters it does not express.
+- **`coordinate_driven`:** Start with explicit J2000 ICRS RA/Dec (prefer sexagesimal accompanied by decimal degrees), search radius in arcsec or arcmin, and an archive-compatible task. Coordinates and radius must come from the immutable MCP reference-call constraints, not be hallucinated by the model. The benchmark itself injects precise coordinates when necessary.
+- **`literature_driven`:** Start with paper/object discovery and **then** ask the agent to identify/verify observation data or objects using the appropriate archive. Search via Astroquery MCP's `astroquery_check_auth` and `ads_query_compact` when the MCP server is authenticated with `API_DEV_KEY`; otherwise use OpenAI `web_search`. Cite identified publications and separately cross-check archive metadata, preferably using `ads_get_paper` when a bibcode is available. Do not equate bibliographic discovery with archive validation.
+
+Gold Benchmark Dataset.xlsx has 31 populated example questions: 20 archive-driven, 7 coordinate-driven, 4 literature-driven. Its examples motivate the task distribution and scientific content, but **no gold answer is copied** and literature-specific paper statements remain unverified until checked. The `--task-mix gold50` option requests 32 / 10 / 8 as a configurable test composition, not the workbook's exact original proportions. The eight literature **research anchors** are deliberately seeds rather than canned complete benchmark questions, so OpenAI authors the output after new research; every authored question and research provenance is recorded. If the model authoring fails, the question is marked as a template fallback, not misrepresented as model-authored.
+
+**Evaluation requirement:** keep literature-driven tasks on a separate multistep track; the existing single-call reference validator is for MCP-bound archive/coordinate candidates only. All three types are `unverified_candidate` until actual evidence and answers are checked. Ensure separate source provenance for MCP ADS vs. OpenAI fallback; ADS authentication is not proof of successful ADS query execution.

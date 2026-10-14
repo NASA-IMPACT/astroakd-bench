@@ -1,3 +1,10 @@
+## [0.6.5] — NATIVE_GOLD_MIXED_QUERY_GENERATION (offline PASS; live PENDING)
+
+- Integrate native Gold-inspired generation with `generate --task-mix gold50` (32 archive, 10 coordinate, 8 literature) or custom family quotas. Previously shared Gold50 file was made by a separate offline builder, **not** AstroAKD-Bench live OpenAI generation.
+- Execute OpenAI/MCP-bound archive generation inside AstroAKD-Bench; add grounded ICRS coordinate questions and eight research-based, multistep literature questions. Research uses **MCP ADS first** and falls back to OpenAI `web_search` when ADS fails or the key is missing.
+- Preserve immutable reference calls, prompt/source provenance, no invented expected answers, uniqueness audit and split outputs to keep literature tasks out of the one-call validator.
+- Add Python API mixed generation, mock/offline tests, usage guide, installation/qualification and conversation handoff. All-suite offline result 177 passed, 1 optional live skipped; no new live OpenAI/ADS run claimed.
+
 ## [0.6.4.3] — GOLD_BENCHMARK_MCP_ADS_LITERATURE_FALLBACK
 
 - Analyzed the separate Gold Benchmark Dataset (31 numbered queries: 20 archive-driven, 7 coordinate-driven, 4 literature-driven). Expanded the default LLM instructions to cover scientific question structure, units, and literature-to-archive evidence chains.

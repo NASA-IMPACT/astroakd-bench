@@ -4,7 +4,27 @@
 
 AstroAKD-Bench is an **independent Python repository** for developing and evaluating agents that discover astronomical data through the [NASA IMPACT Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp). That server is an **external service**, not this repository or the owner of this benchmark. AstroAKD-Bench generates natural-language astronomy tasks, executes reference archive queries via MCP, collects independent agent traces, and scores observable execution and a bounded set of claims.
 
-**Current version: 0.6.4.4 — LITERATURE_SEARCH_FALLBACK_OUTPUT_CLOSURE.** The default `generate` command now uses OpenAI to author diverse synthetic questions with workbook-derived instructions and the external Astroquery MCP server. `--backend template` retains the API-free legacy generator; `--no-mcp` uses OpenAI Responses `web_search` instead. OpenAI generation uses a separate API key/billing; offline audits and scoring do not.
+**Current version: 0.6.5 — NATIVE_GOLD_MIXED_QUERY_GENERATION.** The default `generate` command now uses OpenAI to author diverse synthetic questions with workbook-derived instructions and the external Astroquery MCP server. `--backend template` retains the API-free legacy generator; `--no-mcp` uses OpenAI Responses `web_search` instead. OpenAI generation uses a separate API key/billing; offline audits and scoring do not.
+
+## 0.6.5 — Native Gold-inspired mixed generation
+
+The earlier 50-question Gold-inspired draft was constructed by an **external offline builder** and did not use a live generation run. **Do not present it as a native AstroAKD-Bench/OpenAI-generated dataset.** Version 0.6.5 adds `generate --task-mix gold50` inside the benchmark: 32 `archive_driven`, 10 `coordinate_driven`, and 8 `literature_driven` tasks. The 42 ordinary tasks are produced using the existing OpenAI/MCP-bound generation engine, while literature tasks invoke MCP ADS-first research (with OpenAI web-search fallback) followed by LLM question authoring. Neither search nor authoring verifies scientific answers. See [native mixed generation guide](docs/benchmark/native_gold_mixed_generation_0_6_5.md).
+
+```bash
+uv run --with openai python -m benchmark generate \
+  --backend openai --instructions --mcp --model gpt-4.1-mini \
+  --task-mix gold50 --count 50 --seed 123 \
+  --modules simbad,mast,heasarc,gaia,vizier \
+  --uniqueness archive-target \
+  --output datasets/generated/gold_mixed_065.jsonl \
+  --single-call-output datasets/generated/gold_mixed_065_single_call_42.jsonl \
+  --literature-output datasets/generated/gold_mixed_065_literature_8.jsonl \
+  --csv-output datasets/generated/gold_mixed_065.csv \
+  --pretty-output datasets/generated/gold_mixed_065_pretty.json \
+  --report datasets/generated/gold_mixed_065_report.json --json-format pretty
+```
+
+Only the 42 ordinary MCP-backed tasks can be sent to the existing single-call `validate` command. The eight literature tasks require a future multi-step paper-and-observation validation stage. `--no-mcp` works but makes all tasks research-only, not executable through the current one-call validator. You may also use `--no-instructions` or `--backend hybrid` as in 0.6.4.4. Offline qualification passed; the first live Gold mixed generation is pending.
 
 ## 0.6.4.4 — OpenAI-generated questions: quick start
 

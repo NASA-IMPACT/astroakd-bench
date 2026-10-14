@@ -26,7 +26,7 @@ DEFAULT_DATASET = Path("datasets/generated/synthetic_queries.jsonl")
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="astroakd-bench",
-        description="AstroAKD-Bench 0.6.4.4 with optional MCP ADS literature search and fallback.",
+        description="AstroAKD-Bench 0.6.5 including native Gold mixed-task generation.",
     )
     parser.add_argument("--version", action="version", version=__version__)
     common = argparse.ArgumentParser(add_help=False)
@@ -73,6 +73,9 @@ def build_parser() -> argparse.ArgumentParser:
     gen.add_argument('--quiet-progress', action='store_true', help='Hide OpenAI generation batch progress on stderr')
     gen.add_argument('--batch-size', type=int, default=5,
                      help='Questions per OpenAI call, 1..10 (default: 5)')
+    gen.add_argument('--task-mix', help='Native mixed generation: gold50 or archive_driven=32,coordinate_driven=10,literature_driven=8')
+    gen.add_argument('--single-call-output', type=Path, help='Optional subset JSONL for ordinary single-call validation')
+    gen.add_argument('--literature-output', type=Path, help='Optional subset JSONL for multistep literature tasks')
     gen.add_argument("--count", type=int, default=50, help="Number of candidates, 1..500 (default: 50)")
     gen.add_argument("--seed", type=int, default=42, help="Deterministic seed (default: 42)")
     gen.add_argument("--modules", default=",".join(SUPPORTED_MODULES),
@@ -255,12 +258,31 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
         )
     if args.command == "generate":
         from .exports import check_destinations, save_views
+        from .mixed_generation import parse_task_mix
+        mix = parse_task_mix(args.task_mix, count=args.count)
+        split_outputs = tuple(p for p in (args.single_call_output, args.literature_output) if p is not None)
+        if split_outputs and mix is None:
+            raise GenerationError('--single-call-output/--literature-output require --task-mix')
         check_destinations(None, args.output, args.report, args.pretty_output,
-                           args.csv_output, replace=args.replace)
+                           args.csv_output, replace=args.replace, extras=split_outputs)
+        for path in split_outputs:
+            if path.exists() and not args.replace:
+                raise GenerationError(f'Split output exists: {path}; use --replace')
         if args.output.exists() and not args.replace:
             raise GenerationError(f"Output exists: {args.output}; pass --replace to overwrite")
         modules = parse_modules(args.modules)
-        if args.backend == 'template':
+        if mix is not None:
+            from .mixed_generation import generate_mixed
+            candidates, summary = await generate_mixed(
+                args.mcp_url, count=args.count, seed=args.seed, modules=modules,
+                mix=mix, timeout=args.timeout, uniqueness=args.uniqueness,
+                backend=args.backend, model=args.model, use_instructions=args.instructions,
+                use_mcp=args.mcp, instructions_file=args.instructions_file,
+                batch_size=args.batch_size,
+                progress=(None if args.quiet_progress else lambda message: print(
+                    f'[AstroAKD-Bench generate] {message}', file=sys.stderr, flush=True)),
+            )
+        elif args.backend == 'template':
             if args.instructions_file is not None:
                 raise GenerationError('--instructions-file applies only to openai/hybrid backends')
             if not args.mcp:
@@ -283,6 +305,16 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
                 batch_size=args.batch_size,
                 progress=(None if args.quiet_progress else lambda message: print(f'[AstroAKD-Bench generate] {message}', file=sys.stderr, flush=True)),
             )
+        # Publish only after every task has passed the mixed/single-track audit.
+        if mix is not None:
+            if args.single_call_output is not None:
+                summary['single_call_sha256'] = write_jsonl(args.single_call_output,
+                    [t for t in candidates if t['task_type'] != 'literature_driven'], replace=args.replace)
+                summary['single_call_output'] = str(args.single_call_output)
+            if args.literature_output is not None:
+                summary['literature_sha256'] = write_jsonl(args.literature_output,
+                    [t for t in candidates if t['task_type'] == 'literature_driven'], replace=args.replace)
+                summary['literature_output'] = str(args.literature_output)
         summary["dataset_sha256"] = write_jsonl(args.output, candidates, replace=args.replace)
         summary["output"] = str(args.output)
         save_views(candidates, pretty=args.pretty_output, csv_path=args.csv_output,
