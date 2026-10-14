@@ -1,4 +1,4 @@
-# Current workflow — AstroAKD-Bench 0.6.7.7
+# Current workflow — AstroAKD-Bench 0.6.7.8
 
 This is the **current command guide**. Versioned documentation under `docs/benchmark/`
 may illustrate earlier behavior. Execute all commands from the **repository root**.
@@ -186,3 +186,11 @@ one event row per actual call, per-function A/B totals, and five PNG/SVG plots
 (including two MCP-specific A/B charts). See
 [MCP tool-call reporting](mcp_tool_call_reporting_0_6_7_7.md). No GPT-5.2
 re-execution is needed.
+
+## 7. Paired 50-question analysis and CSVs (0.6.7.8)
+
+For the completed 150-run journal, use the same `score-scorable` command with
+`--overall-csv`, `--mcp-ab-summary-csv`, `--paired-questions-csv`,
+`--paired-summary-csv`, `--mismatch-audit-csv` and `--paired-plots-dir`.
+See [paired analysis and reproducible commands](paired_analysis_0_6_7_8.md).
+These exports are offline, additive, and preserve the frozen dataset.

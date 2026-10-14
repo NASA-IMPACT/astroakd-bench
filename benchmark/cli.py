@@ -264,6 +264,12 @@ def build_parser() -> argparse.ArgumentParser:
     scorable_score.add_argument('--task-performance-csv', type=Path, help='150-row per-task runtime/token/tool-count metrics')
     scorable_score.add_argument('--mcp-calls-csv', type=Path, help='One row per actual MCP gateway call in A/B, including status and tool names')
     scorable_score.add_argument('--mcp-tool-frequency-csv', type=Path, help='Per-tool attempted/successful/rejected/error counts for A and B')
+    scorable_score.add_argument('--overall-csv', type=Path, help='Complete A/B/C overall results, including MCP and web-search metrics')
+    scorable_score.add_argument('--mcp-ab-summary-csv', type=Path, help='MCP-only A/B summary including attempted, successful, and rejected calls')
+    scorable_score.add_argument('--paired-questions-csv', type=Path, help='Paired 50-question A/B/C answer, correctness, tool and cost comparison')
+    scorable_score.add_argument('--paired-summary-csv', type=Path, help='Pairwise match discordances, McNemar test, runtime and token deltas')
+    scorable_score.add_argument('--mismatch-audit-csv', type=Path, help='All reference mismatches requiring independent science review')
+    scorable_score.add_argument('--paired-plots-dir', type=Path, help='Four paired A/B and A/B/C diagnostic figures (PNG and SVG)')
     scorable_score.add_argument('--plots-dir', type=Path, help='Five barplots as PNG and SVG (three A/B/C and two MCP A/B); needs matplotlib')
     scorable_score.add_argument('--replace', action='store_true')
     inspect = commands.add_parser('inspect', parents=[common],
@@ -285,7 +291,11 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
             args.summary_csv,args.report,detail_csv=args.detailed_csv,
             performance_csv=args.performance_csv,task_performance_csv=args.task_performance_csv,
             plots_dir=args.plots_dir,mcp_calls_csv=args.mcp_calls_csv,
-            mcp_tool_frequency_csv=args.mcp_tool_frequency_csv,replace=args.replace)
+            mcp_tool_frequency_csv=args.mcp_tool_frequency_csv,
+            overall_csv=args.overall_csv,mcp_ab_summary_csv=args.mcp_ab_summary_csv,
+            paired_questions_csv=args.paired_questions_csv,paired_summary_csv=args.paired_summary_csv,
+            mismatch_audit_csv=args.mismatch_audit_csv,paired_plots_dir=args.paired_plots_dir,
+            replace=args.replace)
     if args.command == 'export-answer-csv':
         from .answer_reports import export_answer_csv
         return export_answer_csv(args.tasks,args.questions_csv,args.arms_csv,args.summary_csv,args.report,

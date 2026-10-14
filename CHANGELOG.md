@@ -5,9 +5,17 @@ here. This history is separate from the external `astroquery-mcp` project's
 releases: AstroAKD-Bench versions track benchmark capabilities, not versions
 of Astroquery or the MCP server.
 
-The current implemented benchmark version is **0.6.7.7**.
+The current implemented benchmark version is **0.6.7.8**.
 Dates are in UTC. Release statuses distinguish **offline implementation
 qualification** from **real laptop / live-service qualification**.
+
+## [0.6.7.8] — PAIRED_THREE_ARM_ERROR_AND_EFFICIENCY_ANALYSIS (offline-qualified; 2026-10-15)
+
+- Add optional five CSV reports to `score-scorable`: overall A/B/C results including MCP and web statistics; MCP A/B summary; per-question A/B/C paired answers and runtime/token/tool deltas; pairwise match contingency and efficiency summary; and observable-category mismatch audit requiring independent science review. Existing reports remain compatible.
+- Calculate exact two-sided McNemar discordance p-values, paired means and medians, quartiles, and deterministic 2000-resample percentile bootstrap intervals on paired **mean differences**. Missing arm runs remain unavailable rather than being coerced to zero or an incorrect answer.
+- Add four paired PNG/SVG figures, separate from the five original figures. Preserve recorded model responses, source-derived oracle, instruction contents and input hashes.
+- Real 150-record GPT-5.2 journal (SHA-256 `58824a2b71e7063b550c3fa16592f70307f11f6ace7293bf7fe81a47c334daaf`) scored offline: A 48, B 49 and C 12 reference matches; 41 arm-level mismatches requiring review. The A/B correctness table is 48 both match / 0 A-only / 1 B-only / 1 neither, exact McNemar p = 1.0. Mean B-minus-A runtime ~ -6.48 s, median ~ -0.24 s; do not interpret the difference as typical speedup on every question.
+- Refresh CLI, Python API, README, Sphinx navigation, quick-start, tests and conversation handoff. The 50-task archive-focused snapshot is not independent gold or a general astronomy-discovery benchmark. Sphinx host rendering remains a separate qualification.
 
 ## [0.6.7.7] — MCP_TOOL_CALL_REPORTING_AND_AB_PLOTS (offline-qualified; 2026-10-14)
 

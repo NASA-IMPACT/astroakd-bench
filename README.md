@@ -10,7 +10,7 @@ agents and exports reproducible answer comparisons, scores and performance plots
 **AstroAKD** is the *agent being evaluated*; **AstroAKD-Bench** is the *benchmark*;
 **astroquery-mcp** is a *separate MCP service*. They are not interchangeable.
 
-**Current version: `0.6.7.7` — per-query MCP tool-call CSV and A/B diagnostic plots.**
+**Current version: `0.6.7.8` — paired 50-question A/B/C analysis, error audit, comprehensive CSV exports, and new figures.**
 [Documentation index](docs/index.md) · [Current quick-start](docs/benchmark/quickstart.md)
 · [Change history](CHANGELOG.md) · [Instruction layout](instructions/README.md)
 
@@ -190,6 +190,12 @@ uv run --with matplotlib python -m benchmark score-scorable \
   --task-performance-csv datasets/reports/gpt52_fresh_per_task_performance.csv \
   --mcp-calls-csv datasets/reports/gpt52_fresh_mcp_calls.csv \
   --mcp-tool-frequency-csv datasets/reports/gpt52_fresh_mcp_tool_frequency.csv \
+  --overall-csv datasets/reports/gpt52_fresh_overall_results.csv \
+  --mcp-ab-summary-csv datasets/reports/gpt52_fresh_mcp_ab_summary.csv \
+  --paired-questions-csv datasets/reports/gpt52_fresh_paired_questions.csv \
+  --paired-summary-csv datasets/reports/gpt52_fresh_paired_summary.csv \
+  --mismatch-audit-csv datasets/reports/gpt52_fresh_mismatch_audit.csv \
+  --paired-plots-dir datasets/reports/gpt52_fresh_paired_plots \
   --plots-dir datasets/reports/gpt52_fresh_plots \
   --report datasets/reports/gpt52_fresh_scores.json \
   --json-format pretty
@@ -204,7 +210,15 @@ blank, unstructured and abstained answers and produces A/B/C match-rate,
 mean-runtime and total-token bar plots, plus **average MCP tool calls** and **per-function MCP call frequencies** for arms A/B, in PNG and SVG. Reference matches are
 **not independently verified scientific accuracy**. See the
 [reporting guide](docs/benchmark/three_arm_detailed_reporting_0_6_7_1.md) and
-[per-query MCP tool-call reporting](docs/benchmark/mcp_tool_call_reporting_0_6_7_7.md).
+[per-query MCP tool-call reporting](docs/benchmark/mcp_tool_call_reporting_0_6_7_7.md). The 0.6.7.8 extension also exports a **combined A/B/C overall-results CSV**,
+**A/B MCP summary CSV**, 50-row question-paired answer/efficiency table,
+three-row paired comparison summary with exact McNemar testing and
+fixed-seed paired bootstrap intervals, and an independently reviewable
+mismatch audit. Four supplementary paired PNG/SVG figures are saved separately;
+see the [paired-analysis guide](docs/benchmark/paired_analysis_0_6_7_8.md).
+For a full completed journal stored in an older release directory, supply
+its **absolute path** to `--runs`; do not accidentally score the bundled
+15-record pilot. Model/MCP replay is not required.
 
 ## HTML documentation (Sphinx + MyST)
 

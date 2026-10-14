@@ -17,6 +17,7 @@ from .validator import ValidationError, load_jsonl, atomic_jsonl, atomic_json
 from .exports import atomic_csv, json_compact
 from .three_arm import ARMS, _score_one
 from .scorable_diagnostics import export_detailed, plot_paths
+from .paired_analysis import export_paired, paired_plot_paths
 
 MILESTONE = '0.6.7 - REFERENCE_ANCHORED_SCORABLE_QUERIES'
 ARM_LABELS = {'mcp_only':'A - MCP only','mcp_instruction':'B - MCP + Instruction','web_only':'C - Web only'}
@@ -167,12 +168,19 @@ def _normalize_equivalent_unit(answer:dict,gold:dict)->dict:
 def score_scorable(tasks_path:Path,oracle_path:Path,runs_path:Path,comparison_csv:Path,summary_csv:Path,report_out:Path,*,
                    detail_csv:Path|None=None,performance_csv:Path|None=None,
                    task_performance_csv:Path|None=None, plots_dir:Path|None=None,
-                   mcp_calls_csv:Path|None=None,mcp_tool_frequency_csv:Path|None=None,replace:bool=False):
+                   mcp_calls_csv:Path|None=None,mcp_tool_frequency_csv:Path|None=None,
+                   overall_csv:Path|None=None,mcp_ab_summary_csv:Path|None=None,
+                   paired_questions_csv:Path|None=None,paired_summary_csv:Path|None=None,
+                   mismatch_audit_csv:Path|None=None,paired_plots_dir:Path|None=None,
+                   replace:bool=False):
     # Preflight every destination before writing a single output.
     plot_outputs=plot_paths(plots_dir) if plots_dir is not None else []
+    paired_outputs=paired_plot_paths(paired_plots_dir) if paired_plots_dir is not None else []
     _path_safety([tasks_path,oracle_path,runs_path],
                  [comparison_csv,summary_csv,report_out,detail_csv,performance_csv,task_performance_csv,
-                  mcp_calls_csv,mcp_tool_frequency_csv,*plot_outputs],replace)
+                  mcp_calls_csv,mcp_tool_frequency_csv,overall_csv,mcp_ab_summary_csv,
+                  paired_questions_csv,paired_summary_csv,mismatch_audit_csv,
+                  *plot_outputs,*paired_outputs],replace)
     tasks,digest=_read_tasks(tasks_path)
     oracle,hashoracle=load_jsonl(oracle_path)
     runs,hashruns=load_jsonl(runs_path,max_bytes=512*1024*1024)
@@ -227,7 +235,13 @@ def score_scorable(tasks_path:Path,oracle_path:Path,runs_path:Path,comparison_cs
     diagnostics=export_detailed(comparisons,summaries,mapping,detail_csv=detail_csv,
         performance_csv=performance_csv,task_performance_csv=task_performance_csv,
         plots_dir=plots_dir,mcp_calls_csv=mcp_calls_csv,
-        mcp_tool_frequency_csv=mcp_tool_frequency_csv,replace=replace)
+        mcp_tool_frequency_csv=mcp_tool_frequency_csv,replace=replace,
+        collect=any(p is not None for p in (overall_csv,mcp_ab_summary_csv,paired_questions_csv,
+                    paired_summary_csv,mismatch_audit_csv,paired_plots_dir)))
+    paired_reports=export_paired(comparisons,diagnostics.get('performance_observations') or [],mapping,
+        overall_csv=overall_csv,mcp_ab_summary_csv=mcp_ab_summary_csv,
+        paired_questions_csv=paired_questions_csv,paired_summary_csv=paired_summary_csv,
+        mismatch_audit_csv=mismatch_audit_csv,paired_plots_dir=paired_plots_dir,replace=replace)
     atomic_csv(comparison_csv,comparisons,tuple(comparisons[0]),replace=replace)
     atomic_csv(summary_csv,summaries,tuple(summaries[0]),replace=replace)
     report={'milestone':MILESTONE,'benchmark_version':__version__,'status':'PASS' if len(mapping)==len(tasks)*3 else 'PARTIAL',
@@ -235,6 +249,6 @@ def score_scorable(tasks_path:Path,oracle_path:Path,runs_path:Path,comparison_cs
             'oracle_sha256':hashoracle,'runs_sha256':hashruns,'arms':{s['arm']:s for s in summaries},
             'note':'Reference-snapshot exact-match percentages, not independently verified scientific accuracy. All answers, including wrong/free-form/error replies, retained in CSV.',
             'comparison_csv':str(comparison_csv),'summary_csv':str(summary_csv),
-            **diagnostics}
+            **diagnostics,**paired_reports}
     atomic_json(report_out,report,replace=replace,style='pretty')
     return report

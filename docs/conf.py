@@ -3,7 +3,7 @@ from __future__ import annotations
 
 project = "AstroAKD-Bench"
 author = "AstroAKD-Bench contributors"
-release = "0.6.7.7"
+release = "0.6.7.8"
 version = release
 root_doc = "index"
 extensions = ["myst_parser", "sphinx_rtd_theme"]

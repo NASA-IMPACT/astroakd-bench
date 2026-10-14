@@ -166,13 +166,13 @@ def _usage_detail(record: dict | None) -> dict:
 def export_detailed(comparisons:list[dict], summaries:list[dict], runs_by_key:dict, *,
                     detail_csv:Path|None,performance_csv:Path|None,task_performance_csv:Path|None,
                     plots_dir:Path|None,mcp_calls_csv:Path|None=None,
-                    mcp_tool_frequency_csv:Path|None=None,replace:bool=False) -> dict:
+                    mcp_tool_frequency_csv:Path|None=None,replace:bool=False,collect:bool=False) -> dict:
     """Export richer post-score views, retaining every answer, even when wrong.
 
     The caller has already validated task/oracle hashes, model and arm separation.
     """
     if not any(p is not None for p in (detail_csv,performance_csv,task_performance_csv,plots_dir,
-                                        mcp_calls_csv,mcp_tool_frequency_csv)):
+                                        mcp_calls_csv,mcp_tool_frequency_csv)) and not collect:
         return {}
     by_arm = {summary['arm']:summary for summary in summaries}
     detail=[]; per_task=[]; performance=[]

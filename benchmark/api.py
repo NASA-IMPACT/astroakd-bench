@@ -305,6 +305,12 @@ class AstroAKDBench:
                        plots_dir: str | Path | None = None,
                        mcp_calls_csv: str | Path | None = None,
                        mcp_tool_frequency_csv: str | Path | None = None,
+                       overall_csv: str | Path | None = None,
+                       mcp_ab_summary_csv: str | Path | None = None,
+                       paired_questions_csv: str | Path | None = None,
+                       paired_summary_csv: str | Path | None = None,
+                       mismatch_audit_csv: str | Path | None = None,
+                       paired_plots_dir: str | Path | None = None,
                        replace: bool = False) -> dict[str, Any]:
         """Export A/B/C full answers with frozen snapshot-reference exact match percentages."""
         from .scorable import score_scorable
@@ -317,6 +323,12 @@ class AstroAKDBench:
                               plots_dir=self.path(plots_dir) if plots_dir else None,
                               mcp_calls_csv=self.path(mcp_calls_csv) if mcp_calls_csv else None,
                               mcp_tool_frequency_csv=self.path(mcp_tool_frequency_csv) if mcp_tool_frequency_csv else None,
+                              overall_csv=self.path(overall_csv) if overall_csv else None,
+                              mcp_ab_summary_csv=self.path(mcp_ab_summary_csv) if mcp_ab_summary_csv else None,
+                              paired_questions_csv=self.path(paired_questions_csv) if paired_questions_csv else None,
+                              paired_summary_csv=self.path(paired_summary_csv) if paired_summary_csv else None,
+                              mismatch_audit_csv=self.path(mismatch_audit_csv) if mismatch_audit_csv else None,
+                              paired_plots_dir=self.path(paired_plots_dir) if paired_plots_dir else None,
                               replace=replace)
 
     def audit_diversity(self, *, tasks: str | Path | None = None,
