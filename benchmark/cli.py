@@ -26,7 +26,7 @@ DEFAULT_DATASET = Path("datasets/generated/synthetic_queries.jsonl")
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="astroakd-bench",
-        description="AstroAKD-Bench 0.6.4.2 with optional OpenAI and MCP/web search generation.",
+        description="AstroAKD-Bench 0.6.4.3 with optional MCP ADS literature search and fallback.",
     )
     parser.add_argument("--version", action="version", version=__version__)
     common = argparse.ArgumentParser(add_help=False)
@@ -89,6 +89,13 @@ def build_parser() -> argparse.ArgumentParser:
                      default="answer-oriented", help="Use answer-oriented archive field prompts by default")
     gen.add_argument("--replace", action="store_true", help="Overwrite existing dataset and exports")
     gen.add_argument("--report", type=Path, help="Save JSON generation summary separately")
+    literature = commands.add_parser('literature-search', parents=[common],
+        help='Literature evidence via MCP ADS when authenticated, otherwise OpenAI web search')
+    literature.add_argument('--query', required=True, help='Literature discovery request')
+    literature.add_argument('--max-results', type=int, default=5)
+    literature.add_argument('--model', default='gpt-4.1-mini', help='Model for fallback web search')
+    literature.add_argument('--mcp', action=argparse.BooleanOptionalAction, default=True)
+    literature.add_argument('--output', type=Path, help='Optional JSON evidence report')
     validation = commands.add_parser("validate", parents=[common],
         help="Run accepted candidate calls through live MCP, retaining all outcomes")
     validation.add_argument("--input", type=Path, default=DEFAULT_DATASET,
@@ -192,6 +199,10 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
                         csv_path=args.csv,pretty_output=args.pretty_output,
                         strict_accepted_020=args.strict_accepted_020,
                         json_format=args.json_format,replace=args.replace)
+    if args.command == 'literature-search':
+        from .literature import research_literature
+        return await research_literature(args.query, url=args.mcp_url, max_results=args.max_results,
+            timeout=args.timeout, model=args.model, use_mcp=args.mcp)
     if args.command == "doctor":
         return await doctor(
             args.mcp_url, timeout=args.timeout, fast=args.fast,

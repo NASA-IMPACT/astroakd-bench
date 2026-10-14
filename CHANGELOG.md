@@ -1,3 +1,11 @@
+## [0.6.4.3] — GOLD_BENCHMARK_MCP_ADS_LITERATURE_FALLBACK
+
+- Analyzed the separate Gold Benchmark Dataset (31 numbered queries: 20 archive-driven, 7 coordinate-driven, 4 literature-driven). Expanded the default LLM instructions to cover scientific question structure, units, and literature-to-archive evidence chains.
+- Added `literature-search` CLI and `AstroAKDBench.research_literature()` reusable API. All ADS research is routed **through the external Astroquery MCP server** using `astroquery_check_auth` and `ads_query_compact`. No direct Astroquery or ADS HTTP calls.
+- Automatically fallback to OpenAI Responses `web_search` if ADS is not configured/usable; missing `API_DEV_KEY` alone is not fatal. Token values are never saved or logged by AstroAKD-Bench.
+- Preserve strict distinction between literature discovery and independently verified archive observations / scientific answers. Existing frozen datasets and single-archive generator behavior unchanged.
+- Added mocked ADS-auth, fallback, API and token-redaction tests; live service/API qualification pending.
+
 # AstroAKD-Bench Changelog
 
 All significant changes to the **independent AstroAKD-Bench project** are documented

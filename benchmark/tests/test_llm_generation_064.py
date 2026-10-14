@@ -39,7 +39,7 @@ class LLM064Tests(unittest.TestCase):
         self.assertTrue(args.mcp)
         self.assertIn('V1-derived',instruction_text(enabled=True))
         self.assertEqual(instruction_text(enabled=False),'')
-        self.assertEqual(INSTRUCTIONS_VERSION, 'astro_benchmark_v1_0_6_4')
+        self.assertEqual(INSTRUCTIONS_VERSION, 'astro_benchmark_gold_0_6_4_3')
 
     def test_four_flag_combinations_and_no_mcp_network(self):
         for use_mcp in (True,False):

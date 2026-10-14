@@ -115,6 +115,16 @@ class AstroAKDBench:
             atomic_json(report_path, summary, replace=replace)
         return summary
 
+    async def research_literature(self, query: str, *, max_results: int = 5,
+                                  model: str = 'gpt-4.1-mini', use_mcp: bool = True,
+                                  session_factory: Callable | None = None,
+                                  openai_client_factory: Callable | None = None) -> dict[str, Any]:
+        """MCP ADS search with automatic OpenAI web-search fallback; not gold validation."""
+        from .literature import research_literature
+        return await research_literature(query, url=self.mcp_url, timeout=self.timeout,
+                  max_results=max_results, model=model, use_mcp=use_mcp,
+                  session_factory=session_factory, openai_client_factory=openai_client_factory)
+
     async def validate_queries(self, *, input: str | Path | None = None,
                                output: str | Path = 'datasets/validated/reference_answers.jsonl',
                                report: str | Path = 'datasets/validated/validation_report.json',

@@ -26,3 +26,63 @@ Requirements:
 For the MCP-backed track, only emit families actually supported by the discovered function and returned column schema. A result listing alone does not establish observation-specific truth.
 
 **Limitations:** Original workbook questions often specify exact dates/instruments/filters; these constraints cannot be faithfully generated from a broad cone-search MCP call alone. Do not invent them. Deeper scientific grounding requires separately retrieving and checking archive row-level records.
+
+---
+
+## Gold Benchmark Dataset taxonomy (expanded in 0.6.4.3)
+
+The separate user-provided **Gold Benchmark Dataset.xlsx**, sheet `benchmark_queries`,
+contains **31 populated numbered questions**, classified as **20 `archive_driven`,
+7 `coordinate_driven`, and 4 `literature_driven`**. The workbook's expected-answer
+cells are evaluation examples, *not* automatically trusted new gold answers.
+
+**`archive_driven` task family (20 examples):** Begin with an explicitly named object
+or observation. Ask for Chandra/HEASARC ObsIDs, proposal IDs, total exposure in
+kiloseconds, data product URLs, or records associated with a specified bibcode or DOI.
+Preserve telescope, grating (e.g., HETGS), cut-off year, and the given identifier.
+A question requiring filtering by instrument/year or accumulating multiple exposures
+must not be represented as verified by a broad 20-row cone search alone.
+
+**`coordinate_driven` (7 examples):** Begin with an explicit ICRS J2000 sky position,
+expressed as sexagesimal RA/Dec, and an angular radius in arcsec/arcmin. Examples
+search Chandra HETGS, XMM-Newton, and NICER observations. Convert coordinates
+and units carefully; distinguish sky radius from exposure or epoch, and do not
+silently invent source-name matches. Cross-archive questions may need several MCP
+calls and cannot be reduced to a single assumed-successful observation.
+
+**`literature_driven` (4 examples):** Start from a physical description in a paper
+rather than a known source name or sky coordinate. The examples include a quasar
+at `z=0.0809` with a `-17,300 km/s` ultra-fast outflow; the nearest tidal disruption
+event; and a nearby Lyman-break-galaxy analog. Discover the relevant paper and
+object with traceable literature evidence **before** constructing an observation
+request for Chandra HETGS, HST COS, NICER, or XMM-Newton. Do not assume that an
+abstract directly proves the availability of a requested archive dataset.
+
+### Literature tool routing — required
+
+1. Use the **independent NASA IMPACT Astroquery MCP server** for all Astroquery
+   calls. Its authentication variable for ADS is **`API_DEV_KEY`** in the MCP
+   server's launch environment. Never make direct `astroquery.nasa_ads`, `ads`,
+   `requests` or independent ADS REST calls from the benchmark.
+2. Query `astroquery_check_auth` **on the MCP server** (do not print or persist the
+   token). If ADS is configured, use MCP `ads_query_compact` (standard or minimal
+   fields, bounded results), then optionally `ads_get_paper` for a verified bibcode.
+3. If ADS authentication is missing, the ADS tool is unavailable, or ADS search
+   fails, **continue** with OpenAI Responses API `web_search`. This fallback may
+   still use MCP for non-literature astronomical archive steps.
+4. Preserve the research provider (`astroquery_mcp_ads` versus `openai_web_search`),
+   bibliographic references and observed public source URLs in provenance.
+   Do not mistake an LLM result or paper metadata for an independently validated
+   telescope observation or a verified expected answer.
+5. For a literature-driven benchmark, separate: (a) *literature identification*,
+   (b) *object/position determination*, (c) *actual archive observation lookup*,
+   (d) *answer verification*. Record which of these stages have actually completed.
+
+### Diversity / safety
+
+Balance the three question families and vary observatory, science class, evidence
+source, task intent, coordinate form, and units. Reject duplicate scientific
+intent/target/archive combinations. Do not simply replace one ObsID or quasar
+name with a fictional value. Distinguish requests for a complete list from
+results truncated by a server's `max_rows` limit. Keep expected answers *unverified*
+until independent reference validation.
