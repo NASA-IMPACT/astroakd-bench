@@ -1,4 +1,4 @@
-"""Supported Python API for AstroAKD-Bench workflows (v0.6.6).
+"""Supported Python API for AstroAKD-Bench workflows (v0.6.6.1).
 
 AstroAKD-Bench is an independent project. The NASA IMPACT Astroquery MCP
 server is a separate service accessed through its HTTP MCP endpoint.
@@ -41,6 +41,23 @@ class AstroAKDBench:
         """Resolve default artifact paths under the chosen benchmark root."""
         value = Path(relative).expanduser()
         return value if value.is_absolute() else self.root / value
+
+    def export_answer_csv(self, *, tasks: str | Path, questions_csv: str | Path,
+                          arms_csv: str | Path, summary_csv: str | Path,
+                          report: str | Path, runs: str | Path | None = None,
+                          references: str | Path | None = None,
+                          reference_tasks: str | Path | None = None,
+                          gold: str | Path | None = None,
+                          reference_values_csv: str | Path | None = None,
+                          per_arm_dir: str | Path | None = None,
+                          replace: bool = False) -> dict[str, Any]:
+        """Generate inspection CSVs; execution success is never claimed as science truth."""
+        from .answer_reports import export_answer_csv
+        def resolve(p): return self.path(p) if p is not None else None
+        return export_answer_csv(resolve(tasks),resolve(questions_csv),resolve(arms_csv),
+             resolve(summary_csv),resolve(report),runs=resolve(runs),references=resolve(references),
+             reference_tasks=resolve(reference_tasks),gold=resolve(gold),
+             reference_values_csv=resolve(reference_values_csv),per_arm_dir=resolve(per_arm_dir),replace=replace)
 
     @property
     def tasks_path(self) -> Path:

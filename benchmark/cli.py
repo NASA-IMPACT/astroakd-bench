@@ -26,7 +26,7 @@ DEFAULT_DATASET = Path("datasets/generated/synthetic_queries.jsonl")
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="astroakd-bench",
-        description="AstroAKD-Bench 0.6.6 gold-reference and three-arm evaluation.",
+        description="AstroAKD-Bench 0.6.6.1 answer inspection and three-arm reporting.",
     )
     parser.add_argument("--version", action="version", version=__version__)
     common = argparse.ArgumentParser(add_help=False)
@@ -223,6 +223,20 @@ def build_parser() -> argparse.ArgumentParser:
     tri_score.add_argument('--output', required=True, type=Path)
     tri_score.add_argument('--report', required=True, type=Path)
     tri_score.add_argument('--replace', action='store_true')
+    export = commands.add_parser('export-answer-csv', parents=[common],
+        help='Export questions, unverified reference values, A/B/C answers, and honest success rates to CSV')
+    export.add_argument('--tasks', required=True, type=Path)
+    export.add_argument('--references', type=Path, help='Reference JSONL, if available')
+    export.add_argument('--reference-tasks', type=Path, help='Reference subset tasks, required with --references')
+    export.add_argument('--runs', type=Path, help='Completed runs JSONL or partial .progress.jsonl')
+    export.add_argument('--gold', type=Path, help='Independently approved, finalized gold JSONL if available')
+    export.add_argument('--questions-csv', required=True, type=Path, help='50 rows with source values and A/B/C answers')
+    export.add_argument('--arms-csv', required=True, type=Path, help='One row per task and arm including actual final answer')
+    export.add_argument('--summary-csv', required=True, type=Path, help='Operational and scientific rates kept separate')
+    export.add_argument('--reference-values-csv', type=Path, help='All returned candidate field values (NOT verified gold)')
+    export.add_argument('--report', required=True, type=Path)
+    export.add_argument('--per-arm-dir', type=Path, help='Write separate A, B, and C answer CSV files here')
+    export.add_argument('--replace', action='store_true')
     inspect = commands.add_parser('inspect', parents=[common],
         help='Render a bounded JSONL sample or a JSON report for inspection')
     inspect.add_argument('--input', required=True, type=Path)
@@ -232,6 +246,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 async def _execute(args: argparse.Namespace) -> dict[str, Any]:
+    if args.command == 'export-answer-csv':
+        from .answer_reports import export_answer_csv
+        return export_answer_csv(args.tasks,args.questions_csv,args.arms_csv,args.summary_csv,args.report,
+                                 runs=args.runs,references=args.references,reference_tasks=args.reference_tasks,
+                                 gold=args.gold,reference_values_csv=args.reference_values_csv,per_arm_dir=args.per_arm_dir,replace=args.replace)
     if args.command == 'gold-draft':
         from .gold import gold_draft
         return gold_draft(args.tasks,args.output,args.report,references=args.references,
@@ -410,7 +429,7 @@ def main(argv: list[str] | None = None) -> int:
                    "message": str(exc)}}
     output = json_text(payload, args.json_format)
     print(output)
-    report_destination = (None if args.command in {"validate", "run", "evaluate", "build-fixtures", "gold-draft", "gold-finalize", "run-three-arm", "score-three-arm"} else
+    report_destination = (None if args.command in {"validate", "run", "evaluate", "build-fixtures", "gold-draft", "gold-finalize", "run-three-arm", "score-three-arm", "export-answer-csv"} else
                           args.report if args.command in {"generate", "audit-diversity"} else args.output)
     if report_destination is not None:
         try:

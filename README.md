@@ -6,6 +6,33 @@ AstroAKD-Bench is an **independent Python repository** for developing and evalua
 
 **Current version: 0.6.6 — GOLD_REFERENCE_AND_THREE_ARM_EVALUATION.** The default `generate` command now uses OpenAI to author diverse synthetic questions with workbook-derived instructions and the external Astroquery MCP server. `--backend template` retains the API-free legacy generator; `--no-mcp` uses OpenAI Responses `web_search` instead. OpenAI generation uses a separate API key/billing; offline audits and scoring do not.
 
+## 0.6.6.1 — Export all benchmark questions, answers and success rates to CSV
+
+The new `export-answer-csv` command produces a 50-question reference-and-answer spreadsheet view,
+150 per-task/per-arm rows, separate A, B and C answer CSVs, a percentage summary, and a
+full source-field-value table. It reads **incomplete** three-arm `.progress.jsonl` journals safely.
+These are direct inspections of the real pilot, not synthetic replay data.
+
+```bash
+uv run python -m benchmark export-answer-csv \
+  --tasks datasets/generated/gold_mixed_065.jsonl \
+  --references datasets/validated/gold_mixed_065_ref_42.jsonl \
+  --reference-tasks datasets/generated/gold_mixed_065_single_call_42.jsonl \
+  --runs datasets/agent/astroakd_three_arm_runs.jsonl.progress.jsonl \
+  --questions-csv datasets/reports/questions_references_ABC.csv \
+  --arms-csv datasets/reports/answers_all_arms.csv \
+  --summary-csv datasets/reports/three_arm_success_rates.csv \
+  --reference-values-csv datasets/reports/reference_values.csv \
+  --per-arm-dir datasets/reports/per_arm \
+  --report datasets/reports/answer_review_report.json
+```
+
+**Rate definitions:** operational completion = completed / attempted; coverage = completed /
+all benchmark questions; scientific success = correct / *gold-scored* runs. Missing gold
+means **N/A (not 0%)**, even if the agent produced a plausible answer. Reference
+columns are observations from returned archive tables, not independently approved answers.
+See [Answer inspection guide](docs/benchmark/answer_inspection_and_success_rates_0_6_6_1.md).
+
 ## 0.6.6 — Gold-answer review and three-arm AstroAKD science evaluation
 
 The 50-task native Gold mixed generation is now **real-host PASS**, but all 50 reference answers remain scientifically **unverified**. A five-task reference validation pilot (5/42 single-call tasks) was accepted structurally, and the original journal is preserved for `validate --resume`. 0.6.6 adds human-reviewed `gold-draft` / `gold-finalize` and independent `run-three-arm` / `score-three-arm` workflows. The three arms are **MCP only (no domain instruction)**, **MCP + AstroAKD agent instruction**, and **web search only (no MCP)**. The benchmark question-generation prompt is a separate artifact and is **not** used in the agent experiment.

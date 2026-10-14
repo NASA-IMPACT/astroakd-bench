@@ -1,18 +1,3 @@
-## [0.6.5] — NATIVE_GOLD_MIXED_QUERY_GENERATION (offline PASS; live PENDING)
-
-- Integrate native Gold-inspired generation with `generate --task-mix gold50` (32 archive, 10 coordinate, 8 literature) or custom family quotas. Previously shared Gold50 file was made by a separate offline builder, **not** AstroAKD-Bench live OpenAI generation.
-- Execute OpenAI/MCP-bound archive generation inside AstroAKD-Bench; add grounded ICRS coordinate questions and eight research-based, multistep literature questions. Research uses **MCP ADS first** and falls back to OpenAI `web_search` when ADS fails or the key is missing.
-- Preserve immutable reference calls, prompt/source provenance, no invented expected answers, uniqueness audit and split outputs to keep literature tasks out of the one-call validator.
-- Add Python API mixed generation, mock/offline tests, usage guide, installation/qualification and conversation handoff. All-suite offline result 177 passed, 1 optional live skipped; no new live OpenAI/ADS run claimed.
-
-## [0.6.4.3] — GOLD_BENCHMARK_MCP_ADS_LITERATURE_FALLBACK
-
-- Analyzed the separate Gold Benchmark Dataset (31 numbered queries: 20 archive-driven, 7 coordinate-driven, 4 literature-driven). Expanded the default LLM instructions to cover scientific question structure, units, and literature-to-archive evidence chains.
-- Added `literature-search` CLI and `AstroAKDBench.research_literature()` reusable API. All ADS research is routed **through the external Astroquery MCP server** using `astroquery_check_auth` and `ads_query_compact`. No direct Astroquery or ADS HTTP calls.
-- Automatically fallback to OpenAI Responses `web_search` if ADS is not configured/usable; missing `API_DEV_KEY` alone is not fatal. Token values are never saved or logged by AstroAKD-Bench.
-- Preserve strict distinction between literature discovery and independently verified archive observations / scientific answers. Existing frozen datasets and single-archive generator behavior unchanged.
-- Added mocked ADS-auth, fallback, API and token-redaction tests; live service/API qualification pending.
-
 # AstroAKD-Bench Changelog
 
 All significant changes to the **independent AstroAKD-Bench project** are documented
@@ -20,9 +5,23 @@ here. This history is separate from the external `astroquery-mcp` project's
 releases: AstroAKD-Bench versions track benchmark capabilities, not versions
 of Astroquery or the MCP server.
 
-The current implemented benchmark version is **0.6.6**.
+The current implemented benchmark version is **0.6.6.1**.
 Dates are in UTC. Release statuses distinguish **offline implementation
 qualification** from **real laptop / live-service qualification**.
+
+## [Unreleased]
+
+- Planned after 0.6.1: broader scientific claim verification, multi-archive workflows and frozen evaluation suites.
+
+## [0.6.6.1] — ANSWER_INSPECTION_AND_SUCCESS_RATE_CSV (offline qualified; real data imported) — 2026-10-14
+
+- Added `export-answer-csv` CLI and `AstroAKDBench.export_answer_csv()` Python API. The benchmark exports a 50-question CSV with returned reference values and A/B/C agent answers, a 150-row long-form arm comparison, an independent A/B/C percentage summary, a full source-value CSV, and optional separate A, B and C CSVs.
+- Ingested the user's **complete 42/42 real-host reference results** (SHA-256 `fd359a148c3b9137e09cb07c0db100b2b6f1266ce76290cf2c33a2f5f64c2aa5`) and the real five-task/15-run three-arm pilot journal. Initial extraction produced 1,709 individual source table-field observations. All historical candidate files are unchanged.
+- Distinguished **operational completion rate** (completed / attempted) from **whole-dataset coverage** (completed / 50) and **scientific success** (correct / scientifically graded). The pilot shows 5/5 completed for each arm (100% operational completion, 10% of the 50-task experiment per arm); scientific success remains unavailable because zero independently approved gold answers exist.
+- Recorded structured-answer compliance (1/5 for A, 0/5 for B and C), full free-text replies, source citations, run errors, trace counts, timing, token usage and missing/unrun status. A completed reply, even if nonempty, is **not** automatically counted as scientifically correct.
+- Archived each requested field value with source table and row index; explicitly flag truncation, unverified reference values and absent gold. MAST returned subsets and other large catalogs are not silently promoted to complete gold answers.
+- Guarded dataset SHA-256 bindings, duplicate run IDs, web/MCP tool isolation, verified gold provenance, output collision checks, atomic formula-safe CSV publication. Added focused tests, release instructions, and a continuation handoff.
+- Offline qualification: **190 passed, 1 optional live test skipped, 26 subtests passed** (including 4 new targeted CSV tests). No new live OpenAI, ADS, or archive requests are claimed.
 
 ## 0.6.6 — GOLD_REFERENCE_AND_THREE_ARM_EVALUATION (offline qualification)
 
@@ -34,9 +33,12 @@ qualification** from **real laptop / live-service qualification**.
 - Preserved the real five-task (of 42) structural validation journal and manifest; original Gold mixed, single-call and literature candidate hashes unchanged. Added new 0.6.6 guide, installation, qualification and conversation handoff.
 - Offline full suite: 186 passed, one optional live test skipped. **Live gold-answer approval and full AstroAKD three-arm science evaluation pending.**
 
-## [Unreleased]
+## [0.6.5] — NATIVE_GOLD_MIXED_QUERY_GENERATION (offline PASS; live PENDING)
 
-- Planned after 0.6.1: broader scientific claim verification, multi-archive workflows and frozen evaluation suites.
+- Integrate native Gold-inspired generation with `generate --task-mix gold50` (32 archive, 10 coordinate, 8 literature) or custom family quotas. Previously shared Gold50 file was made by a separate offline builder, **not** AstroAKD-Bench live OpenAI generation.
+- Execute OpenAI/MCP-bound archive generation inside AstroAKD-Bench; add grounded ICRS coordinate questions and eight research-based, multistep literature questions. Research uses **MCP ADS first** and falls back to OpenAI `web_search` when ADS fails or the key is missing.
+- Preserve immutable reference calls, prompt/source provenance, no invented expected answers, uniqueness audit and split outputs to keep literature tasks out of the one-call validator.
+- Add Python API mixed generation, mock/offline tests, usage guide, installation/qualification and conversation handoff. All-suite offline result 177 passed, 1 optional live skipped; no new live OpenAI/ADS run claimed.
 
 ## [0.6.4.4] - 2026-10-14
 
@@ -50,6 +52,14 @@ qualification** from **real laptop / live-service qualification**.
 ### Qualification
 
 - Source tree: **173 tests run, 172 passed, one optional live MCP test skipped**. Real ADS authentication and OpenAI web-search requalification **PENDING**.
+
+## [0.6.4.3] — GOLD_BENCHMARK_MCP_ADS_LITERATURE_FALLBACK
+
+- Analyzed the separate Gold Benchmark Dataset (31 numbered queries: 20 archive-driven, 7 coordinate-driven, 4 literature-driven). Expanded the default LLM instructions to cover scientific question structure, units, and literature-to-archive evidence chains.
+- Added `literature-search` CLI and `AstroAKDBench.research_literature()` reusable API. All ADS research is routed **through the external Astroquery MCP server** using `astroquery_check_auth` and `ads_query_compact`. No direct Astroquery or ADS HTTP calls.
+- Automatically fallback to OpenAI Responses `web_search` if ADS is not configured/usable; missing `API_DEV_KEY` alone is not fatal. Token values are never saved or logged by AstroAKD-Bench.
+- Preserve strict distinction between literature discovery and independently verified archive observations / scientific answers. Existing frozen datasets and single-archive generator behavior unchanged.
+- Added mocked ADS-auth, fallback, API and token-redaction tests; live service/API qualification pending.
 
 ## [0.6.4.2] - 2026-10-14
 
@@ -494,3 +504,4 @@ For **every future AstroAKD-Bench version**, in the **same delivery**:
 Starting in 0.4.0, the root `README.md` retains the original MCP server
 documentation, and the root `CHANGELOG.md` maintains AstroAKD-Bench history.
 Both will be updated with every new benchmark version.
+
