@@ -168,7 +168,7 @@ def _ensure_named_archive(question: str, task: dict[str, Any]) -> tuple[str, boo
 def _guard_question(question: Any, task: dict[str, Any], *, use_mcp: bool) -> str:
     if not isinstance(question, str) or not 20 <= len(question) <= 450 or '\n' in question:
         raise GenerationError(f'Invalid question for {task["id"]}: must be 20..450 chars, single line')
-    if task['target'].casefold() not in question.casefold():
+    if not _target_in_question(task['target'], question):
         raise GenerationError(f'OpenAI question {task["id"]} omits target {task["target"]}')
     # Repair of a missing named archive belongs to the controlled authoring
     # boundary; this guard still rejects missing/ambiguous archive labels.
@@ -192,6 +192,91 @@ def _guard_question(question: Any, task: dict[str, Any], *, use_mcp: bool) -> st
                 raise GenerationError(f'OpenAI question {task["id"]} asks about unsupported field {word}')
     return question.strip()
 
+
+
+def _target_in_question(target: str, question: str) -> bool:
+    """Match a target as a complete name, not as a substring (M1 != M101)."""
+    pattern = r'(?<![\w])' + r'\s+'.join(re.escape(part) for part in target.split()) + r'(?![\w])'
+    return bool(re.search(pattern, question, re.I))
+
+
+def _prepare_authored_question(question: Any, task: dict[str, Any], *, use_mcp: bool) -> tuple[str, bool]:
+    """Validate wording before it can be associated with an immutable task slot."""
+    if not isinstance(question, str) or not 20 <= len(question) <= 450 or '\n' in question:
+        raise GenerationError(f'Invalid question for {task["id"]}: must be 20..450 chars, single line')
+    if not _target_in_question(task['target'], question):
+        raise GenerationError(f'OpenAI question {task["id"]} omits target {task["target"]}')
+    if not question.strip().endswith('?'):
+        raise GenerationError(f'OpenAI question {task["id"]} must be a question')
+    normalized, repaired = _ensure_named_archive(question.strip(), task)
+    return _guard_question(normalized, task, use_mcp=use_mcp), repaired
+
+
+def _resolve_batch_slots(found: list[Any], batch: list[dict[str, Any]], *, use_mcp: bool
+                         ) -> list[tuple[dict[str, Any], dict[str, Any], str, bool]]:
+    """Reconcile a model's *untrusted* slot labels with pre-bound scientific tasks.
+
+    Exact IDs win only when their questions match their assigned constraints.
+    Otherwise a unique perfect matching of validated target/archive question
+    content is required. Never publish an ambiguous permutation or change an
+    MCP reference call to accommodate generated text.
+    """
+    if len(found) != len(batch):
+        raise GenerationError(f'OpenAI returned {len(found)} questions for {len(batch)} slots')
+    if any(not isinstance(row, dict) for row in found):
+        raise GenerationError('OpenAI returned non-object question rows')
+
+    expected = {t['id']: i for i, t in enumerate(batch)}
+    given_ids = [r.get('id') for r in found]
+    exact_error: GenerationError | None = None
+    if all(isinstance(v, str) for v in given_ids) and set(given_ids) == set(expected) and len(set(given_ids)) == len(batch):
+        aligned = [found[given_ids.index(t['id'])] for t in batch]
+        try:
+            prepared = [_prepare_authored_question(r.get('question'), t, use_mcp=use_mcp)
+                        for t, r in zip(batch, aligned)]
+        except GenerationError as exc:
+            exact_error = exc  # May be swapped questions; try unique scientific matching.
+        else:
+            return [(t, r, q, fix) for t, r, (q, fix) in zip(batch, aligned, prepared)]
+
+    # Detect scientific compatibility independent of model-written IDs/order.
+    compatible: list[list[tuple[int, str, bool]]] = []
+    for row in found:
+        options = []
+        for slot, task in enumerate(batch):
+            try:
+                q, fixed = _prepare_authored_question(row.get('question'), task, use_mcp=use_mcp)
+            except GenerationError:
+                continue
+            options.append((slot, q, fixed))
+        compatible.append(options)
+    if any(not choices for choices in compatible):
+        if exact_error is not None:
+            raise exact_error
+        raise GenerationError('OpenAI task IDs changed/omitted and question target/archive cannot be safely assigned to frozen slots')
+
+    # At most two solutions need to be discovered: ambiguity must fail closed.
+    assignments: list[list[tuple[int, str, bool]]] = []
+    def find_unique(row_index: int, selected: list[tuple[int, str, bool]], used: set[int]) -> None:
+        if len(assignments) >= 2:
+            return
+        if row_index == len(found):
+            assignments.append(list(selected))
+            return
+        for option in compatible[row_index]:
+            if option[0] not in used:
+                used.add(option[0]); selected.append(option)
+                find_unique(row_index + 1, selected, used)
+                selected.pop(); used.remove(option[0])
+                if len(assignments) >= 2:
+                    return
+    find_unique(0, [], set())
+    if len(assignments) != 1:
+        raise GenerationError('OpenAI task IDs changed/omitted and target/archive matching is ambiguous or incomplete')
+    result: list[Any] = [None] * len(batch)
+    for row, (slot, question, fixed) in zip(found, assignments[0]):
+        result[slot] = (batch[slot], row, question, fixed)
+    return result
 
 def _openai_client(factory: Callable[[], Any] | None) -> Any:
     if factory:
@@ -251,6 +336,8 @@ async def generate_llm(url: str = DEFAULT_MCP_URL, *, count: int = 50, seed: int
     model_calls = web_calls = 0
     seen_questions: set[str] = set()
     archive_name_repairs = 0
+    task_id_repairs = 0
+    openai_retries = 0
     for i in range(0, len(tasks), batch_size):
         batch = tasks[i:i + batch_size]
         opts: dict[str, Any] = {'model': model,
@@ -259,47 +346,50 @@ async def generate_llm(url: str = DEFAULT_MCP_URL, *, count: int = 50, seed: int
         if not use_mcp:
             opts['tools'] = [{'type': 'web_search'}]
             opts['tool_choice'] = 'required'
-        if progress is not None:
-            progress(f'OpenAI START batch {i // batch_size + 1}/{(len(tasks)+batch_size-1)//batch_size} ({len(batch)} questions)')
         opts['timeout'] = timeout
-        try:
-            response = await asyncio.to_thread(_create, client, **opts)
-        except Exception as exc:
-            raise GenerationError(f'OpenAI generation request failed at batch {i // batch_size + 1}: {exc}') from exc
-        model_calls += 1
-        if progress is not None:
-            progress(f'OpenAI DONE batch {i // batch_size + 1}/{(len(tasks)+batch_size-1)//batch_size}')
-        uses = _tool_uses(response)
-        web_calls += uses
-        if not use_mcp and uses == 0:
-            raise GenerationError('No-MCP mode requires a completed OpenAI web_search call; none observed')
-        payload = _response_json(response)
-        found = payload['questions']
-        if len(found) != len(batch):
-            raise GenerationError(f'OpenAI returned {len(found)} questions for {len(batch)} slots')
-        indexed = {}
-        for row in found:
-            if not isinstance(row, dict) or not isinstance(row.get('id'), str) or row['id'] in indexed:
-                raise GenerationError('OpenAI returned invalid or repeated task IDs')
-            indexed[row['id']] = row
-        if set(indexed) != {t['id'] for t in batch}:
-            raise GenerationError('OpenAI changed or omitted task IDs')
-        for task in batch:
-            row = indexed[task['id']]
-            raw_question = row.get('question')
-            if not isinstance(raw_question, str):
-                raise GenerationError(f'OpenAI question {task["id"]} is not text')
-            # Only repair an omitted archive after the model has provided a
-            # syntactically plausible question and the mandatory target name.
-            # This avoids turning malformed output into an accepted task.
-            if not 20 <= len(raw_question) <= 450 or '\n' in raw_question or \
-                    not raw_question.strip().endswith('?') or \
-                    task['target'].casefold() not in raw_question.casefold():
-                question = _guard_question(raw_question, task, use_mcp=use_mcp)
-                repaired = False
-            else:
-                candidate, repaired = _ensure_named_archive(raw_question.strip(), task)
-                question = _guard_question(candidate, task, use_mcp=use_mcp)
+        resolved = None
+        for attempt in range(2):
+            if progress is not None:
+                message = f'OpenAI START batch {i // batch_size + 1}/{(len(tasks)+batch_size-1)//batch_size} ({len(batch)} questions)'
+                progress(message if attempt == 0 else message + ' RETRY (unsafe/unresolved task IDs)')
+            try:
+                response = await asyncio.to_thread(_create, client, **opts)
+            except Exception as exc:
+                raise GenerationError(f'OpenAI generation request failed at batch {i // batch_size + 1}: {exc}') from exc
+            model_calls += 1
+            if progress is not None:
+                progress(f'OpenAI DONE batch {i // batch_size + 1}/{(len(tasks)+batch_size-1)//batch_size}')
+            uses = _tool_uses(response)
+            web_calls += uses
+            if not use_mcp and uses == 0:
+                raise GenerationError('No-MCP mode requires a completed OpenAI web_search call; none observed')
+            payload = _response_json(response)
+            try:
+                resolved = _resolve_batch_slots(payload['questions'], batch, use_mcp=use_mcp)
+                break
+            except GenerationError as exc:
+                if attempt == 1:
+                    raise GenerationError(f'OpenAI batch {i // batch_size + 1} could not be safely aligned after retry: {exc}') from exc
+                if progress is not None:
+                    progress(f'OpenAI batch {i // batch_size + 1} has unresolvable slot/question assignment; requesting one corrected batch')
+                # Never rewrite bound MCP calls or accept a guess. Retry this
+                # single batch with the immutable IDs and intended targets.
+                opts['input'] = opts['input'] + [
+                    {'role': 'user', 'content':
+                        'Your last response could not be unambiguously matched to the supplied task slots. '
+                        'Regenerate this entire batch. Include each exact ID once, and each question must name '
+                        'the corresponding target and archive. Do not invent new constraints. '
+                        'Previous error: ' + str(exc)}]
+                openai_retries += 1
+        assert resolved is not None
+        for task, row, question, repaired in resolved:
+            original_id = row.get('id')
+            id_repaired = original_id != task['id']
+            if id_repaired:
+                task_id_repairs += 1
+                if progress is not None:
+                    progress(f'OpenAI normalized task ID {original_id!r} -> {task["id"]} ({task["module"]}; target={task["target"]})')
+            raw_question = row['question']
             if repaired:
                 archive_name_repairs += 1
                 if progress is not None:
@@ -317,6 +407,8 @@ async def generate_llm(url: str = DEFAULT_MCP_URL, *, count: int = 50, seed: int
                                if use_instructions else None,
                                'mcp_enabled': use_mcp,
                                'archive_name_repaired': repaired,
+                               'task_id_repaired': id_repaired,
+                               'original_llm_task_id': original_id if id_repaired else None,
                                'original_llm_question': raw_question.strip() if repaired else None,
                                'search_tool': 'none' if use_mcp else 'openai_web_search',
                                'model_generation_reproducibility': 'best_effort_nondeterministic'})
@@ -338,12 +430,13 @@ async def generate_llm(url: str = DEFAULT_MCP_URL, *, count: int = 50, seed: int
     check = analyze_candidates(tasks)
     if any(check['counts'].values()):
         raise GenerationError('Generated questions fail diversity audit')
-    summary.update({'milestone': '0.6.4.1 — OPENAI_ARCHIVE_NAME_NORMALIZATION',
+    summary.update({'milestone': '0.6.4.2 — OPENAI_TASK_ID_RECONCILIATION',
                     'benchmark_version': __version__, 'status': 'PASS',
                     'generation_backend': backend, 'model': model, 'use_instructions': use_instructions,
                     'use_mcp': use_mcp, 'instructions_sha256': hashlib.sha256(instructions.encode()).hexdigest() if instructions else None, 'research_tool': 'none' if use_mcp else 'openai_web_search',
                     'openai_requests': model_calls, 'web_search_calls': web_calls,
                     'archive_name_repairs': archive_name_repairs,
+                    'task_id_repairs': task_id_repairs, 'openai_batch_retries': openai_retries,
                     'scientific_truth_verified': False,
                     'expected_answers_verified': 0,
                     'archive_queries_executed': 0,
@@ -352,6 +445,7 @@ async def generate_llm(url: str = DEFAULT_MCP_URL, *, count: int = 50, seed: int
                     'by_intent': check['by_intent'],
                     'notes': ['The model writes questions, never a gold answer.',
                               'Missing single-archive names may be inserted deterministically; each repair is audited.',
+                              'LLM task IDs are never authoritative; safe ID corrections use unique target/archive matches and are audited.',
                               'OpenAI results are not guaranteed byte-reproducible even with fixed seed.',
                               'No-MCP tasks require a future adapter/validation track; benchmark validate uses MCP.']})
     return tasks, summary

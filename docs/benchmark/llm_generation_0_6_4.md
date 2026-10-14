@@ -1,6 +1,32 @@
-# OpenAI-assisted synthetic query generation (0.6.4 / 0.6.4.1)
+# OpenAI-assisted synthetic query generation (0.6.4–0.6.4.2)
 
 AstroAKD-Bench and the [NASA IMPACT Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp) are **separate** repositories. The benchmark does not alter the MCP server. This optional LLM generator uses the **OpenAI Responses API** to author questions; it never reads the answers in `Astro Benchmark V1.xlsx` as gold.
+
+## 0.6.4.2 correction: model-altered or missing task IDs
+
+A real 0.6.4.1 OpenAI + MCP generation stopped at **batch 6 of 10** with
+`OpenAI changed or omitted task IDs`. The submitted failure report contains only
+this error, not the model's raw response; the precise altered IDs are unknown.
+
+All slot IDs and MCP calls are defined **before** contacting OpenAI. From 0.6.4.2,
+model-written IDs are advisory. If the provided IDs are absent, changed,
+repeated, or attached to reordered questions, the benchmark uses validated
+**whole-target-name and archive** correspondence to find a *unique* assignment
+back to its immutable slots. It never trusts an approximate target substring
+(`M1` is not `M101`) and never changes stored reference-call arguments. A
+missing archive name may still be prefixed using the approved 0.6.4.1 rule.
+
+If no unique scientifically compatible assignment exists, the model is asked
+to regenerate **only that batch, once**. The operation fails closed when the
+retry is unsafe; it never invents task IDs or answers. Repaired records expose
+`provenance.task_id_repaired` and `provenance.original_llm_task_id` (which may
+be null if the model omitted it). The generation summary includes
+`task_id_repairs`, `archive_name_repairs`, `openai_batch_retries`, and
+`openai_requests`. Counts are auditable but not proof of astronomical accuracy.
+
+For a new run use fresh paths such as `llm_0642_mcp.jsonl` and `llm_0642_mcp_report.json`;
+previous FAIL reports may remain, even if no candidate JSONL was published.
+The original seed=42 dataset and 50-entry replay fixture remain unchanged.
 
 ## 0.6.4.1 correction: omitted archive name
 

@@ -5,13 +5,26 @@ here. This history is separate from the external `astroquery-mcp` project's
 releases: AstroAKD-Bench versions track benchmark capabilities, not versions
 of Astroquery or the MCP server.
 
-The current implemented benchmark version is **0.6.4.1**.
+The current implemented benchmark version is **0.6.4.2**.
 Dates are in UTC. Release statuses distinguish **offline implementation
 qualification** from **real laptop / live-service qualification**.
 
 ## [Unreleased]
 
 - Planned after 0.6.1: broader scientific claim verification, multi-archive workflows and frozen evaluation suites.
+
+## [0.6.4.2] - 2026-10-14
+
+### Fixed — OPENAI_TASK_ID_RECONCILIATION
+
+- Real laptop OpenAI+instructions+MCP generation 0.6.4.1 completed five batches but failed after batch 6/10: `GenerationError: OpenAI changed or omitted task IDs`. User-provided FAIL report contains no raw model response, so the exact changed IDs are unknown.
+- Treat model-returned task IDs as advisory only. Reassociate a question with its immutable prebound task ID when strict astronomical target/archive/field guards admit **exactly one complete assignment**. Reordered rows and omitted/rewritten/duplicated ID labels are supported if scientifically unambiguous; never alter MCP reference calls or constraints. A complete target-name boundary check prevents substring collisions.
+- If mapping is ambiguous, request one corrected batch; then reject safely. Original ID and repair flag are retained in per-record provenance, and summary reports show `task_id_repairs` and `openai_batch_retries`. Each retry is an additional OpenAI request. Existing 0.6.4.1 archive-name normalization is preserved.
+- Added batch-6 regression tests with missing, rewritten and reordered IDs (including no-MCP web mode), retry, unsafe-response rejection, target-boundary checks and exact MCP-call parity.
+
+### Qualification
+
+- Complete offline suite: **158 tests run, 157 passed, 1 optional live MCP test skipped**. Frozen historical candidate/reference datasets and reference fixture preserved. Live 50-question OpenAI rerun is still **PENDING**.
 
 ## [0.6.4.1] - 2026-10-14
 
