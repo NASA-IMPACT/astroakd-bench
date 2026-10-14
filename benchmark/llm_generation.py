@@ -5,6 +5,7 @@ pre-bound using the qualified generator. In no-MCP mode, tasks are explicitly
 research-only and cannot be mistaken for validated Astroquery reference calls.
 """
 from __future__ import annotations
+from .mcp_config import resolve_mcp_url
 
 import asyncio
 from collections import Counter
@@ -294,7 +295,7 @@ def _create(client: Any, **kwargs: Any) -> Any:
     return client.responses.create(**kwargs)
 
 
-async def generate_llm(url: str = DEFAULT_MCP_URL, *, count: int = 50, seed: int = 42,
+async def generate_llm(url: str | None = None, *, count: int = 50, seed: int = 42,
                        modules: tuple[str, ...] = SUPPORTED_MODULES, timeout: float = 180,
                        uniqueness: str = 'archive-target', question_style: str = 'answer-oriented',
                        backend: str = 'openai', model: str = 'gpt-5.2',

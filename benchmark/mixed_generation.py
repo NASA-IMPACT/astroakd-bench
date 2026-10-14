@@ -6,6 +6,7 @@ is not a gold answer. Multi-step tasks are intentionally not single-call
 validator inputs. No external offline dataset builder is used.
 """
 from __future__ import annotations
+from .mcp_config import resolve_mcp_url
 
 import asyncio
 from collections import Counter
@@ -120,7 +121,7 @@ def _evidence_snippet(evidence: dict[str,Any]) -> str:
                'No corroborating paper found; ask an explicitly open research question.')[:2200]
 
 
-async def generate_mixed(url: str = DEFAULT_MCP_URL, *, count: int = 50, seed: int = 123,
+async def generate_mixed(url: str | None = None, *, count: int = 50, seed: int = 123,
                          modules: tuple[str,...] = SUPPORTED_MODULES, mix: dict[str,int],
                          timeout: float = 180, uniqueness: str = 'archive-target',
                          backend: str = 'openai', model: str = 'gpt-5.2',

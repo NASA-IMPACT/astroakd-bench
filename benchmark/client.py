@@ -13,6 +13,7 @@ from typing import Any, Callable
 from urllib.parse import urlsplit
 
 from . import DEFAULT_MCP_URL
+from .mcp_config import resolve_mcp_url, resolve_mcp_token, sanitize_mcp_error
 from .errors import (
     MCPConnectionError,
     MCPResponseError,
@@ -88,13 +89,16 @@ def _raise_application_error(tool_name: str, payload: Any) -> None:
         )
 
 
-def _make_fastmcp_client(url: str) -> Any:
+def _make_fastmcp_client(url: str, token: str | None = None) -> Any:
     try:
         from fastmcp import Client
     except ImportError as exc:
         raise MCPConnectionError(
             "fastmcp is not installed. In the astroquery-mcp checkout run 'uv sync'."
         ) from exc
+    if token:
+        from fastmcp.client.auth import BearerAuth
+        return Client(url, auth=BearerAuth(token))
     return Client(url)
 
 
@@ -111,25 +115,29 @@ class AstroqueryMCPClient:
 
     def __init__(
         self,
-        url: str = DEFAULT_MCP_URL,
+        url: str | None = None,
         *,
+        token: str | None = None,
         timeout: float = 180.0,
         session_factory: Callable[[str], Any] | None = None,
     ) -> None:
+        url = resolve_mcp_url(url)
         parsed = urlsplit(url)
         if parsed.scheme not in {"http", "https"} or not parsed.netloc:
             raise ValueError("--mcp-url must be a full http(s) URL")
         if timeout <= 0:
             raise ValueError("--timeout must be positive")
         self.url = url
+        self._token = resolve_mcp_token(token)
         self.timeout = timeout
-        self._factory = session_factory or _make_fastmcp_client
+        self._factory = session_factory
         self._session: Any = None
         self._connected = False
 
     async def __aenter__(self) -> "AstroqueryMCPClient":
         try:
-            self._session = self._factory(self.url)
+            self._session = (self._factory(self.url) if self._factory is not None
+                             else _make_fastmcp_client(self.url, self._token))
             async with asyncio.timeout(self.timeout):
                 await self._session.__aenter__()
                 self._connected = True
@@ -142,7 +150,7 @@ class AstroqueryMCPClient:
                     pass  # Preserve the original connection or ping failure.
             self._connected = False
             raise MCPConnectionError(
-                f"Cannot connect/ping MCP endpoint {self.url}: {exc}"
+                f"Cannot connect to MCP server at {self.url}: {sanitize_mcp_error(exc, self._token)}"
             ) from exc
         return self
 
@@ -164,7 +172,7 @@ class AstroqueryMCPClient:
             async with asyncio.timeout(self.timeout):
                 tools = await session.list_tools()
         except Exception as exc:
-            raise MCPTransportError(f"MCP tools/list failed: {exc}") from exc
+            raise MCPTransportError(f"MCP tools/list failed at {self.url}: {sanitize_mcp_error(exc, self._token)}") from exc
         if not isinstance(tools, list):
             raise MCPResponseError("MCP tools/list did not return a list")
         result: list[dict[str, Any]] = []
@@ -190,7 +198,7 @@ class AstroqueryMCPClient:
                 # Compatible with FastMCP 2.14+ and the existing server.
                 result = await session.call_tool(tool_name, arguments, timeout=self.timeout)
         except Exception as exc:
-            raise MCPTransportError(f"MCP tools/call '{tool_name}' failed: {exc}") from exc
+            raise MCPTransportError(f"MCP tools/call '{tool_name}' failed at {self.url}: {sanitize_mcp_error(exc, self._token)}") from exc
         if getattr(result, "is_error", getattr(result, "isError", False)):
             try:
                 payload = _unwrap_result_envelope(_extract_result(result))

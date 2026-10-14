@@ -4,6 +4,7 @@ Reference responses and reference calls are intentionally never exposed to an ag
 This module records execution, NOT scientific correctness (reserved for 0.5.0).
 """
 from __future__ import annotations
+from .mcp_config import resolve_mcp_url
 
 import asyncio
 from collections import Counter
@@ -477,7 +478,7 @@ def _load_completed(journal: Path, dataset_hash: str) -> dict[str, dict[str, Any
 
 
 async def run_agents(tasks_file: Path, reference_file: Path, output: Path, report_path: Path, *,
-                     url: str = DEFAULT_MCP_URL, timeout: float = 180,
+                     url: str | None = None, timeout: float = 180,
                      agent_name: str = 'openai', model: str = 'gpt-5.2',
                      adapter: str | None = None, max_turns: int = 8,
                      max_calls: int = 12, max_tool_bytes: int = 65536,

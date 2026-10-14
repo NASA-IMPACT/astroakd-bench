@@ -1,5 +1,6 @@
 """Gold-blind, three-arm AstroAKD agent experiment and gold-only offline scoring."""
 from __future__ import annotations
+from .mcp_config import resolve_mcp_url
 import asyncio
 from collections import Counter
 from pathlib import Path
@@ -74,12 +75,13 @@ async def _web_answer(question: str, *, model: str, sdk: Any):
 
 
 async def run_three_arm(tasks_path:Path, instruction_file:Path, output:Path, report:Path, *,
-                        url:str=DEFAULT_MCP_URL, model:str='gpt-5.2', limit:int|None=None,
+                        url:str|None=None, model:str='gpt-5.2', limit:int|None=None,
                         max_turns:int=8,max_calls:int=12,max_tool_bytes:int=65536,timeout:float=180,
                         task_timeout:float=600,resume:bool=False,replace:bool=False,
                         mcp_factory:Callable|None=None,sdk:Any=None,
                         progress:Callable[[str],None]|None=None):
     """Blind execution: no gold or reference-answer path is accepted by the runner."""
+    url = resolve_mcp_url(url)
     if resume and replace: raise AgentRunError('--resume and --replace are mutually exclusive')
     if limit is not None and limit<1: raise AgentRunError('--limit must be >=1')
     if not 1<=max_turns<=32 or not 1<=max_calls<=100 or not 1024<=max_tool_bytes<=1024*1024 or timeout<=0 or task_timeout<=0:
@@ -94,6 +96,11 @@ async def run_three_arm(tasks_path:Path, instruction_file:Path, output:Path, rep
              'task_timeout':task_timeout,'mcp_timeout':timeout,'arms':list(ARMS)}
     journal=output.with_name(output.name+'.progress.jsonl')
     manifest=output.with_name(output.name+'.manifest.json')
+    # For a NEW run, validate connectivity before creating even a manifest.
+    # Offline SDK/test injection remains fully disconnected from the network.
+    if not resume and mcp_factory is None:
+        async with AstroqueryMCPClient(url, timeout=timeout):
+            pass
     if resume:
         if not manifest.exists() or output.exists(): raise AgentRunError('No resumable journal or output already final')
         if json.loads(manifest.read_text())!=context: raise AgentRunError('Resume context differs; refuse data mixing')
@@ -120,6 +127,12 @@ async def run_three_arm(tasks_path:Path, instruction_file:Path, output:Path, rep
         if not os.getenv('OPENAI_API_KEY'): raise AgentRunError('OPENAI_API_KEY missing for three-arm experiment')
         from openai import AsyncOpenAI
         sdk=AsyncOpenAI(timeout=min(task_timeout,120),max_retries=0)
+    # Fail before recording any new run if a real MCP endpoint is unreachable.
+    # Both MCP arms require the same connection; never silently convert a
+    # transport outage into two sets of incorrect/"completed" answers.
+    if todo and resume and mcp_factory is None:
+        async with AstroqueryMCPClient(url, timeout=timeout):
+            pass
     for t,arm in todo:
         ident=t['id']
         if progress: progress(f'START {ident} {arm}')

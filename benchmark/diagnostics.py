@@ -1,6 +1,7 @@
 """Structured, reproducible connection qualification for the local MCP server."""
 
 from __future__ import annotations
+from .mcp_config import resolve_mcp_url
 
 from datetime import datetime, timezone
 from typing import Any, Callable
@@ -19,7 +20,7 @@ def _check(name: str, ok: bool, *, details: Any = None, error: str | None = None
 
 
 async def doctor(
-    url: str = DEFAULT_MCP_URL,
+    url: str | None = None,
     *,
     timeout: float = 180.0,
     fast: bool = False,
@@ -32,6 +33,7 @@ async def doctor(
     The slow function-introspection check can be skipped with ``fast=True``.
     The upstream archive smoke check runs only with ``smoke=True``.
     """
+    url = resolve_mcp_url(url)
     report: dict[str, Any] = {
         "milestone": "0.1.0 — LOCAL_MCP_CONNECTION",
         "benchmark_version": __version__,

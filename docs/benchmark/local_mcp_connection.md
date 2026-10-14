@@ -48,6 +48,7 @@ uv run python -m benchmark simbad --object M31
 
 The CLI also supports `--mcp-url http://127.0.0.1:8000/mcp` and the
 `ASTROAKD_MCP_URL` environment variable; command-line values take precedence.
+Authentication uses `ASTROAKD_MCP_TOKEN` if nonempty, or `--mcp-token`; the standard `MCP_URL` and `MCP_TOKEN` environment variables are intentionally ignored.
 It prints machine-readable JSON. Exit status is `0` for PASS, `1` for FAIL,
 `2` for report-output failure. The `--output` option saves exactly that JSON.
 

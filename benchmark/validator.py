@@ -4,6 +4,7 @@ This module deliberately does not import Astroquery, alter the server, or genera
 new questions. It records the actual MCP result and evidence of its validation.
 """
 from __future__ import annotations
+from .mcp_config import resolve_mcp_url
 
 import asyncio
 from contextlib import asynccontextmanager, suppress
@@ -394,7 +395,7 @@ def journal_records(journal: Path, *, dataset_hash: str) -> dict[str, dict[str, 
 
 
 async def validate(dataset: Path, output: Path, report_path: Path, *,
-                   url: str = DEFAULT_MCP_URL, timeout: float = 180,
+                   url: str | None = None, timeout: float = 180,
                    attempts: int = 2, delay: float = 2.0, max_rows: int = 20,
                    max_response_bytes: int = 8 * 1024 * 1024,
                    limit: int | None = None, resume: bool = False,
@@ -404,6 +405,7 @@ async def validate(dataset: Path, output: Path, report_path: Path, *,
                    session_factory: Callable[[str], Any] | None = None,
                    sleep: Callable[[float], Any] = asyncio.sleep,
                    ) -> dict[str, Any]:
+    url = resolve_mcp_url(url)
     if not 1 <= attempts <= 5 or not 0 <= delay <= 60 or not 1 <= max_rows <= 1000:
         raise ValidationError("Require --attempts 1..5, --delay 0..60, --max-rows 1..1000")
     if not 1024 <= max_response_bytes <= 128 * 1024 * 1024 or timeout <= 0:

@@ -11,6 +11,7 @@ import sys
 from typing import Any
 
 from . import DEFAULT_MCP_URL, __version__
+from .mcp_config import resolve_mcp_url, resolve_mcp_token, sanitize_mcp_error, mcp_token_scope
 from .client import AstroqueryMCPClient, normalize
 from .diagnostics import doctor
 from .errors import BenchmarkError
@@ -26,11 +27,14 @@ DEFAULT_DATASET = Path("datasets/generated/synthetic_queries.jsonl")
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="astroakd-bench",
-        description="AstroAKD-Bench 0.6.7.1 answer and performance reporting.",
+        description="AstroAKD-Bench 0.6.7.3 configurable MCP endpoint and bearer access.",
     )
     parser.add_argument("--version", action="version", version=__version__)
     common = argparse.ArgumentParser(add_help=False)
-    common.add_argument("--mcp-url", default=os.environ.get("ASTROAKD_MCP_URL", DEFAULT_MCP_URL))
+    common.add_argument("--mcp-url", "--mcp-server", dest="mcp_url", default=None,
+        help="MCP endpoint URL (default: ASTROAKD_MCP_URL environment variable, else http://127.0.0.1:8000/mcp)")
+    common.add_argument("--mcp-token", "--mcp-server-token", dest="mcp_token", default=None,
+        help="MCP Bearer access token (default: ASTROAKD_MCP_TOKEN environment variable; empty means no authentication)")
     common.add_argument("--timeout", type=float, default=180.0,
                         help="Timeout per MCP operation, seconds (default: 180)")
     common.add_argument('--json-format', choices=('compact','pretty'), default='compact',
@@ -455,11 +459,13 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
-        payload = asyncio.run(_execute(args))
+        args.mcp_url = resolve_mcp_url(args.mcp_url)
+        with mcp_token_scope(args.mcp_token):
+            payload = asyncio.run(_execute(args))
     except (BenchmarkError, GenerationError, ValidationError, AgentRunError, EvaluationError, ValueError, OSError) as exc:
         payload = {"status": "FAIL", "command": args.command,
                    "endpoint": args.mcp_url, "error": {"type": type(exc).__name__,
-                   "message": str(exc)}}
+                   "message": sanitize_mcp_error(exc, args.mcp_token)}}
     output = json_text(payload, args.json_format)
     print(output)
     report_destination = (None if args.command in {"validate", "run", "evaluate", "build-fixtures", "gold-draft", "gold-finalize", "run-three-arm", "score-three-arm", "export-answer-csv", "build-scorable", "score-scorable"} else

@@ -5,6 +5,7 @@ The generator NEVER calls astroquery_execute or any archive data service.
 """
 
 from __future__ import annotations
+from .mcp_config import resolve_mcp_url
 
 from collections import Counter
 from dataclasses import dataclass
@@ -469,7 +470,7 @@ def write_jsonl(path: Path, candidates: list[dict[str, Any]], *, replace: bool =
     return hashlib.sha256(payload).hexdigest()
 
 
-async def generate(url: str = DEFAULT_MCP_URL, *, count: int = 50, seed: int = 42,
+async def generate(url: str | None = None, *, count: int = 50, seed: int = 42,
                    modules: tuple[str, ...] = SUPPORTED_MODULES, timeout: float = 180,
                    session_factory: Callable[[str], Any] | None = None,
                    targets: tuple[SkyTarget, ...] | None = None,

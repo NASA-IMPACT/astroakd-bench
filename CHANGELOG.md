@@ -5,9 +5,18 @@ here. This history is separate from the external `astroquery-mcp` project's
 releases: AstroAKD-Bench versions track benchmark capabilities, not versions
 of Astroquery or the MCP server.
 
-The current implemented benchmark version is **0.6.7.2**.
+The current implemented benchmark version is **0.6.7.3**.
 Dates are in UTC. Release statuses distinguish **offline implementation
 qualification** from **real laptop / live-service qualification**.
+
+## [0.6.7.3] — CONFIGURABLE_MCP_ENDPOINT_AND_BEARER_AUTH (offline qualified; remote host pending) — 2026-10-14
+
+- Standardize on **`ASTROAKD_MCP_URL`** and **`ASTROAKD_MCP_TOKEN`** only; deliberately ignore the generic `MCP_URL`/`MCP_TOKEN` variables. Endpoint order: explicit `--mcp-url`/`--mcp-server` > `ASTROAKD_MCP_URL` > `http://127.0.0.1:8000/mcp`. Empty environment values are treated as unset. Validate HTTP(S) URLs and reject URL-embedded credentials.
+- Provide `--mcp-token` / `--mcp-server-token` overrides, with `ASTROAKD_MCP_TOKEN` as default. Empty or unset tokens use unauthenticated MCP; tokens are sent as bearer authentication through FastMCP `BearerAuth` and are not placed into question data, reports, trace journals, or resume manifests.
+- All native MCP workflows use the shared transport, including discovery, generation, validation, legacy agent tracing, literature tools, and both MCP evaluation arms. Endpoint failures explicitly say **`Cannot connect to MCP server at <selected-address>`**; authentication errors are surfaced without revealing secrets.
+- Three-arm runner now tests the actual MCP connection **before recording new runs** (only for a real client, not injected offline test doubles), preventing unreachable endpoints from filling the evaluation journal with misleading errors. No web-only tool access or scientific scoring policy changed.
+- An existing in-progress experiment should continue without changing its address or other manifest-bound settings. Changing endpoints mid-experiment is intentionally blocked by the resume guard. The bearer token can rotate without being persisted in the manifest.
+- Offline tests exercise precedence, ignored legacy names, unauthenticated and bearer clients, redaction, diagnostic error address, and fail-fast three-arm offline behavior. Real deployment and authentication remain host-qualified only when user runs `doctor` against a connected service.
 
 ## [0.6.7.2] — THREE_ARM_RESUME_MANIFEST_JSON_CLOSURE (offline-qualified; real host resume pending) — 2026-10-14
 

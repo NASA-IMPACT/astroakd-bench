@@ -4,7 +4,28 @@
 
 AstroAKD-Bench is an **independent Python repository** for developing and evaluating agents that discover astronomical data through the [NASA IMPACT Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp). That server is an **external service**, not this repository or the owner of this benchmark. AstroAKD-Bench generates natural-language astronomy tasks, executes reference archive queries via MCP, collects independent agent traces, and scores observable execution and a bounded set of claims.
 
-**Current version: 0.6.6 — GOLD_REFERENCE_AND_THREE_ARM_EVALUATION.** The default `generate` command now uses OpenAI to author diverse synthetic questions with workbook-derived instructions and the external Astroquery MCP server. `--backend template` retains the API-free legacy generator; `--no-mcp` uses OpenAI Responses `web_search` instead. OpenAI generation uses a separate API key/billing; offline audits and scoring do not.
+**Current implemented version: 0.6.7.3 — CONFIGURABLE_MCP_ENDPOINT_AND_BEARER_AUTH.** The default `generate` command now uses OpenAI to author diverse synthetic questions with workbook-derived instructions and the external Astroquery MCP server. `--backend template` retains the API-free legacy generator; `--no-mcp` uses OpenAI Responses `web_search` instead. OpenAI generation uses a separate API key/billing; offline audits and scoring do not.
+
+## 0.6.7.3: MCP endpoint and bearer-token configuration
+
+AstroAKD-Bench uses `--mcp-url` (alias `--mcp-server`) if supplied; otherwise it reads **`ASTROAKD_MCP_URL`**, falling back to **`http://127.0.0.1:8000/mcp`**. Authentication comes from `--mcp-token` (alias `--mcp-server-token`) or **`ASTROAKD_MCP_TOKEN`**. **Empty or unset tokens mean no bearer authentication.** Generic `MCP_URL` and `MCP_TOKEN` are intentionally not consulted.
+
+```bash
+# Local unauthenticated MCP server
+export ASTROAKD_MCP_URL='http://127.0.0.1:8000/mcp'
+unset ASTROAKD_MCP_TOKEN
+uv run python -m benchmark doctor --fast --json-format pretty
+
+# Remote bearer-protected MCP server
+export ASTROAKD_MCP_URL='https://coming-gray-slug.fastmcp.app/mcp'
+export ASTROAKD_MCP_TOKEN='YOUR_ACCESS_TOKEN'
+uv run python -m benchmark doctor --fast --json-format pretty
+
+# CLI endpoint override; use the environment for secrets to avoid shell history
+uv run python -m benchmark doctor --mcp-url 'https://alternate.example/mcp' --fast
+```
+
+If connection fails, `doctor` returns an actionable error naming the **selected server address**, never the bearer token. For a full `run-three-arm` experiment, the server is checked before new results are recorded. **Do not change a running/resumed experiment's endpoint:** its manifest binds the original `mcp_url` so datasets from different servers cannot be silently merged. This change is best applied after your current 150-run experiment finishes. See [endpoint and authentication guide](docs/benchmark/mcp_endpoint_auth_0_6_7_3.md).
 
 ## 0.6.7: Fifty objectively scorable questions and GPT-5.2 three-arm evaluation
 

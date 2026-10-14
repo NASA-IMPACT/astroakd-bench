@@ -6,6 +6,7 @@ Neither result type is a validated scientific answer or an MCP observation call.
 No ADS token is transmitted to this client, logged, or saved in artifacts.
 """
 from __future__ import annotations
+from .mcp_config import resolve_mcp_url
 
 import asyncio
 from typing import Any, Callable
@@ -113,7 +114,7 @@ def _web_research_payload(response: Any, fallback_reason: str) -> dict[str, Any]
     return result
 
 
-async def check_literature_auth(*, url: str = DEFAULT_MCP_URL,
+async def check_literature_auth(*, url: str | None = None,
                                 timeout: float = 180.0,
                                 session_factory: Callable | None = None) -> dict[str, Any]:
     """Read-only auth diagnostics via MCP, with no token or token length."""
@@ -127,7 +128,7 @@ async def check_literature_auth(*, url: str = DEFAULT_MCP_URL,
             'token_values_exposed':False}
 
 
-async def research_literature(query: str, *, url: str = DEFAULT_MCP_URL,
+async def research_literature(query: str, *, url: str | None = None,
                               max_results: int = 5, timeout: float = 180.0,
                               model: str = 'gpt-5.2', use_mcp: bool = True,
                               session_factory: Callable | None = None,

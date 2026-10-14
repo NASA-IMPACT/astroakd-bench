@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from . import DEFAULT_MCP_URL
+from .mcp_config import resolve_mcp_url
 from .generator import generate, parse_modules, write_jsonl
 from .seeds import SkyTarget
 from .validator import validate, load_jsonl, EXPECTED_ACCEPTED_020_SHA256, atomic_json
@@ -29,10 +30,10 @@ class AstroAKDBench:
     ``evaluate_agent`` and ``build_fixtures`` require no external service.
     """
 
-    def __init__(self, root: str | Path = '.', *, mcp_url: str = DEFAULT_MCP_URL,
+    def __init__(self, root: str | Path = '.', *, mcp_url: str | None = None,
                  timeout: float = 180.0):
         self.root = Path(root).expanduser().resolve()
-        self.mcp_url = mcp_url
+        self.mcp_url = resolve_mcp_url(mcp_url)
         if timeout <= 0:
             raise ValueError('timeout must be positive')
         self.timeout = timeout
