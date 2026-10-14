@@ -25,7 +25,7 @@ from .generator import (
 from .seeds import SkyTarget
 from .diversity import analyze_candidates
 
-INSTRUCTIONS_PATH = Path(__file__).resolve().parent.parent / 'instructions' / 'astroakd_bench' / 'llm_generation_instructions_v1.md'
+INSTRUCTIONS_PATH = Path(__file__).resolve().parent.parent / 'instructions' / 'astroakd_bench' / 'AstroAKD-Bench_Instruction.md'
 INSTRUCTIONS_VERSION = 'astro_benchmark_gold_0_6_4_3'
 BASE_SYSTEM = (
     'You author astronomical data-discovery benchmark questions as STRICT JSON. '

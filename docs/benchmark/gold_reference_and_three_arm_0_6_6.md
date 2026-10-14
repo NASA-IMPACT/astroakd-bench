@@ -1,6 +1,6 @@
 # 0.6.6 — Gold references and three-arm AstroAKD evaluation
 
-**Projects are distinct:** AstroAKD-Bench creates and scores tests. **AstroAKD** is the data-search agent being evaluated. `instructions/astroakd/AstroAKD_Instruction.md` is an **AstroAKD agent instruction**, not the benchmark's synthetic-question generator prompt (`instructions/astroakd_bench/llm_generation_instructions_v1.md`).
+**Projects are distinct:** AstroAKD-Bench creates and scores tests. **AstroAKD** is the data-search agent being evaluated. `instructions/astroakd/AstroAKD_Instruction.md` is an **AstroAKD agent instruction**, not the benchmark's synthetic-question generator prompt (`instructions/astroakd_bench/AstroAKD-Bench_Instruction.md`).
 
 ## Source data and acceptance state
 

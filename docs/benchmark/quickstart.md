@@ -1,4 +1,4 @@
-# Current workflow — AstroAKD-Bench 0.6.7.4
+# Current workflow — AstroAKD-Bench 0.6.7.5
 
 This is the **current command guide**. Versioned documentation under `docs/benchmark/`
 may illustrate earlier behavior. Execute all commands from the **repository root**.
@@ -39,11 +39,11 @@ connection failure without revealing the token. Refer to
 - Agent instruction for **arm B only**:
   `instructions/astroakd/AstroAKD_Instruction.md`.
 - Synthetic authoring instruction for the `generate` workflow:
-  `instructions/astroakd_bench/llm_generation_instructions_v1.md`
+  `instructions/astroakd_bench/AstroAKD-Bench_Instruction.md`
   (read by default when instructions are enabled).
 
 These are **different projects' instructions**. The two files were moved from
-`docs/` in version 0.6.7.4; their content hashes remain unchanged. The
+`docs/` in version 0.6.7.5; their content hashes remain unchanged. The
 benchmark oracle must never be passed to any agent.
 
 ## 3. Generate or examine the scorable questions
@@ -72,57 +72,84 @@ To author *unverified candidate* questions from the LLM prompt instead, see
 
 ## 4. Run the three GPT-5.2 arms
 
-Set `OPENAI_API_KEY` in the **runner** environment; start the external MCP
-service and check it with `doctor`. The 3 arms are A: MCP only, B: MCP plus
-specialist AstroAKD instruction, and C: web search only (never MCP).
+Set `OPENAI_API_KEY` and check MCP connectivity with `doctor` first. The three
+arms are A: MCP only, B: MCP with AstroAKD instruction, C: web only.
+The archive's original experiment journal must be kept separate from new runs.
+
+### New 50-question experiment (without `--resume`)
 
 ```bash
 uv run --with openai python -m benchmark run-three-arm \
   --tasks datasets/generated/scorable_50.jsonl \
   --agent-instruction instructions/astroakd/AstroAKD_Instruction.md \
-  --model gpt-5.2 \
-  --max-turns 8 --max-calls 12 \
+  --model gpt-5.2 --max-turns 8 --max-calls 12 \
   --max-tool-bytes 262144 --timeout 180 --task-timeout 900 \
-  --output datasets/agent/scorable_50_gpt52_runs.jsonl \
-  --report datasets/agent/scorable_50_gpt52_report.json \
-  --resume --json-format pretty
+  --output datasets/agent/gpt52_fresh_runs.jsonl \
+  --report datasets/agent/gpt52_fresh_report.json
 ```
 
-**Resume** assumes a matching previously initialized manifest/journal; remove
-`--resume` for a brand-new output prefix. For a pilot on brand-new paths use
-`--limit 5`. Do not combine `--resume` with `--replace`. A resumed experiment
-requires the same question hash, instruction content hash, model, MCP URL,
-and resource budgets. Changing just the file path to the **identical** moved
-instruction does not change its hash. An ongoing process should be allowed to
-finish before applying a software update. Switching the MCP server requires
-starting a separate experiment with **new output paths**.
+### Pilot: five questions per arm (`--limit 5`)
 
-## 5. Score all answers and re-create CSV and plots
+Use a different output prefix from the full run:
 
-After completion, the runner publishes the final `.jsonl`. For a partial
-experiment use the same prefix with `.jsonl.progress.jsonl` instead.
+```bash
+uv run --with openai python -m benchmark run-three-arm \
+  --tasks datasets/generated/scorable_50.jsonl \
+  --agent-instruction instructions/astroakd/AstroAKD_Instruction.md \
+  --model gpt-5.2 --limit 5 --max-turns 8 --max-calls 12 \
+  --max-tool-bytes 262144 --timeout 180 --task-timeout 900 \
+  --output datasets/agent/gpt52_new_pilot_runs.jsonl \
+  --report datasets/agent/gpt52_new_pilot_report.json
+```
+
+### Resume that pilot (`--resume`, no `--limit`)
+
+```bash
+uv run --with openai python -m benchmark run-three-arm \
+  --tasks datasets/generated/scorable_50.jsonl \
+  --agent-instruction instructions/astroakd/AstroAKD_Instruction.md \
+  --model gpt-5.2 --max-turns 8 --max-calls 12 \
+  --max-tool-bytes 262144 --timeout 180 --task-timeout 900 \
+  --output datasets/agent/gpt52_new_pilot_runs.jsonl \
+  --report datasets/agent/gpt52_new_pilot_report.json \
+  --resume
+```
+
+The runner records task/arm pairs and checks the manifest before resuming;
+do not change the MCP address, model or budgets mid-experiment. The agent
+instruction was only renamed/moved, not rewritten, so its SHA-256 is unchanged.
+Use new paths to start different experiments.
+
+## 5. Score and generate CSV reports / plots
+
+After a completed full new experiment, score its final `.jsonl`. For a pilot,
+use the same prefix with `.jsonl.progress.jsonl` as input and choose a
+**different report prefix**. First-time reports do not require `--replace`.
 
 ```bash
 uv run --with matplotlib python -m benchmark score-scorable \
   --tasks datasets/generated/scorable_50.jsonl \
   --oracle datasets/gold/scorable_50_reference_oracle.jsonl \
-  --runs datasets/agent/scorable_50_gpt52_runs.jsonl \
-  --comparison-csv datasets/reports/scorable_50_gpt52_ABC_answers.csv \
-  --summary-csv datasets/reports/scorable_50_gpt52_rates.csv \
-  --detailed-csv datasets/reports/scorable_50_gpt52_detailed_150.csv \
-  --performance-csv datasets/reports/scorable_50_gpt52_performance.csv \
-  --task-performance-csv datasets/reports/scorable_50_gpt52_per_task_performance.csv \
-  --plots-dir datasets/reports/scorable_50_gpt52_plots \
-  --report datasets/reports/scorable_50_gpt52_scores.json \
-  --replace --json-format pretty
+  --runs datasets/agent/gpt52_fresh_runs.jsonl \
+  --comparison-csv datasets/reports/gpt52_fresh_ABC_answers.csv \
+  --summary-csv datasets/reports/gpt52_fresh_rates.csv \
+  --detailed-csv datasets/reports/gpt52_fresh_detailed_150.csv \
+  --performance-csv datasets/reports/gpt52_fresh_performance.csv \
+  --task-performance-csv datasets/reports/gpt52_fresh_per_task_performance.csv \
+  --plots-dir datasets/reports/gpt52_fresh_plots \
+  --report datasets/reports/gpt52_fresh_scores.json \
+  --json-format pretty
 ```
 
-Produces (a) 50-question wide A/B/C table, (b) 150-row long answer report,
-(c) three-row per-arm score + timing/token summaries, (d) 150-row per-task
-performance, and (e) match-rate, mean-runtime and total-token barplots in PNG
-and SVG. **All answers are retained**, correct or incorrect. Scoring is offline:
-no OpenAI calls or MCP connectivity required. `--replace` only replaces output
-reports, never the source agent journal, tasks or oracle.
+Outputs: (a) 50-question wide A/B/C table, (b) 150-row long answer report,
+(c) three-row per-arm score and timing/token summaries, (d) 150-row per-task
+performance file, (e) match-rate, mean-runtime and total-token barplots in
+PNG/SVG. Incorrect, abstained and incomplete responses stay in the CSVs.
+The score is archive-snapshot agreement, **not independently verified
+scientific accuracy**. The scorer never makes OpenAI or MCP calls.
+
+For an already existing report, add `--replace` intentionally; this overwrites
+**reports only**, not the input journal, tasks or oracle.
 
 ## 6. Interpret results and check qualification
 
@@ -139,3 +166,13 @@ uv run python -m unittest discover -s benchmark/tests -q
 See [experimental interpretation](experimental_methods.md),
 [detailed reporting](three_arm_detailed_reporting_0_6_7_1.md), and
 [the instructions directory](../../instructions/README.md).
+
+## Build the HTML documentation
+
+```bash
+make html
+# Output: docs/_build/html/index.html
+make clean
+```
+
+See the [Sphinx build guide](documentation_build.md).

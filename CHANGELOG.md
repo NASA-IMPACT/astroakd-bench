@@ -5,9 +5,30 @@ here. This history is separate from the external `astroquery-mcp` project's
 releases: AstroAKD-Bench versions track benchmark capabilities, not versions
 of Astroquery or the MCP server.
 
-The current implemented benchmark version is **0.6.7.4**.
+The current implemented benchmark version is **0.6.7.5**.
 Dates are in UTC. Release statuses distinguish **offline implementation
 qualification** from **real laptop / live-service qualification**.
+
+## [0.6.7.5] — SPHINX_HTML_AND_INSTRUCTION_NAMING (offline qualified; HTML host build pending) — 2026-10-14
+
+- Rename the **AstroAKD-Bench synthetic generation instruction** from
+  `instructions/astroakd_bench/llm_generation_instructions_v1.md` to
+  `instructions/astroakd_bench/AstroAKD-Bench_Instruction.md` without changing
+  content (SHA-256 `d430cf4d2508f124abee4deb23da44b3aca1618707f6c052fea8ee9deda47acf`). Update the default generation loader, tests and active instructions/documentation links. The separate AstroAKD instruction for arm B remains byte-identical.
+- Add a native **Sphinx + MyST** HTML documentation configuration in `docs/conf.py`,
+  a repository-root `Makefile` with `make html` / `make clean` / `make linkcheck`,
+  `pyproject.toml` optional `docs` dependencies and `.gitignore` for generated
+  `_build` outputs. Add navigation trees covering current guides and historical
+  references, plus a dedicated documentation-build guide.
+- Refresh README and quick-start to demonstrate **fresh full run without `--resume`**,
+  **five-question pilot with `--limit 5`**, **continuation via `--resume`**, and
+  **first-time scoring without `--replace`**. Rename the scoring section to
+  *Score and generate CSV reports / plots*.
+- Preserve frozen science and reference datasets, all model settings, experiment
+  journal contents and manifest semantics. No new GPT-5.2 or MCP evaluation was
+  performed. Run offline regression and static Sphinx configuration/navigation
+  checks; actual HTML render remains **host pending** because Sphinx/MyST could
+  not be installed from the container's disabled package network.
 
 ## [0.6.7.4] — DOCUMENTATION_AND_INSTRUCTION_SEPARATION (offline qualified; 2026-10-14)
 

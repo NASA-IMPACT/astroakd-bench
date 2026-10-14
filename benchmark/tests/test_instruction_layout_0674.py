@@ -11,7 +11,7 @@ from benchmark.llm_generation import INSTRUCTIONS_PATH, instruction_text
 
 ROOT = Path(__file__).resolve().parents[2]
 ASTROAKD_PATH = ROOT / 'instructions' / 'astroakd' / 'AstroAKD_Instruction.md'
-GEN_PATH = ROOT / 'instructions' / 'astroakd_bench' / 'llm_generation_instructions_v1.md'
+GEN_PATH = ROOT / 'instructions' / 'astroakd_bench' / 'AstroAKD-Bench_Instruction.md'
 
 
 class InstructionLayoutTests(unittest.TestCase):
@@ -31,7 +31,12 @@ class InstructionLayoutTests(unittest.TestCase):
         self.assertFalse((ROOT/'docs/benchmark/llm_generation_instructions_v1.md').exists())
         self.assertTrue((ROOT/'docs/index.md').is_file())
         self.assertTrue((ROOT/'instructions/README.md').is_file())
-        self.assertTrue(all(p.suffix=='.md' for p in (ROOT/'docs').rglob('*') if p.is_file()))
+        self.assertTrue(all(
+            p.suffix == '.md' or p == ROOT/'docs/conf.py'
+            for p in (ROOT/'docs').rglob('*')
+            if p.is_file() and '_build' not in p.parts
+            and '__pycache__' not in p.parts
+        ))
 
     def test_active_markdown_local_links_resolve(self):
         paths=[ROOT/'README.md',ROOT/'instructions/README.md',ROOT/'docs/index.md',
@@ -48,8 +53,8 @@ class InstructionLayoutTests(unittest.TestCase):
         for path in (ROOT/'README.md', ROOT/'docs/index.md', ROOT/'docs/benchmark/quickstart.md'):
             content=path.read_text(encoding='utf-8')
             self.assertIn('instructions/astroakd/AstroAKD_Instruction.md',content)
-            self.assertIn('instructions/astroakd_bench/llm_generation_instructions_v1.md',content)
-        self.assertIn('0.6.7.4',(ROOT/'pyproject.toml').read_text())
+            self.assertIn('instructions/astroakd_bench/AstroAKD-Bench_Instruction.md',content)
+        self.assertIn('0.6.7.5',(ROOT/'pyproject.toml').read_text())
 
 
 if __name__=='__main__':

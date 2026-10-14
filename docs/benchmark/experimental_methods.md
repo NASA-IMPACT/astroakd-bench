@@ -24,7 +24,7 @@ is preserved separately and is not interchangeable with the scorable set.
 
 All use **GPT-5.2** and identical question text. The hidden source-derived
 reference oracle is not provided to any arm. The generation-time question-authoring
-prompt `instructions/astroakd_bench/llm_generation_instructions_v1.md` is
+prompt `instructions/astroakd_bench/AstroAKD-Bench_Instruction.md` is
 **not** an agent instruction, and is **not** used in A, B or C.
 
 Run completion, reference match, tool success, latency and token usage are

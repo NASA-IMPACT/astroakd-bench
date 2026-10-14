@@ -10,7 +10,7 @@ agents and exports reproducible answer comparisons, scores and performance plots
 **AstroAKD** is the *agent being evaluated*; **AstroAKD-Bench** is the *benchmark*;
 **astroquery-mcp** is a *separate MCP service*. They are not interchangeable.
 
-**Current version: `0.6.7.4` — documentation and instruction-file separation.**
+**Current version: `0.6.7.5` — named benchmark instruction and Sphinx HTML documentation.**
 [Documentation index](docs/index.md) · [Current quick-start](docs/benchmark/quickstart.md)
 · [Change history](CHANGELOG.md) · [Instruction layout](instructions/README.md)
 
@@ -56,12 +56,14 @@ AstroAKD-Bench/
 │   ├── astroakd/
 │   │   └── AstroAKD_Instruction.md    # Specialist instruction: arm B only
 │   └── astroakd_bench/
-│       └── llm_generation_instructions_v1.md # Synthetic-question authoring
-├── docs/                              # Documentation only
+│       └── AstroAKD-Bench_Instruction.md       # Synthetic-question authoring
+├── docs/                              # Sphinx/MyST documentation sources
+│   ├── conf.py                        # Sphinx configuration
 │   ├── index.md                       # Documentation home
 │   ├── benchmark/                     # Current and versioned technical guides
 │   └── history/                       # Archived historical README
 ├── scripts/                           # Supporting utilities
+├── Makefile                            # make html, make clean
 ├── README.md                           # Concise current landing page
 ├── CHANGELOG.md                        # Benchmark release history
 └── pyproject.toml
@@ -75,7 +77,8 @@ are separate files under `instructions/` and are **byte-identical** to their
 
 The old `docs/agent/AstroAKD_Instruction.md` and
 `docs/benchmark/llm_generation_instructions_v1.md` paths have moved; update
-any shell commands or scripts using those paths. The `docs/` directory now
+any shell commands or scripts using those paths. Version 0.6.7.5 additionally
+renamed the generator prompt to `AstroAKD-Bench_Instruction.md`. The `docs/` directory now
 contains only documentation and preserved technical background.
 
 ## Current 50-question GPT-5.2 experiment
@@ -104,11 +107,11 @@ seconds** and recorded token totals **276,739, 308,724 and 101,552**,
 respectively. The ongoing full 150-run experiment is not claimed complete
 until the final live host report confirms it.
 
-### Continue the existing three-arm experiment
+### Run all 50 questions (new experiment; no `--resume`)
 
-Ensure `OPENAI_API_KEY` is set and the external MCP endpoint remains the same
-as the saved manifest. From a **0.6.7.4 checkout** (or after the current run
-finishes and you upgrade), use the **new instruction path**:
+With `OPENAI_API_KEY` configured and the external MCP endpoint running,
+use **fresh output paths** for a new experiment. The three arms use GPT-5.2
+and the same tasks and budgets:
 
 ```bash
 uv run --with openai python -m benchmark run-three-arm \
@@ -117,52 +120,109 @@ uv run --with openai python -m benchmark run-three-arm \
   --model gpt-5.2 \
   --max-turns 8 --max-calls 12 \
   --max-tool-bytes 262144 --timeout 180 --task-timeout 900 \
-  --output datasets/agent/scorable_50_gpt52_runs.jsonl \
-  --report datasets/agent/scorable_50_gpt52_report.json \
+  --output datasets/agent/gpt52_fresh_runs.jsonl \
+  --report datasets/agent/gpt52_fresh_report.json \
+  --json-format pretty
+```
+
+The command runs 50 questions × 3 arms = **150 executions**. The example
+uses fresh names because the release already contains an earlier GPT-5.2 pilot
+journal. If the output exists, the runner refuses to overwrite it.
+
+### Pilot run (`--limit 5`)
+
+To examine five questions per arm before executing all 50, use a **different
+fresh output prefix**:
+
+```bash
+uv run --with openai python -m benchmark run-three-arm \
+  --tasks datasets/generated/scorable_50.jsonl \
+  --agent-instruction instructions/astroakd/AstroAKD_Instruction.md \
+  --model gpt-5.2 --limit 5 \
+  --max-turns 8 --max-calls 12 \
+  --max-tool-bytes 262144 --timeout 180 --task-timeout 900 \
+  --output datasets/agent/gpt52_new_pilot_runs.jsonl \
+  --report datasets/agent/gpt52_new_pilot_report.json \
+  --json-format pretty
+```
+
+The pilot writes `gpt52_new_pilot_runs.jsonl.progress.jsonl` containing 15
+entries. Partial progress is deliberately marked `PARTIAL`; it does not
+represent success on the full dataset.
+
+### Resume a partial pilot (`--resume`)
+
+Use the **same** task file, model, instruction *content*, MCP URL, budgets,
+output path and report path as the original limited run; **remove `--limit`**:
+
+```bash
+uv run --with openai python -m benchmark run-three-arm \
+  --tasks datasets/generated/scorable_50.jsonl \
+  --agent-instruction instructions/astroakd/AstroAKD_Instruction.md \
+  --model gpt-5.2 \
+  --max-turns 8 --max-calls 12 \
+  --max-tool-bytes 262144 --timeout 180 --task-timeout 900 \
+  --output datasets/agent/gpt52_new_pilot_runs.jsonl \
+  --report datasets/agent/gpt52_new_pilot_report.json \
   --resume --json-format pretty
 ```
 
-`--resume` is used only when a partial journal already exists. Remove it for a
-new experiment with new output files. Moving an instruction **without changing
-its content** keeps the instruction SHA-256 consistent with the original
-pilot's resume manifest. **Do not apply a code update to a currently running
-process**; finish that process first. **Do not change MCP URLs within the
-same journal**; use a different output prefix for a different server.
+Resume skips already recorded task/arm pairs. A completed run publishes the
+final `.jsonl`, and an interrupted run remains in the `.progress.jsonl` journal.
+To resume the existing historical GPT-5.2 pilot instead, use the original
+`scorable_50_gpt52_runs.jsonl` output prefix and match its saved manifest.
+**Do not** use `--replace` to resume or change the endpoint during one run.
 
-### Re-score and regenerate CSV reports / plots
+### Score and generate CSV reports / plots
 
-Once the 150-run output `.jsonl` exists, run:
+**After the run** (no previous scoring required), use `score-scorable` to
+compare actual replies against the frozen reference-answer snapshot:
 
 ```bash
 uv run --with matplotlib python -m benchmark score-scorable \
   --tasks datasets/generated/scorable_50.jsonl \
   --oracle datasets/gold/scorable_50_reference_oracle.jsonl \
-  --runs datasets/agent/scorable_50_gpt52_runs.jsonl \
-  --comparison-csv datasets/reports/scorable_50_gpt52_ABC_answers.csv \
-  --summary-csv datasets/reports/scorable_50_gpt52_rates.csv \
-  --detailed-csv datasets/reports/scorable_50_gpt52_detailed_150.csv \
-  --performance-csv datasets/reports/scorable_50_gpt52_performance.csv \
-  --task-performance-csv datasets/reports/scorable_50_gpt52_per_task_performance.csv \
-  --plots-dir datasets/reports/scorable_50_gpt52_plots \
-  --report datasets/reports/scorable_50_gpt52_scores.json \
-  --replace --json-format pretty
+  --runs datasets/agent/gpt52_fresh_runs.jsonl \
+  --comparison-csv datasets/reports/gpt52_fresh_ABC_answers.csv \
+  --summary-csv datasets/reports/gpt52_fresh_rates.csv \
+  --detailed-csv datasets/reports/gpt52_fresh_detailed_150.csv \
+  --performance-csv datasets/reports/gpt52_fresh_performance.csv \
+  --task-performance-csv datasets/reports/gpt52_fresh_per_task_performance.csv \
+  --plots-dir datasets/reports/gpt52_fresh_plots \
+  --report datasets/reports/gpt52_fresh_scores.json \
+  --json-format pretty
 ```
 
-For a partial run substitute
-`datasets/agent/scorable_50_gpt52_runs.jsonl.progress.jsonl` for `--runs`.
-Scoring is offline and keeps **all** actual answers including wrong, blank,
-abstained and unstructured ones. Results include a 50-question wide answer
-comparison, 150-row detailed comparison, 3-row A/B/C performance CSV, a
-per-task performance CSV and PNG/SVG barplots of match rate, runtime and tokens.
-`--replace` affects the generated reporting outputs, not the oracle or journal.
-See [the reporting guide](docs/benchmark/three_arm_detailed_reporting_0_6_7_1.md).
+This command reads the **fresh full-run** example above. For the five-question
+pilot, point `--runs` to
+`datasets/agent/gpt52_new_pilot_runs.jsonl.progress.jsonl` and use different
+report destinations. When refreshing **existing** reports, add `--replace`;
+it is not required on the first score. The offline scorer preserves wrong,
+blank, unstructured and abstained answers and produces A/B/C match-rate,
+mean-runtime and total-token bar plots in PNG and SVG. Reference matches are
+**not independently verified scientific accuracy**. See the
+[reporting guide](docs/benchmark/three_arm_detailed_reporting_0_6_7_1.md).
+
+## HTML documentation (Sphinx + MyST)
+
+From the repository root, build all current and historical Markdown guides:
+
+```bash
+make html
+```
+
+This installs the optional documentation dependencies through `uv` and writes
+`docs/_build/html/index.html`. Run `make clean` to delete build outputs. If
+Sphinx is already installed, use `make html SPHINXBUILD=sphinx-build`.
+The source configuration lives in `docs/conf.py`; see the
+[documentation build guide](docs/benchmark/documentation_build.md).
 
 ## Synthetic questions, evidence and scientific qualification
 
 Synthetic generation may use deterministic templates, MCP-backed OpenAI
 question authoring, or web-only research. Question-generation instructions
 are read automatically from
-[`instructions/astroakd_bench/llm_generation_instructions_v1.md`](instructions/astroakd_bench/llm_generation_instructions_v1.md)
+[`instructions/astroakd_bench/AstroAKD-Bench_Instruction.md`](instructions/astroakd_bench/AstroAKD-Bench_Instruction.md)
 when enabled, and can be replaced with `--instructions-file`. Candidate
 questions are not verified scientific answers until separately checked.
 
