@@ -26,7 +26,7 @@ DEFAULT_DATASET = Path("datasets/generated/synthetic_queries.jsonl")
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="astroakd-bench",
-        description="AstroAKD-Bench 0.6.7 reference-anchored scorable experiment.",
+        description="AstroAKD-Bench 0.6.7.1 answer and performance reporting.",
     )
     parser.add_argument("--version", action="version", version=__version__)
     common = argparse.ArgumentParser(add_help=False)
@@ -248,13 +248,17 @@ def build_parser() -> argparse.ArgumentParser:
     scorable.add_argument('--report', required=True, type=Path)
     scorable.add_argument('--replace', action='store_true')
     scorable_score = commands.add_parser('score-scorable', parents=[common],
-        help='Score GPT-5.2 A/B/C answers against frozen reference snapshot; save all wrong answers')
+        help='Score GPT-5.2 A/B/C answers; optionally export detailed responses, resource CSVs and barplots')
     scorable_score.add_argument('--tasks', required=True, type=Path)
     scorable_score.add_argument('--oracle', required=True, type=Path)
     scorable_score.add_argument('--runs', required=True, type=Path)
     scorable_score.add_argument('--comparison-csv', required=True, type=Path)
     scorable_score.add_argument('--summary-csv', required=True, type=Path)
     scorable_score.add_argument('--report', required=True, type=Path)
+    scorable_score.add_argument('--detailed-csv', type=Path, help='150-row full question, reference and A/B/C answer detail')
+    scorable_score.add_argument('--performance-csv', type=Path, help='Three-arm match, runtime and token metrics')
+    scorable_score.add_argument('--task-performance-csv', type=Path, help='150-row per-task runtime/token/tool-count metrics')
+    scorable_score.add_argument('--plots-dir', type=Path, help='Three barplots, each as PNG and SVG; needs matplotlib')
     scorable_score.add_argument('--replace', action='store_true')
     inspect = commands.add_parser('inspect', parents=[common],
         help='Render a bounded JSONL sample or a JSON report for inspection')
@@ -272,7 +276,9 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
     if args.command == 'score-scorable':
         from .scorable import score_scorable
         return score_scorable(args.tasks,args.oracle,args.runs,args.comparison_csv,
-            args.summary_csv,args.report,replace=args.replace)
+            args.summary_csv,args.report,detail_csv=args.detailed_csv,
+            performance_csv=args.performance_csv,task_performance_csv=args.task_performance_csv,
+            plots_dir=args.plots_dir,replace=args.replace)
     if args.command == 'export-answer-csv':
         from .answer_reports import export_answer_csv
         return export_answer_csv(args.tasks,args.questions_csv,args.arms_csv,args.summary_csv,args.report,

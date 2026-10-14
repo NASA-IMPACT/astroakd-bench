@@ -16,6 +16,7 @@ from .gold import _path_safety, _read_tasks
 from .validator import ValidationError, load_jsonl, atomic_jsonl, atomic_json
 from .exports import atomic_csv, json_compact
 from .three_arm import ARMS, _score_one
+from .scorable_diagnostics import export_detailed, plot_paths
 
 MILESTONE = '0.6.7 - REFERENCE_ANCHORED_SCORABLE_QUERIES'
 ARM_LABELS = {'mcp_only':'A - MCP only','mcp_instruction':'B - MCP + Instruction','web_only':'C - Web only'}
@@ -163,8 +164,13 @@ def _normalize_equivalent_unit(answer:dict,gold:dict)->dict:
     return answer
 
 
-def score_scorable(tasks_path:Path,oracle_path:Path,runs_path:Path,comparison_csv:Path,summary_csv:Path,report_out:Path,*,replace:bool=False):
-    _path_safety([tasks_path,oracle_path,runs_path],[comparison_csv,summary_csv,report_out],replace)
+def score_scorable(tasks_path:Path,oracle_path:Path,runs_path:Path,comparison_csv:Path,summary_csv:Path,report_out:Path,*,
+                   detail_csv:Path|None=None,performance_csv:Path|None=None,
+                   task_performance_csv:Path|None=None, plots_dir:Path|None=None,replace:bool=False):
+    # Preflight every destination before writing a single output.
+    plot_outputs=plot_paths(plots_dir) if plots_dir is not None else []
+    _path_safety([tasks_path,oracle_path,runs_path],
+                 [comparison_csv,summary_csv,report_out,detail_csv,performance_csv,task_performance_csv,*plot_outputs],replace)
     tasks,digest=_read_tasks(tasks_path)
     oracle,hashoracle=load_jsonl(oracle_path)
     runs,hashruns=load_jsonl(runs_path,max_bytes=512*1024*1024)
@@ -216,12 +222,16 @@ def score_scorable(tasks_path:Path,oracle_path:Path,runs_path:Path,comparison_cs
                           'errors':sum(x[prefix+'_status']=='RUN_ERROR' for x in attempted),
                           'independently_verified_scientific_success_pct':'',
                           'answer_key_status':'reference_anchored_unreviewed'})
+    diagnostics=export_detailed(comparisons,summaries,mapping,detail_csv=detail_csv,
+        performance_csv=performance_csv,task_performance_csv=task_performance_csv,
+        plots_dir=plots_dir,replace=replace)
     atomic_csv(comparison_csv,comparisons,tuple(comparisons[0]),replace=replace)
     atomic_csv(summary_csv,summaries,tuple(summaries[0]),replace=replace)
     report={'milestone':MILESTONE,'benchmark_version':__version__,'status':'PASS' if len(mapping)==len(tasks)*3 else 'PARTIAL',
             'tasks':len(tasks),'runs_recorded':len(mapping),'model':'gpt-5.2','dataset_sha256':digest,
             'oracle_sha256':hashoracle,'runs_sha256':hashruns,'arms':{s['arm']:s for s in summaries},
             'note':'Reference-snapshot exact-match percentages, not independently verified scientific accuracy. All answers, including wrong/free-form/error replies, retained in CSV.',
-            'comparison_csv':str(comparison_csv),'summary_csv':str(summary_csv)}
+            'comparison_csv':str(comparison_csv),'summary_csv':str(summary_csv),
+            **diagnostics}
     atomic_json(report_out,report,replace=replace,style='pretty')
     return report

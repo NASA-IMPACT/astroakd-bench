@@ -572,6 +572,27 @@ follow-on archive validation stage and cannot claim verified answers merely from
 ADS or web-search results. See
 [Gold Benchmark/ADS guide](docs/benchmark/gold_benchmark_dataset_and_ads.md).
 
+## GPT-5.2 detailed answer / performance reporting (0.6.7.1)
+
+`score-scorable` now optionally creates **detailed long-form CSV (150 task/arm rows)**,
+**A/B/C performance summary CSV**, **per-task resource-use CSV**, and three reproducible
+bar charts (reference-match percentage, mean wall time per attempted question,
+recorded total tokens). Plots are exported as PNG **and** SVG; only the reporting
+command needs optional `matplotlib` (`uv run --with matplotlib`). Full agent answers,
+including incorrect answers, structured or free-form text, source identifiers,
+errors and abstention flags, are preserved unchanged. Run progress and oracle hashes
+are checked before scoring; existing candidate and agent journal bytes are not modified.
+
+For the real 5-question GPT-5.2 pilot the frozen-snapshot match percentages were
+A **5/5=100%**, B **5/5=100%**, C **1/5=20%**; mean observed wall times were
+A **21.46 s**, B **7.58 s**, C **16.95 s**, and recorded token totals were
+A **276,739**, B **308,724**, C **101,552**. **These are partial-pilot snapshot
+matches, not independently verified scientific gold accuracy.** Per-arm resource
+use can only be compared fairly across the same attempted question set.
+
+See [0.6.7.1 reporting guide](docs/benchmark/three_arm_detailed_reporting_0_6_7_1.md)
+and [installation instructions](INSTALL_ASTROAKD_BENCH_0_6_7_1.md).
+
 ## 0.6.6 — Scientific gold references and AstroAKD three-arm evaluation
 
 **AstroAKD-Bench** constructs and scores the benchmark; **AstroAKD** is the evaluated agent. The user-provided AstroAKD agent instruction is retained unchanged in `docs/agent/AstroAKD_Instruction.md` and is never confused with the synthetic-generation instructions under `docs/benchmark/`.

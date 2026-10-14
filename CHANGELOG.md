@@ -5,9 +5,19 @@ here. This history is separate from the external `astroquery-mcp` project's
 releases: AstroAKD-Bench versions track benchmark capabilities, not versions
 of Astroquery or the MCP server.
 
-The current implemented benchmark version is **0.6.7**.
+The current implemented benchmark version is **0.6.7.1**.
 Dates are in UTC. Release statuses distinguish **offline implementation
 qualification** from **real laptop / live-service qualification**.
+
+## [0.6.7.1] — THREE_ARM_DETAILED_ANSWER_PERFORMANCE_PLOTS (offline-qualified; live pilot files analyzed) — 2026-10-14
+
+- Extend native `score-scorable` with `--detailed-csv`, `--performance-csv`, `--task-performance-csv`, and `--plots-dir` options, preserving the old two CSV/report outputs and the unchanged `gpt-5.2` agent runner.
+- Detailed 150-row (50 tasks × 3 arms) CSV includes each full question, frozen reference, actual answer text and array, structured/unstructured status, source identifiers, abstention flag, match result, compact tool-event summary (complete raw trace remains in the saved JSONL journal), run errors, duration and token counts. Mark a response with both `abstained=true` and nonempty answer values explicitly as `ABSTAIN_WITH_VALUES` instead of disguising it as an ordinary abstention; **do not change the existing reference-match scorer**.
+- New three-arm `performance_observations.csv` separately records snapshot-match percentage, attempted/completed coverage, mean and summed wall time, prompt/completion/total tokens, per-query token mean, web searches, successful/rejected MCP calls, and errors. A companion per-task resource CSV keeps all 150 rows, including `not_run`.
+- Three barplots saved to PNG and SVG: **reference-snapshot match rate (% of attempted), mean runtime per attempted question (seconds), total recorded tokens**. Annotate actual attempted counts; output displays N/A when an arm has no attempts. Optional dependency `matplotlib` is required only when plots are requested, via `uv run --with matplotlib` or `.[plots]`.
+- Export remains offline and gold-blind (agents are never rerun). All new destination paths are preflight-checked for overwrite and collision; source data and frozen scientific reference hashes remain unchanged. Existing CSV reports are backward compatible.
+- Real GPT-5.2 5-question pilot reprocessed: **A 5/5 (100%), B 5/5 (100%), C 1/5 (20%)** snapshot matches; mean times **21.4642 / 7.5763 / 16.9497 s**; totals **276739 / 308724 / 101552 tokens**. These are **not independently verified scientific truth**, and 45 questions remain unrun.
+- Added installation, docs, tests and conversation handoff. Full offline suite qualification results in `QUALIFICATION_0_6_7_1.md`. Native live 150-run follow-up pending.
 
 ## [0.6.7] — REFERENCE_ANCHORED_SCORABLE_QUERIES (offline-qualified; GPT-5.2 live pending) — 2026-10-14
 
