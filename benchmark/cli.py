@@ -26,7 +26,7 @@ DEFAULT_DATASET = Path("datasets/generated/synthetic_queries.jsonl")
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="astroakd-bench",
-        description="AstroAKD-Bench 0.6.4.3 with optional MCP ADS literature search and fallback.",
+        description="AstroAKD-Bench 0.6.4.4 with optional MCP ADS literature search and fallback.",
     )
     parser.add_argument("--version", action="version", version=__version__)
     common = argparse.ArgumentParser(add_help=False)
@@ -96,6 +96,9 @@ def build_parser() -> argparse.ArgumentParser:
     literature.add_argument('--model', default='gpt-4.1-mini', help='Model for fallback web search')
     literature.add_argument('--mcp', action=argparse.BooleanOptionalAction, default=True)
     literature.add_argument('--output', type=Path, help='Optional JSON evidence report')
+    lit_auth = commands.add_parser('literature-auth', parents=[common],
+        help='Inspect MCP server ADS auth status safely (no credential values)')
+    lit_auth.add_argument('--output', type=Path, help='Optional JSON auth report')
     validation = commands.add_parser("validate", parents=[common],
         help="Run accepted candidate calls through live MCP, retaining all outcomes")
     validation.add_argument("--input", type=Path, default=DEFAULT_DATASET,
@@ -199,10 +202,15 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
                         csv_path=args.csv,pretty_output=args.pretty_output,
                         strict_accepted_020=args.strict_accepted_020,
                         json_format=args.json_format,replace=args.replace)
+    if args.command == 'literature-auth':
+        from .literature import check_literature_auth
+        return await check_literature_auth(url=args.mcp_url, timeout=args.timeout)
     if args.command == 'literature-search':
         from .literature import research_literature
         return await research_literature(args.query, url=args.mcp_url, max_results=args.max_results,
-            timeout=args.timeout, model=args.model, use_mcp=args.mcp)
+            timeout=args.timeout, model=args.model, use_mcp=args.mcp,
+            progress=lambda message: print(f'[AstroAKD-Bench literature] {message}',
+                                           file=sys.stderr, flush=True))
     if args.command == "doctor":
         return await doctor(
             args.mcp_url, timeout=args.timeout, fast=args.fast,

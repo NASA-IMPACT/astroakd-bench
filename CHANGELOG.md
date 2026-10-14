@@ -13,13 +13,26 @@ here. This history is separate from the external `astroquery-mcp` project's
 releases: AstroAKD-Bench versions track benchmark capabilities, not versions
 of Astroquery or the MCP server.
 
-The current implemented benchmark version is **0.6.4.2**.
+The current implemented benchmark version is **0.6.4.4**.
 Dates are in UTC. Release statuses distinguish **offline implementation
 qualification** from **real laptop / live-service qualification**.
 
 ## [Unreleased]
 
 - Planned after 0.6.1: broader scientific claim verification, multi-archive workflows and frozen evaluation suites.
+
+## [0.6.4.4] - 2026-10-14
+
+### Fixed — LITERATURE_SEARCH_FALLBACK_OUTPUT_CLOSURE
+
+- User's real-host `literature-search` in 0.6.4.3 reached the OpenAI web-search fallback, but the fallback reused the strict LLM synthetic-question JSON parser. Ordinary search prose (with source citations) raised `GenerationError: OpenAI output is not valid JSON`. The saved FAIL report did not include the raw provider response, so the reason ADS was bypassed is unknown.
+- OpenAI web-search evidence now accepts either the historical JSON question form or ordinary citation-bearing research text, without treating either as independently verified astronomical truth. Preserve optional source URLs from both search actions and Responses message citation annotations. Missing citations become `source_review_required=true`, not invented citations.
+- Added the `literature-auth` read-only CLI to query the external MCP server's `astroquery_check_auth` and tool catalog; reports ADS booleans only and never token values or token length. Emit sanitized fallback reasons on stderr and in successful web-search evidence reports. Preserve ADS-through-MCP first choice; no direct ADS client/API.
+- Added eight mock regressions covering prose, JSON compatibility, fallback routing, annotations, no-citation review, incomplete output and safe authentication probe. Original candidate/reference/fixture artifacts remain unchanged.
+
+### Qualification
+
+- Source tree: **173 tests run, 172 passed, one optional live MCP test skipped**. Real ADS authentication and OpenAI web-search requalification **PENDING**.
 
 ## [0.6.4.2] - 2026-10-14
 

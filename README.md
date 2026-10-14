@@ -4,9 +4,9 @@
 
 AstroAKD-Bench is an **independent Python repository** for developing and evaluating agents that discover astronomical data through the [NASA IMPACT Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp). That server is an **external service**, not this repository or the owner of this benchmark. AstroAKD-Bench generates natural-language astronomy tasks, executes reference archive queries via MCP, collects independent agent traces, and scores observable execution and a bounded set of claims.
 
-**Current version: 0.6.4.3 — OPENAI_TASK_ID_RECONCILIATION.** The default `generate` command now uses OpenAI to author diverse synthetic questions with workbook-derived instructions and the external Astroquery MCP server. `--backend template` retains the API-free legacy generator; `--no-mcp` uses OpenAI Responses `web_search` instead. OpenAI generation uses a separate API key/billing; offline audits and scoring do not.
+**Current version: 0.6.4.4 — LITERATURE_SEARCH_FALLBACK_OUTPUT_CLOSURE.** The default `generate` command now uses OpenAI to author diverse synthetic questions with workbook-derived instructions and the external Astroquery MCP server. `--backend template` retains the API-free legacy generator; `--no-mcp` uses OpenAI Responses `web_search` instead. OpenAI generation uses a separate API key/billing; offline audits and scoring do not.
 
-## 0.6.4.3 — OpenAI-generated questions: quick start
+## 0.6.4.4 — OpenAI-generated questions: quick start
 
 OpenAI generation is now the default. To **reproduce the 0.6.3 template results**, specify `--backend template`; old reports and accepted dataset hashes are not changed. These model-authored questions are **unverified candidates**, not known scientific answers.
 
@@ -30,9 +30,41 @@ Toggle instructions with `--instructions` (default) and `--no-instructions`. Pas
 
 **0.6.4.1 hotfix (retained):** The generator now safely normalizes *omitted* archive names in model-authored questions (for example, adds `Using VizieR,` to a question already bound to VizieR). It refuses questions naming another archive, inventing years, omitting a target, or requesting unsupported fields. Each normalization appears in task provenance (`archive_name_repaired`, `original_llm_question`) and the report count (`archive_name_repairs`). The prebound MCP query is never modified. The 0.6.4 laptop pilot failed after its first OpenAI batch due to a missing VizieR name; real 0.6.4.1 live qualification remains pending. If retrying after that failure, use new output/report names or explicitly `--replace`.
 
-**0.6.4.3 ID reconciliation:** A second live pilot stopped at batch 6/10 with `OpenAI changed or omitted task IDs`. OpenAI may rewrite the artificial slot labels; these are *never* authoritative. The benchmark now maps questions to frozen task IDs only when target/archive/question constraints determine a unique assignment, records `task_id_repaired` and `original_llm_task_id` per repaired record, and reports `task_id_repairs`. Unsafe/ambiguous responses are retried once (`openai_batch_retries`) and rejected if still unresolved. No MCP call, scientific constraint, or reference fixture is mutated. An API batch retry incurs an extra model request. A successful full live 50-query generation is still pending.
+**0.6.4.2 ID reconciliation:** A second live pilot stopped at batch 6/10 with `OpenAI changed or omitted task IDs`. OpenAI may rewrite the artificial slot labels; these are *never* authoritative. The benchmark now maps questions to frozen task IDs only when target/archive/question constraints determine a unique assignment, records `task_id_repaired` and `original_llm_task_id` per repaired record, and reports `task_id_repairs`. Unsafe/ambiguous responses are retried once (`openai_batch_retries`) and rejected if still unresolved. No MCP call, scientific constraint, or reference fixture is mutated. An API batch retry incurs an extra model request. A 50-question live OpenAI generation subsequently succeeded in 0.6.4.2.
 
 See [full 0.6.4 usage and comparison matrix](docs/benchmark/llm_generation_0_6_4.md) and [V1 workbook-derived instructions](docs/benchmark/llm_generation_instructions_v1.md). No historical workbook expected answers are imported as gold.
+
+## Literature search and ADS fallback (0.6.4.4)
+
+The external [NASA IMPACT Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp/wiki)
+provides `astroquery_check_auth` and `ads_query_compact`; AstroAKD-Bench never
+sends `API_DEV_KEY` to OpenAI or calls the ADS API directly. Check the server
+safely **without exposing credentials**:
+
+```bash
+uv run python -m benchmark literature-auth --json-format pretty
+```
+
+`ads_authenticated=true` and `ads_tool_available=true` indicate that the
+benchmark will attempt ADS via MCP first. If the server process lacks
+`API_DEV_KEY`, its ADS tool errors, or the server is unreachable, the benchmark
+uses OpenAI Responses `web_search` (requires `OPENAI_API_KEY`). The fallback
+reason is printed to stderr and saved in the successful evidence report.
+A web-search result may be *prose with citations*, not JSON; both are now
+accepted as **unverified research evidence**, not scientific gold.
+
+```bash
+uv run --with openai python -m benchmark literature-search \
+  --query 'z=0.0809 quasar ultra-fast outflow 17300 km/s Chandra HETGS' \
+  --max-results 5 \
+  --output datasets/generated/literature_0644.json \
+  --json-format pretty
+```
+
+If the key is in `.bashrc`, it must be present in the shell that **starts the
+MCP server**; restarting the server after setting it may be necessary. The
+benchmark saves only booleans, source URLs, papers or unverified prose, never
+credential values. See [Gold Benchmark and ADS usage](docs/benchmark/gold_benchmark_dataset_and_ads.md).
 
 ## Status and scope
 
@@ -50,7 +82,8 @@ See [full 0.6.4 usage and comparison matrix](docs/benchmark/llm_generation_0_6_4
 | **0.6.2 — READABLE_DATASET_EXPORT_AND_VALIDATION_PROGRESS** | Optional query/reference CSV and pretty JSON exports, progress messages and bounded validation waits | **Offline qualification; laptop live validation pending** |
 | **0.6.3 — QUERY_DIVERSITY_AND_DEDUPLICATION_CLOSURE** | Default archive-target uniqueness, optional global-target uniqueness, answer-oriented prompts, offline duplicate-return audit | **Offline qualification PASS; live laptop qualification pending** |
 | **0.6.4.1 — OPENAI_ARCHIVE_NAME_NORMALIZATION** | Deterministic missing-archive wording normalization, explicit provenance, original MCP calls preserved | **Offline focused PASS; first full retry stopped at batch 6 for changed task IDs** |
-| **0.6.4.3 — OPENAI_TASK_ID_RECONCILIATION** | Immutable ID recovery from unique validated target/archive matches; one bounded unsafe-batch retry | **157 offline tests PASS; full OpenAI laptop run pending** |
+| **0.6.4.3 — GOLD_BENCHMARK_MCP_ADS_LITERATURE_FALLBACK** | Immutable ID recovery from unique validated target/archive matches; one bounded unsafe-batch retry | **157 offline tests PASS; full OpenAI laptop run pending** |
+| **0.6.4.4 — LITERATURE_SEARCH_FALLBACK_OUTPUT_CLOSURE** | Web-search prose/JSON normalization, cited URLs, safe MCP ADS auth command | **Offline 172 PASS, live provider retry pending** |
 | **0.6.4 — LLM_ASSISTED_SYNTHETIC_QUERY_GENERATION** | Default OpenAI+instructions+MCP, optional web_search without MCP, hybrid/template modes, optional custom prompt | **Offline mocks PASS; real OpenAI qualification pending** |
 
 **What the scores mean.** The weighted 0–100 **technical evidence score** assesses archive/function selection, argument alignment, successful execution, reference-result consistency, and *limited* automated answer-claim checks. It is **not a general scientific answer-accuracy score**. Truncated responses, changing public archives, and unverified scientific assertions are explicitly flagged for independent review. Reference acceptance establishes structurally valid MCP data, not independently proven astrophysical ground truth.

@@ -35,13 +35,23 @@ over what the benchmark's own shell happens to expose.
 
 ## Literature research CLI
 
+Check the server's ADS state without exposing any token or requiring OpenAI:
+
+```bash
+uv run python -m benchmark literature-auth --json-format pretty
+```
+
+Both `ads_authenticated` and `ads_tool_available` should be `true` for
+MCP ADS search. If false, check the **server** shell environment and restart
+the server; the benchmark process having a key does not mean the server has it.
+
 From the independent AstroAKD-Bench checkout:
 
 ```bash
 uv run --with openai python -m benchmark literature-search \
   --query 'z=0.0809 quasar ultra-fast outflow 17300 km/s HETGS' \
   --max-results 5 --json-format pretty \
-  --output datasets/generated/literature_discovery.json
+  --output datasets/generated/literature_0644.json
 ```
 
 - ADS configured in MCP: `astroquery_check_auth` -> `ads_query_compact`.
@@ -50,6 +60,15 @@ uv run --with openai python -m benchmark literature-search \
 - ADS search failed: fallback to OpenAI web search; report a generic reason and do not expose tokens.
 - If the fallback is necessary, `OPENAI_API_KEY` and `uv run --with openai` are
   required. No search provider can be called without credentials/network access.
+
+The fallback now handles both JSON and **ordinary Responses `web_search` prose**.
+The report indicates `research_response_format`, carries
+`research_summary_unverified` (prose) or `suggested_question_unverified` (JSON),
+collects URLs from both web-search sources and message annotations, and marks
+`source_review_required=true` if no verifiable source URLs were surfaced.
+A sanitized `fallback_reason` such as `ads_not_configured`,
+`ads_search_unavailable`, or `mcp_auth_check_unavailable` is also included;
+none of these fields include tokens.
 
 Every report has `scientific_truth_verified: false`; searching for a paper does
 not verify telescope dataset existence. The evidence step is **separate** from
