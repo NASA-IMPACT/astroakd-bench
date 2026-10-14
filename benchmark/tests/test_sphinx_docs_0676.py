@@ -27,7 +27,7 @@ class ReadTheDocsBuildTests(unittest.TestCase):
         self.assertIn('"sphinx_rtd_theme"',source)
         deps=(ROOT/'pyproject.toml').read_text()
         self.assertIn('"sphinx-rtd-theme>=3.1,<4"',deps)
-        self.assertIn('0.6.7.6',deps)
+        self.assertIn('0.6.7.7',deps)
 
     def test_current_doc_commands(self):
         for path in ('README.md','docs/benchmark/quickstart.md',

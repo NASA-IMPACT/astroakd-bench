@@ -166,11 +166,13 @@ def _normalize_equivalent_unit(answer:dict,gold:dict)->dict:
 
 def score_scorable(tasks_path:Path,oracle_path:Path,runs_path:Path,comparison_csv:Path,summary_csv:Path,report_out:Path,*,
                    detail_csv:Path|None=None,performance_csv:Path|None=None,
-                   task_performance_csv:Path|None=None, plots_dir:Path|None=None,replace:bool=False):
+                   task_performance_csv:Path|None=None, plots_dir:Path|None=None,
+                   mcp_calls_csv:Path|None=None,mcp_tool_frequency_csv:Path|None=None,replace:bool=False):
     # Preflight every destination before writing a single output.
     plot_outputs=plot_paths(plots_dir) if plots_dir is not None else []
     _path_safety([tasks_path,oracle_path,runs_path],
-                 [comparison_csv,summary_csv,report_out,detail_csv,performance_csv,task_performance_csv,*plot_outputs],replace)
+                 [comparison_csv,summary_csv,report_out,detail_csv,performance_csv,task_performance_csv,
+                  mcp_calls_csv,mcp_tool_frequency_csv,*plot_outputs],replace)
     tasks,digest=_read_tasks(tasks_path)
     oracle,hashoracle=load_jsonl(oracle_path)
     runs,hashruns=load_jsonl(runs_path,max_bytes=512*1024*1024)
@@ -224,7 +226,8 @@ def score_scorable(tasks_path:Path,oracle_path:Path,runs_path:Path,comparison_cs
                           'answer_key_status':'reference_anchored_unreviewed'})
     diagnostics=export_detailed(comparisons,summaries,mapping,detail_csv=detail_csv,
         performance_csv=performance_csv,task_performance_csv=task_performance_csv,
-        plots_dir=plots_dir,replace=replace)
+        plots_dir=plots_dir,mcp_calls_csv=mcp_calls_csv,
+        mcp_tool_frequency_csv=mcp_tool_frequency_csv,replace=replace)
     atomic_csv(comparison_csv,comparisons,tuple(comparisons[0]),replace=replace)
     atomic_csv(summary_csv,summaries,tuple(summaries[0]),replace=replace)
     report={'milestone':MILESTONE,'benchmark_version':__version__,'status':'PASS' if len(mapping)==len(tasks)*3 else 'PARTIAL',

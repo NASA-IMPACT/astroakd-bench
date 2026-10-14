@@ -8,7 +8,7 @@ not under `docs/`.
 Start with the repository `README.md` for an overview, or the
 [current quick-start](benchmark/quickstart.md) for tested commands.
 
-## Current guides (0.6.7.6)
+## Current guides (0.6.7.7)
 
 | Topic | Guide |
 | --- | --- |
@@ -17,6 +17,7 @@ Start with the repository `README.md` for an overview, or the
 | MCP endpoint precedence, bearer authentication, connectivity | [MCP configuration — 0.6.7.3](benchmark/mcp_endpoint_auth_0_6_7_3.md) |
 | Generate 50 single-value reference-anchored tasks | [Scorable dataset — 0.6.7](benchmark/reference_anchored_scorable_0_6_7.md) |
 | Detailed A/B/C CSV, timing, token summaries and plots | [Reporting — 0.6.7.1](benchmark/three_arm_detailed_reporting_0_6_7_1.md) |
+| Individual MCP calls, per-function A/B frequencies and two extra plots | [MCP tool-call reporting — 0.6.7.7](benchmark/mcp_tool_call_reporting_0_6_7_7.md) |
 | Three-arm experiment and human gold workflow | [Gold review and evaluation — 0.6.6](benchmark/gold_reference_and_three_arm_0_6_6.md) |
 | Generate synthetic questions with OpenAI, MCP and web | [Question-generation overview](benchmark/llm_generation_0_6_4.md) |
 | Validate references against archives | [Reference validation](benchmark/reference_validation.md) |
@@ -57,6 +58,7 @@ benchmark/experimental_methods
 benchmark/mcp_endpoint_auth_0_6_7_3
 benchmark/reference_anchored_scorable_0_6_7
 benchmark/three_arm_detailed_reporting_0_6_7_1
+benchmark/mcp_tool_call_reporting_0_6_7_7
 benchmark/python_api
 benchmark/documentation_build
 ```

@@ -1,4 +1,4 @@
-# Current workflow — AstroAKD-Bench 0.6.7.6
+# Current workflow — AstroAKD-Bench 0.6.7.7
 
 This is the **current command guide**. Versioned documentation under `docs/benchmark/`
 may illustrate earlier behavior. Execute all commands from the **repository root**.
@@ -176,3 +176,13 @@ make -C docs/sphinx clean
 ```
 
 See the [Sphinx build guide](documentation_build.md).
+
+## 6. MCP tool-call CSVs and A/B diagnostic plots
+
+The `run-three-arm` JSONL `trace` already preserves every MCP tool attempt.
+Use the **same offline `score-scorable` command** as in the README, adding
+`--mcp-calls-csv`, `--mcp-tool-frequency-csv`, and `--plots-dir` to obtain
+one event row per actual call, per-function A/B totals, and five PNG/SVG plots
+(including two MCP-specific A/B charts). See
+[MCP tool-call reporting](mcp_tool_call_reporting_0_6_7_7.md). No GPT-5.2
+re-execution is needed.

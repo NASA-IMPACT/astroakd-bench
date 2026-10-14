@@ -262,7 +262,9 @@ def build_parser() -> argparse.ArgumentParser:
     scorable_score.add_argument('--detailed-csv', type=Path, help='150-row full question, reference and A/B/C answer detail')
     scorable_score.add_argument('--performance-csv', type=Path, help='Three-arm match, runtime and token metrics')
     scorable_score.add_argument('--task-performance-csv', type=Path, help='150-row per-task runtime/token/tool-count metrics')
-    scorable_score.add_argument('--plots-dir', type=Path, help='Three barplots, each as PNG and SVG; needs matplotlib')
+    scorable_score.add_argument('--mcp-calls-csv', type=Path, help='One row per actual MCP gateway call in A/B, including status and tool names')
+    scorable_score.add_argument('--mcp-tool-frequency-csv', type=Path, help='Per-tool attempted/successful/rejected/error counts for A and B')
+    scorable_score.add_argument('--plots-dir', type=Path, help='Five barplots as PNG and SVG (three A/B/C and two MCP A/B); needs matplotlib')
     scorable_score.add_argument('--replace', action='store_true')
     inspect = commands.add_parser('inspect', parents=[common],
         help='Render a bounded JSONL sample or a JSON report for inspection')
@@ -282,7 +284,8 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
         return score_scorable(args.tasks,args.oracle,args.runs,args.comparison_csv,
             args.summary_csv,args.report,detail_csv=args.detailed_csv,
             performance_csv=args.performance_csv,task_performance_csv=args.task_performance_csv,
-            plots_dir=args.plots_dir,replace=args.replace)
+            plots_dir=args.plots_dir,mcp_calls_csv=args.mcp_calls_csv,
+            mcp_tool_frequency_csv=args.mcp_tool_frequency_csv,replace=args.replace)
     if args.command == 'export-answer-csv':
         from .answer_reports import export_answer_csv
         return export_answer_csv(args.tasks,args.questions_csv,args.arms_csv,args.summary_csv,args.report,

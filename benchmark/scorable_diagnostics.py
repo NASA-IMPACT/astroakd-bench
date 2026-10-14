@@ -1,10 +1,11 @@
 """Inspect GPT-5.2 A/B/C benchmark answers and resource usage, offline.
 
-Charts compare snapshot-reference match rates, mean observed wall time, and
-recorded token totals. These are experiment diagnostics, not scientific truth.
+Charts compare snapshot matches, runtime, tokens, MCP call averages, and
+per-tool frequencies for the two MCP arms. These are experiment diagnostics, not scientific truth.
 """
 from __future__ import annotations
 from pathlib import Path
+from collections import Counter
 from typing import Any
 import math
 import os
@@ -17,7 +18,8 @@ from .three_arm import ARMS
 ARM_LABELS = {'mcp_only': 'A — MCP only',
               'mcp_instruction': 'B — MCP + Instruction',
               'web_only': 'C — Web only'}
-PLOT_STEMS = ('match_rate', 'mean_runtime', 'total_tokens')
+PLOT_STEMS = ('match_rate', 'mean_runtime', 'total_tokens',
+              'mean_mcp_tool_calls', 'mcp_tool_calls_by_name')
 PLOT_EXTENSIONS = ('.png', '.svg')
 
 
@@ -50,36 +52,132 @@ def _usage(record: dict) -> tuple[int, int, int]:
     return prompt, completion, total
 
 
+def _mcp_events(record: dict | None) -> list[dict]:
+    """Return the attempted MCP gateway calls, including rejected/errors.
+
+    Original serialized traces contain the full redacted arguments and tool
+    response evidence. This offline projection does not change the runner.
+    """
+    events=(record or {}).get('trace') or []
+    return [ev for ev in events if isinstance(ev,dict)
+            and ev.get('tool') != 'openai_web_search'] if isinstance(events,list) else []
+
+
+def _mcp_success(event: dict) -> bool:
+    return event.get('status') == 'ok' and event.get('response_success',True) is not False
+
+
+def _arguments_preview(event:dict) -> tuple[str,bool]:
+    """Preserve the full sanitized arguments in JSONL; limit one CSV cell."""
+    args=event.get('arguments')
+    if args is None:return '',False
+    formatted=json_compact(args)
+    if len(formatted) > 8192:
+        return formatted[:8192]+'...[truncated; full sanitized arguments in run JSONL]',True
+    return formatted,False
+
+
+def _mcp_event_rows(comparisons:list[dict], runs_by_key:dict) -> list[dict]:
+    rows=[]
+    for comparison in comparisons:
+        for arm in ARMS[:2]:
+            record=runs_by_key.get((comparison['task_id'],arm))
+            for ordinal,ev in enumerate(_mcp_events(record),1):
+                args=ev.get('arguments') or {}
+                if not isinstance(args,dict):args={}
+                preview,truncated=_arguments_preview(ev)
+                rows.append({
+                    'task_id':comparison['task_id'],
+                    'question':comparison['question'], 'archive':comparison['archive'],
+                    'arm':arm,'arm_label':ARM_LABELS[arm],
+                    'call_index':ev.get('index',ordinal),
+                    'tool_name':str(ev.get('tool') or '(unnamed)'),
+                    'module_name':args.get('module_name',''),
+                    'function_name':args.get('function_name',''),
+                    'tool_signature':(str(ev.get('tool') or '(unnamed)') +
+                                      (f" ({args['module_name']}.{args['function_name']})"
+                                       if args.get('module_name') and args.get('function_name') else '')),
+                    'status':ev.get('status','unknown'),
+                    'successful_mcp_call':_mcp_success(ev),
+                    'response_success':ev.get('response_success',''),
+                    'duration_seconds':ev.get('duration_seconds',''),
+                    'response_bytes':ev.get('response_bytes',''),
+                    'response_truncated':ev.get('response_truncated',''),
+                    'error_type':ev.get('error_type',''),
+                    'error_message':str(ev.get('error',''))[:500],
+                    'arguments_json':preview,'arguments_truncated':truncated,
+                })
+    return rows
+
+
+MCP_CALL_COLUMNS = (
+    'task_id','question','archive','arm','arm_label','call_index','tool_name',
+    'module_name','function_name','tool_signature','status','successful_mcp_call','response_success',
+    'duration_seconds','response_bytes','response_truncated','error_type',
+    'error_message','arguments_json','arguments_truncated')
+MCP_FREQUENCY_COLUMNS = (
+    'tool_name','tool_signature','A_attempts','A_successful','A_rejected','A_errors','A_queries_using_tool',
+    'B_attempts','B_successful','B_rejected','B_errors','B_queries_using_tool')
+
+
+def _mcp_frequency(rows:list[dict]) -> list[dict]:
+    names=sorted({(row['tool_name'],row['tool_signature']) for row in rows})
+    grouped=[]
+    for name,signature in names:
+        item={'tool_name':name,'tool_signature':signature}
+        for arm,letter in zip(ARMS[:2],'AB'):
+            group=[row for row in rows if row['tool_signature']==signature and row['arm']==arm]
+            item.update({
+                f'{letter}_attempts':len(group),
+                f'{letter}_successful':sum(x['successful_mcp_call'] for x in group),
+                f'{letter}_rejected':sum(x['status']=='rejected' for x in group),
+                f'{letter}_errors':sum(x['status']=='error' for x in group),
+                f'{letter}_queries_using_tool':len({x['task_id'] for x in group}),
+            })
+        grouped.append(item)
+    return grouped
+
+
 def _usage_detail(record: dict | None) -> dict:
     if record is None:
         return dict(prompt_tokens='',completion_tokens='',total_tokens='',
                     duration_seconds='',tool_attempts='',successful_mcp_calls='',
+                    mcp_tool_attempts='',mcp_tool_errors='',mcp_tool_names_json='',mcp_tool_counts_json='',
                     rejected_tool_calls='',web_search_calls='',error_type='',error_message='')
     prompt, completion, total = _usage(record)
     trace = record.get('trace') or []
     if not isinstance(trace,list):trace=[]
-    mcp = sum(1 for ev in trace if ev.get('tool') != 'openai_web_search' and ev.get('status')=='ok'
-              and ev.get('response_success',True) is not False)
+    calls=_mcp_events(record)
+    mcp=sum(_mcp_success(ev) for ev in calls)
+    names=[str(ev.get('tool') or '(unnamed)') for ev in calls]
     web = sum(_nonnegative(ev.get('web_search_calls',1)) for ev in trace
               if ev.get('tool')=='openai_web_search')
     error = record.get('error') or {}
     return dict(prompt_tokens=prompt,completion_tokens=completion,total_tokens=total,
                 duration_seconds=record.get('duration_seconds', ''), tool_attempts=len(trace),
-                successful_mcp_calls=mcp,rejected_tool_calls=sum(ev.get('status')=='rejected' for ev in trace),
+                successful_mcp_calls=mcp,mcp_tool_attempts=len(calls),
+                mcp_tool_errors=sum(ev.get('status')=='error' for ev in calls),
+                mcp_tool_names_json=json_compact(names),
+                mcp_tool_counts_json=json_compact(dict(sorted(Counter(names).items()))),
+                rejected_tool_calls=sum(ev.get('status')=='rejected' for ev in trace),
                 web_search_calls=web,error_type=error.get('type',''),error_message=error.get('message',''))
 
 
 def export_detailed(comparisons:list[dict], summaries:list[dict], runs_by_key:dict, *,
                     detail_csv:Path|None,performance_csv:Path|None,task_performance_csv:Path|None,
-                    plots_dir:Path|None,replace:bool=False) -> dict:
+                    plots_dir:Path|None,mcp_calls_csv:Path|None=None,
+                    mcp_tool_frequency_csv:Path|None=None,replace:bool=False) -> dict:
     """Export richer post-score views, retaining every answer, even when wrong.
 
     The caller has already validated task/oracle hashes, model and arm separation.
     """
-    if not any(p is not None for p in (detail_csv,performance_csv,task_performance_csv,plots_dir)):
+    if not any(p is not None for p in (detail_csv,performance_csv,task_performance_csv,plots_dir,
+                                        mcp_calls_csv,mcp_tool_frequency_csv)):
         return {}
     by_arm = {summary['arm']:summary for summary in summaries}
     detail=[]; per_task=[]; performance=[]
+    call_rows=_mcp_event_rows(comparisons,runs_by_key)
+    frequencies=_mcp_frequency(call_rows)
     for comparison in comparisons:
         for arm,prefix in zip(ARMS,'ABC'):
             record=runs_by_key.get((comparison['task_id'],arm))
@@ -123,7 +221,8 @@ def export_detailed(comparisons:list[dict], summaries:list[dict], runs_by_key:di
             per_task.append({k:row[k] for k in (
                 'task_id','arm','arm_label','run_status','match_status','reference_match',
                 'duration_seconds','prompt_tokens','completion_tokens','total_tokens',
-                'tool_attempts','successful_mcp_calls','rejected_tool_calls','web_search_calls')})
+                'tool_attempts','successful_mcp_calls','rejected_tool_calls','web_search_calls',
+                'mcp_tool_attempts','mcp_tool_errors','mcp_tool_names_json','mcp_tool_counts_json')})
     for arm in ARMS:
         summ=by_arm[arm]
         subset=[runs_by_key.get((q['task_id'],arm)) for q in comparisons]
@@ -148,6 +247,10 @@ def export_detailed(comparisons:list[dict], summaries:list[dict], runs_by_key:di
             token_usage_reported_runs=sum(bool(r.get('token_usage')) for r in attempted),
             mean_tokens_per_attempt=round(sum(c for a,b,c in token_counts)/len(attempted),2) if attempted else '',
             successful_mcp_calls=sum(x['successful_mcp_calls'] for x in metrics),
+            total_mcp_tool_attempts=sum(x['mcp_tool_attempts'] for x in metrics),
+            mean_mcp_tool_calls_per_attempt=round(sum(x['mcp_tool_attempts'] for x in metrics)/len(attempted),4) if attempted and arm!='web_only' else '',
+            mean_successful_mcp_calls_per_attempt=round(sum(x['successful_mcp_calls'] for x in metrics)/len(attempted),4) if attempted and arm!='web_only' else '',
+            distinct_mcp_tools=len({ev.get('tool') for r in attempted for ev in _mcp_events(r)}),
             rejected_tool_calls=sum(x['rejected_tool_calls'] for x in metrics),
             web_search_calls=sum(x['web_search_calls'] for x in metrics),
             run_errors=sum(r.get('status')!='completed' for r in attempted),
@@ -166,17 +269,26 @@ def export_detailed(comparisons:list[dict], summaries:list[dict], runs_by_key:di
         atomic_csv(performance_csv,performance,tuple(performance[0]),replace=replace)
     if task_performance_csv is not None:
         atomic_csv(task_performance_csv,per_task,tuple(per_task[0]),replace=replace)
+    if mcp_calls_csv is not None:
+        atomic_csv(mcp_calls_csv,call_rows,MCP_CALL_COLUMNS,replace=replace)
+    if mcp_tool_frequency_csv is not None:
+        atomic_csv(mcp_tool_frequency_csv,frequencies,MCP_FREQUENCY_COLUMNS,replace=replace)
     if plots_dir is not None:
-        _plot(performance,plots_dir)
+        _plot(performance,plots_dir,frequencies)
     return {'reporting_milestone':'0.6.7.1 - THREE_ARM_DETAILED_ANSWER_PERFORMANCE_PLOTS',
+            'mcp_reporting_milestone':'0.6.7.7 - MCP_TOOL_CALL_REPORTING_AND_AB_PLOTS',
             'detailed_answers_csv':str(detail_csv) if detail_csv else None,
             'performance_observations_csv':str(performance_csv) if performance_csv else None,
             'per_task_performance_csv':str(task_performance_csv) if task_performance_csv else None,
             'barplots':[str(p) for p in plot_paths(plots_dir)] if plots_dir else [],
+            'mcp_call_events_csv':str(mcp_calls_csv) if mcp_calls_csv else None,
+            'mcp_tool_frequency_csv':str(mcp_tool_frequency_csv) if mcp_tool_frequency_csv else None,
+            'mcp_tool_attempts_recorded':len(call_rows),
+            'mcp_tool_frequencies':frequencies,
             'performance_observations':performance}
 
 
-def _plot(performance: list[dict], out_dir:Path) -> None:
+def _plot(performance: list[dict], out_dir:Path, frequencies:list[dict]) -> None:
     try:
         import matplotlib
         matplotlib.use('Agg')
@@ -223,3 +335,65 @@ def _plot(performance: list[dict], out_dir:Path) -> None:
             finally:
                 if temp is not None:temp.unlink(missing_ok=True)
         plt.close(fig)
+    _plot_mcp(plt, performance, frequencies, out_dir)
+
+
+def _plot_mcp(plt, performance:list[dict], frequencies:list[dict], out_dir:Path) -> None:
+    """Two MCP-only views; never include the Web-only arm in the denominators."""
+    arms=performance[:2]
+    labels=['A — MCP only','B — MCP + Instruction']
+    fig,ax=plt.subplots(figsize=(9.3,5.6))
+    x=[0,1]; width=.32
+    attempts=[v['mean_mcp_tool_calls_per_attempt'] for v in arms]
+    successes=[v['mean_successful_mcp_calls_per_attempt'] for v in arms]
+    one=ax.bar([v-width/2 for v in x],[v if isinstance(v,(int,float)) else 0 for v in attempts],width,label='Attempted calls')
+    two=ax.bar([v+width/2 for v in x],[v if isinstance(v,(int,float)) else 0 for v in successes],width,label='Successful calls')
+    ax.set_xticks(x,labels);ax.set_ylabel('MCP calls per attempted query')
+    ax.set_title('Mean MCP tool calls per question — GPT-5.2')
+    ax.grid(axis='y',alpha=.2);ax.set_axisbelow(True);ax.legend()
+    for bars,vals in ((one,attempts),(two,successes)):
+        ax.bar_label(bars,labels=[f'{v:.2f}' if isinstance(v,(int,float)) else 'N/A' for v in vals],padding=3)
+    n=', '.join(f"{a['attempted']}/{a['total_questions']}" for a in arms)
+    fig.text(.5,.045,f'Attempted questions: A/B = {n}; includes rejected gateway calls.',ha='center',fontsize=8.5)
+    fig.tight_layout(rect=(0,.07,1,1))
+    _save_plot(fig, out_dir, 'mean_mcp_tool_calls')
+    plt.close(fig)
+
+    fig,ax=plt.subplots(figsize=(max(9.3,2.2*len(frequencies)+4),5.8))
+    if frequencies:
+        idx=list(range(len(frequencies)))
+        left=ax.bar([i-width/2 for i in idx],[row['A_attempts'] for row in frequencies],width,label='A — MCP only')
+        right=ax.bar([i+width/2 for i in idx],[row['B_attempts'] for row in frequencies],width,label='B — MCP + Instruction')
+        def short_label(row):
+            signature=row['tool_signature']
+            if row['tool_name']=='astroquery_execute' and '(' in signature:
+                return signature.split('(',1)[1].rstrip(')').replace('.', '\n',1)
+            return signature.replace(' (','\n(')
+        ax.set_xticks(idx,[short_label(row) for row in frequencies],rotation=0,ha='center')
+        for bars in (left,right):
+            ax.bar_label(bars,padding=3,fontsize=9)
+    else:
+        ax.text(.5,.5,'No MCP tool calls recorded',ha='center',va='center',transform=ax.transAxes)
+        ax.set_xticks([])
+    ax.set_ylim(0, max(1,max([max(row['A_attempts'],row['B_attempts']) for row in frequencies],default=0)*1.25))
+    ax.set_ylabel('Total tool call attempts')
+    ax.set_title('MCP tool calls by function — GPT-5.2')
+    ax.grid(axis='y',alpha=.2);ax.set_axisbelow(True);ax.legend() if frequencies else None
+    fig.text(.5,.04,'A and B only. Counts include successful, rejected and error calls; see tool-frequency CSV.',
+             ha='center',fontsize=8.5)
+    fig.tight_layout(rect=(0,.07,1,1))
+    _save_plot(fig,out_dir,'mcp_tool_calls_by_name')
+    plt.close(fig)
+
+
+def _save_plot(fig, out_dir:Path, stem:str) -> None:
+    """Publish both graphics formats after rendering via temporary files."""
+    for extension in PLOT_EXTENSIONS:
+        temporary=None
+        try:
+            with tempfile.NamedTemporaryFile(dir=out_dir,prefix='.astroakd-plot-',suffix=extension,delete=False) as stream:
+                temporary=Path(stream.name)
+            fig.savefig(temporary,format=extension[1:],dpi=180,bbox_inches='tight')
+            os.replace(temporary,out_dir/(stem+extension))
+        finally:
+            if temporary is not None:temporary.unlink(missing_ok=True)

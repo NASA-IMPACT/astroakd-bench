@@ -302,7 +302,10 @@ class AstroAKDBench:
                        report: str | Path, detail_csv: str | Path | None = None,
                        performance_csv: str | Path | None = None,
                        task_performance_csv: str | Path | None = None,
-                       plots_dir: str | Path | None = None, replace: bool = False) -> dict[str, Any]:
+                       plots_dir: str | Path | None = None,
+                       mcp_calls_csv: str | Path | None = None,
+                       mcp_tool_frequency_csv: str | Path | None = None,
+                       replace: bool = False) -> dict[str, Any]:
         """Export A/B/C full answers with frozen snapshot-reference exact match percentages."""
         from .scorable import score_scorable
         return score_scorable(self.path(tasks),self.path(oracle),self.path(runs),
@@ -312,6 +315,8 @@ class AstroAKDBench:
                               performance_csv=self.path(performance_csv) if performance_csv else None,
                               task_performance_csv=self.path(task_performance_csv) if task_performance_csv else None,
                               plots_dir=self.path(plots_dir) if plots_dir else None,
+                              mcp_calls_csv=self.path(mcp_calls_csv) if mcp_calls_csv else None,
+                              mcp_tool_frequency_csv=self.path(mcp_tool_frequency_csv) if mcp_tool_frequency_csv else None,
                               replace=replace)
 
     def audit_diversity(self, *, tasks: str | Path | None = None,

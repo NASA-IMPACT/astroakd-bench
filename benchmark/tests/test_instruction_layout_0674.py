@@ -54,7 +54,7 @@ class InstructionLayoutTests(unittest.TestCase):
             content=path.read_text(encoding='utf-8')
             self.assertIn('instructions/astroakd/AstroAKD_Instruction.md',content)
             self.assertIn('instructions/astroakd_bench/AstroAKD-Bench_Instruction.md',content)
-        self.assertIn('0.6.7.6',(ROOT/'pyproject.toml').read_text())
+        self.assertIn('0.6.7.7',(ROOT/'pyproject.toml').read_text())
 
 
 if __name__=='__main__':

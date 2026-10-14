@@ -10,7 +10,7 @@ agents and exports reproducible answer comparisons, scores and performance plots
 **AstroAKD** is the *agent being evaluated*; **AstroAKD-Bench** is the *benchmark*;
 **astroquery-mcp** is a *separate MCP service*. They are not interchangeable.
 
-**Current version: `0.6.7.6` — Read the Docs theme and documentation-build layout.**
+**Current version: `0.6.7.7` — per-query MCP tool-call CSV and A/B diagnostic plots.**
 [Documentation index](docs/index.md) · [Current quick-start](docs/benchmark/quickstart.md)
 · [Change history](CHANGELOG.md) · [Instruction layout](instructions/README.md)
 
@@ -188,6 +188,8 @@ uv run --with matplotlib python -m benchmark score-scorable \
   --detailed-csv datasets/reports/gpt52_fresh_detailed_150.csv \
   --performance-csv datasets/reports/gpt52_fresh_performance.csv \
   --task-performance-csv datasets/reports/gpt52_fresh_per_task_performance.csv \
+  --mcp-calls-csv datasets/reports/gpt52_fresh_mcp_calls.csv \
+  --mcp-tool-frequency-csv datasets/reports/gpt52_fresh_mcp_tool_frequency.csv \
   --plots-dir datasets/reports/gpt52_fresh_plots \
   --report datasets/reports/gpt52_fresh_scores.json \
   --json-format pretty
@@ -199,9 +201,10 @@ pilot, point `--runs` to
 report destinations. When refreshing **existing** reports, add `--replace`;
 it is not required on the first score. The offline scorer preserves wrong,
 blank, unstructured and abstained answers and produces A/B/C match-rate,
-mean-runtime and total-token bar plots in PNG and SVG. Reference matches are
+mean-runtime and total-token bar plots, plus **average MCP tool calls** and **per-function MCP call frequencies** for arms A/B, in PNG and SVG. Reference matches are
 **not independently verified scientific accuracy**. See the
-[reporting guide](docs/benchmark/three_arm_detailed_reporting_0_6_7_1.md).
+[reporting guide](docs/benchmark/three_arm_detailed_reporting_0_6_7_1.md) and
+[per-query MCP tool-call reporting](docs/benchmark/mcp_tool_call_reporting_0_6_7_7.md).
 
 ## HTML documentation (Sphinx + MyST)
 

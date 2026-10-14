@@ -68,7 +68,7 @@ class SphinxDocumentationTests(unittest.TestCase):
 
     def test_qualification_records_no_live_build(self):
         self.assertIn("HTML", (ROOT / "CHANGELOG.md").read_text())
-        self.assertIn("0.6.7.6", (ROOT / "benchmark/__init__.py").read_text())
+        self.assertIn("0.6.7.7", (ROOT / "benchmark/__init__.py").read_text())
 
 if __name__ == "__main__":
     unittest.main()

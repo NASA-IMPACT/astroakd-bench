@@ -5,9 +5,17 @@ here. This history is separate from the external `astroquery-mcp` project's
 releases: AstroAKD-Bench versions track benchmark capabilities, not versions
 of Astroquery or the MCP server.
 
-The current implemented benchmark version is **0.6.7.6**.
+The current implemented benchmark version is **0.6.7.7**.
 Dates are in UTC. Release statuses distinguish **offline implementation
 qualification** from **real laptop / live-service qualification**.
+
+## [0.6.7.7] — MCP_TOOL_CALL_REPORTING_AND_AB_PLOTS (offline-qualified; 2026-10-14)
+
+- Expose every recorded MCP gateway call from existing GPT-5.2 A/B run traces in a new `--mcp-calls-csv` (question, arm, call index, tool/function, status, outcome, duration and bounded already-redacted parameters). Preserve the original run journal as the authoritative full tool trace. No new calls or changes to agent behavior.
+- Add `--mcp-tool-frequency-csv`: per-tool and per-archive-function A/B totals, including attempts, successes, rejected calls, errors and number of questions using the function. Extend existing detailed answer, per-task performance and per-arm CSVs with MCP call sequences, totals and attempted-query averages. Web-only C remains excluded from MCP-specific denominators.
+- Add two new PNG/SVG barplots to the existing three: `mean_mcp_tool_calls` (attempted/successful A vs B) and `mcp_tool_calls_by_name` (A/B tool-function frequency), with pilot denominators and N/A when no arm executions exist. The other three A/B/C plots remain intact.
+- Qualify the offline scorer on the retained five-query GPT-5.2 pilot: A/B each have 6 attempts, 5 successful and 1 rejected, for 1.20 mean attempted calls per query; source hashes, original instruction contents, model and completed runs unchanged.
+- Update CLI, Python API, Sphinx docs, README and regression coverage. Live 50-query MCP tool summaries must be regenerated on the host from its completed JSONL run journal.
 
 ## [0.6.7.6] — SPHINX_RTD_THEME_AND_MAKEFILE_LAYOUT (offline qualified; host RTD build pending) — 2026-10-14
 
