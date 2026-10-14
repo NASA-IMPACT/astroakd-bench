@@ -26,7 +26,7 @@ DEFAULT_DATASET = Path("datasets/generated/synthetic_queries.jsonl")
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="astroakd-bench",
-        description="AstroAKD-Bench 0.6.6.1 answer inspection and three-arm reporting.",
+        description="AstroAKD-Bench 0.6.7 reference-anchored scorable experiment.",
     )
     parser.add_argument("--version", action="version", version=__version__)
     common = argparse.ArgumentParser(add_help=False)
@@ -64,7 +64,7 @@ def build_parser() -> argparse.ArgumentParser:
                               help="Generate schema-checked candidates; NO archive queries")
     gen.add_argument('--backend', choices=('openai','hybrid','template'), default='openai',
                      help='Generation engine (default: openai; template is API-free legacy mode)')
-    gen.add_argument('--model', default='gpt-4.1-mini', help='OpenAI model for openai/hybrid modes')
+    gen.add_argument('--model', default='gpt-5.2', help='OpenAI model for openai/hybrid modes')
     gen.add_argument('--instructions', action=argparse.BooleanOptionalAction, default=True,
                      help='Use V1 workbook-derived question-writing instructions (default: on)')
     gen.add_argument('--instructions-file', type=Path, help='Optional custom instruction Markdown file')
@@ -96,7 +96,7 @@ def build_parser() -> argparse.ArgumentParser:
         help='Literature evidence via MCP ADS when authenticated, otherwise OpenAI web search')
     literature.add_argument('--query', required=True, help='Literature discovery request')
     literature.add_argument('--max-results', type=int, default=5)
-    literature.add_argument('--model', default='gpt-4.1-mini', help='Model for fallback web search')
+    literature.add_argument('--model', default='gpt-5.2', help='Model for fallback web search')
     literature.add_argument('--mcp', action=argparse.BooleanOptionalAction, default=True)
     literature.add_argument('--output', type=Path, help='Optional JSON evidence report')
     lit_auth = commands.add_parser('literature-auth', parents=[common],
@@ -145,7 +145,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path("datasets/agent/run_report.json"))
     run.add_argument("--agent", choices=("openai", "external", "echo"), default="openai",
         help="openai=real optional LLM, external=user adapter, echo=harness check ONLY")
-    run.add_argument("--model", default="gpt-4.1-mini", help="OpenAI model name")
+    run.add_argument("--model", default="gpt-5.2", help="OpenAI model name")
     run.add_argument("--adapter", help="External async adapter, e.g. my_agent.adapter:run")
     run.add_argument("--max-turns", type=int, default=8)
     run.add_argument("--max-calls", type=int, default=12)
@@ -207,7 +207,7 @@ def build_parser() -> argparse.ArgumentParser:
                      help='AstroAKD Instruction, NOT benchmark question-generation instructions')
     tri.add_argument('--output', required=True, type=Path)
     tri.add_argument('--report', required=True, type=Path)
-    tri.add_argument('--model', default='gpt-4.1-mini')
+    tri.add_argument('--model', default='gpt-5.2')
     tri.add_argument('--max-turns', type=int, default=8)
     tri.add_argument('--max-calls', type=int, default=12)
     tri.add_argument('--max-tool-bytes', type=int, default=65536)
@@ -237,6 +237,25 @@ def build_parser() -> argparse.ArgumentParser:
     export.add_argument('--report', required=True, type=Path)
     export.add_argument('--per-arm-dir', type=Path, help='Write separate A, B, and C answer CSV files here')
     export.add_argument('--replace', action='store_true')
+    scorable = commands.add_parser('build-scorable', parents=[common],
+        help='Derive 50 one-value source-grounded benchmark questions and reference snapshot keys')
+    scorable.add_argument('--source-tasks', required=True, type=Path)
+    scorable.add_argument('--references', required=True, type=Path)
+    scorable.add_argument('--count', type=int, default=50)
+    scorable.add_argument('--tasks-output', required=True, type=Path)
+    scorable.add_argument('--oracle-output', required=True, type=Path)
+    scorable.add_argument('--answers-csv', required=True, type=Path)
+    scorable.add_argument('--report', required=True, type=Path)
+    scorable.add_argument('--replace', action='store_true')
+    scorable_score = commands.add_parser('score-scorable', parents=[common],
+        help='Score GPT-5.2 A/B/C answers against frozen reference snapshot; save all wrong answers')
+    scorable_score.add_argument('--tasks', required=True, type=Path)
+    scorable_score.add_argument('--oracle', required=True, type=Path)
+    scorable_score.add_argument('--runs', required=True, type=Path)
+    scorable_score.add_argument('--comparison-csv', required=True, type=Path)
+    scorable_score.add_argument('--summary-csv', required=True, type=Path)
+    scorable_score.add_argument('--report', required=True, type=Path)
+    scorable_score.add_argument('--replace', action='store_true')
     inspect = commands.add_parser('inspect', parents=[common],
         help='Render a bounded JSONL sample or a JSON report for inspection')
     inspect.add_argument('--input', required=True, type=Path)
@@ -246,6 +265,14 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 async def _execute(args: argparse.Namespace) -> dict[str, Any]:
+    if args.command == 'build-scorable':
+        from .scorable import build_scorable
+        return build_scorable(args.source_tasks,args.references,args.tasks_output,
+            args.oracle_output,args.answers_csv,args.report,count=args.count,replace=args.replace)
+    if args.command == 'score-scorable':
+        from .scorable import score_scorable
+        return score_scorable(args.tasks,args.oracle,args.runs,args.comparison_csv,
+            args.summary_csv,args.report,replace=args.replace)
     if args.command == 'export-answer-csv':
         from .answer_reports import export_answer_csv
         return export_answer_csv(args.tasks,args.questions_csv,args.arms_csv,args.summary_csv,args.report,
@@ -429,7 +456,7 @@ def main(argv: list[str] | None = None) -> int:
                    "message": str(exc)}}
     output = json_text(payload, args.json_format)
     print(output)
-    report_destination = (None if args.command in {"validate", "run", "evaluate", "build-fixtures", "gold-draft", "gold-finalize", "run-three-arm", "score-three-arm", "export-answer-csv"} else
+    report_destination = (None if args.command in {"validate", "run", "evaluate", "build-fixtures", "gold-draft", "gold-finalize", "run-three-arm", "score-three-arm", "export-answer-csv", "build-scorable", "score-scorable"} else
                           args.report if args.command in {"generate", "audit-diversity"} else args.output)
     if report_destination is not None:
         try:

@@ -15,6 +15,19 @@ from .validator import load_jsonl, atomic_json, atomic_jsonl, append_journal, no
 from .gold import _read_tasks, _path_safety, MILESTONE
 
 ARMS = ('mcp_only','mcp_instruction','web_only')
+ANSWER_JSON_SCHEMA = {
+    'type': 'object',
+    'properties': {
+        'answer': {'type':'string'},
+        'answer_values': {'type':'array','items':{'anyOf':[{'type':'string'},{'type':'number'}]}},
+        'unit': {'type':['string','null']},
+        'sources': {'type':'array','items':{'type':'string'}},
+        'abstained': {'type':'boolean'}
+    },
+    'required':['answer','answer_values','unit','sources','abstained'],
+    'additionalProperties':False
+}
+
 MINIMAL = ("You are an astronomy research assistant. Use only the provided tools and the user's question. "
            "Use archive results as evidence, cite source identifiers, never fabricate an observation or bibliographic ID. "
            "Do not invent missing parameters. State uncertainty and say when the available evidence is insufficient. "
@@ -43,9 +56,11 @@ def _parse_answer(text: str) -> dict[str,Any]:
 
 
 async def _web_answer(question: str, *, model: str, sdk: Any):
+    options={'text':{'format':{'type':'json_schema','name':'astroakd_single_answer',
+              'strict':True,'schema':ANSWER_JSON_SCHEMA}}} if model.startswith('gpt-5.2') else {}
     response = await sdk.responses.create(model=model, tools=[{'type':'web_search'}],
         tool_choice='required',include=['web_search_call.action.sources'],
-        input=[{'role':'system','content':WEB},{'role':'user','content':question}])
+        input=[{'role':'system','content':WEB},{'role':'user','content':question}],**options)
     uses=sum(getattr(x,'type',None)=='web_search_call' for x in getattr(response,'output',[]) or [])
     if uses<1:
         raise AgentRunError('Web-only arm produced no actual web_search call')
@@ -59,7 +74,7 @@ async def _web_answer(question: str, *, model: str, sdk: Any):
 
 
 async def run_three_arm(tasks_path:Path, instruction_file:Path, output:Path, report:Path, *,
-                        url:str=DEFAULT_MCP_URL, model:str='gpt-4.1-mini', limit:int|None=None,
+                        url:str=DEFAULT_MCP_URL, model:str='gpt-5.2', limit:int|None=None,
                         max_turns:int=8,max_calls:int=12,max_tool_bytes:int=65536,timeout:float=180,
                         task_timeout:float=600,resume:bool=False,replace:bool=False,
                         mcp_factory:Callable|None=None,sdk:Any=None,

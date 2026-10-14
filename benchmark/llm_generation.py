@@ -297,7 +297,7 @@ def _create(client: Any, **kwargs: Any) -> Any:
 async def generate_llm(url: str = DEFAULT_MCP_URL, *, count: int = 50, seed: int = 42,
                        modules: tuple[str, ...] = SUPPORTED_MODULES, timeout: float = 180,
                        uniqueness: str = 'archive-target', question_style: str = 'answer-oriented',
-                       backend: str = 'openai', model: str = 'gpt-4.1-mini',
+                       backend: str = 'openai', model: str = 'gpt-5.2',
                        use_instructions: bool = True, use_mcp: bool = True,
                        instructions_file: str | Path | None = None,
                        batch_size: int = 5, session_factory: Callable | None = None,

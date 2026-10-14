@@ -123,7 +123,7 @@ def _evidence_snippet(evidence: dict[str,Any]) -> str:
 async def generate_mixed(url: str = DEFAULT_MCP_URL, *, count: int = 50, seed: int = 123,
                          modules: tuple[str,...] = SUPPORTED_MODULES, mix: dict[str,int],
                          timeout: float = 180, uniqueness: str = 'archive-target',
-                         backend: str = 'openai', model: str = 'gpt-4.1-mini',
+                         backend: str = 'openai', model: str = 'gpt-5.2',
                          use_instructions: bool = True, use_mcp: bool = True,
                          instructions_file: str | Path | None = None,
                          batch_size: int = 5, progress: Callable[[str],None] | None = None,

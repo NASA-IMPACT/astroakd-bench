@@ -5,9 +5,21 @@ here. This history is separate from the external `astroquery-mcp` project's
 releases: AstroAKD-Bench versions track benchmark capabilities, not versions
 of Astroquery or the MCP server.
 
-The current implemented benchmark version is **0.6.6.1**.
+The current implemented benchmark version is **0.6.7**.
 Dates are in UTC. Release statuses distinguish **offline implementation
 qualification** from **real laptop / live-service qualification**.
+
+## [0.6.7] — REFERENCE_ANCHORED_SCORABLE_QUERIES (offline-qualified; GPT-5.2 live pending) — 2026-10-14
+
+- Default agent, literature and synthetic-question model advanced from `gpt-4.1-mini` to **`gpt-5.2`** (the OpenAI API model ID, not deprecated `gpt-5.2-chat-latest`). The three-arm pilot and future full run MUST use the same `--model gpt-5.2`; earlier GPT-4.1-mini pilot results are retained separately and cannot be combined with GPT-5.2 rates.
+- Added native `build-scorable` to convert the accepted **42/42 real MCP reference responses** into **50 distinct one-field questions with explicit answer keys**, source task IDs, row/field indexes, field units and numeric tolerances. Output includes 50-row question/answer CSV, new candidate JSONL, separate reference snapshot oracle JSONL and audit report. No new archive calls or LLM-generated answers are needed to construct this key.
+- Added native `score-scorable` to compare 3-arm agent replies against those frozen snapshot values; saves a **50-row CSV containing each question, expected reference answer, and *all* A/B/C responses (correct or incorrect)**, plus per-arm percentages of exact reference matches over attempted questions and all 50. Model mismatch, run/candidate hash mismatch, and tool-arm violations fail closed. A pilot does not masquerade as complete coverage.
+- The snapshot oracle is explicitly `reference_anchored_unreviewed` rather than `verified` scientific gold. Published percentages are **archive-snapshot reference match rates**, not externally verified scientific accuracy; literature-driven multistep answers still need independent ADS/archival validation and are not manufactured.
+- Added GPT-5.2 structured JSON-answer schemas for MCP Chat Completions and web-only Responses; the actual answer value remains hidden from all three arms. Higher completion token budget for GPT-5.x; preserve wrong/unstructured/abstained replies for manual review.
+- Extended read-only agent path allows SIMBAD name resolution as an intermediate when another archive is requested, removing the pilot's false tool-guard rejection without permitting unrequested final-archive substitution.
+- Original source hashes retained: `gold_mixed_065.jsonl` = `139e895c63a0c0834f282fe4bf0622470f3a5ff7760343384f690ae567ded9eb`; accepted 42 references = `fd359a148c3b9137e09cb07cdb100b2b6f1266ce76290cf2c33a2f5f64c2aa5`.
+- Added new 0.6.7 install, guide, tests, qualification and conversation handoff. No real GPT-5.2 A/B/C execution or independently verified science score claimed.
+- Offline qualification: **197 passed, 1 optional live test skipped, 26 subtests passed**; 50 source-keyed task/answer rows across 18 requested fields successfully generated from 42 immutable reference responses. Numerically equivalent unit spellings (such as degree/deg and second/s) are normalized without unit conversion.
 
 ## [Unreleased]
 

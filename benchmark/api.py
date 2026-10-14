@@ -76,7 +76,7 @@ class AstroAKDBench:
                                targets: tuple[SkyTarget, ...] | None = None,
                                uniqueness: str = "archive-target",
                                question_style: str = "answer-oriented",
-                               backend: str = "openai", model: str = "gpt-4.1-mini",
+                               backend: str = "openai", model: str = "gpt-5.2",
                                use_instructions: bool = True, use_mcp: bool = True,
                                instructions_file: str | Path | None = None,
                                batch_size: int = 5,
@@ -164,7 +164,7 @@ class AstroAKDBench:
         return summary
 
     async def research_literature(self, query: str, *, max_results: int = 5,
-                                  model: str = 'gpt-4.1-mini', use_mcp: bool = True,
+                                  model: str = 'gpt-5.2', use_mcp: bool = True,
                                   session_factory: Callable | None = None,
                                   openai_client_factory: Callable | None = None) -> dict[str, Any]:
         """MCP ADS search with automatic OpenAI web-search fallback; not gold validation."""
@@ -196,7 +196,7 @@ class AstroAKDBench:
                               csv_output=self.path(csv_output) if csv_output is not None else None,
                               progress=progress)
 
-    async def run_agent(self, *, agent: str = 'openai', model: str = 'gpt-4.1-mini',
+    async def run_agent(self, *, agent: str = 'openai', model: str = 'gpt-5.2',
                         adapter: str | None = None, mcp_mode: str = 'live',
                         fixtures: str | Path | None = None,
                         tasks: str | Path | None = None, references: str | Path | None = None,
@@ -264,7 +264,7 @@ class AstroAKDBench:
 
     async def run_three_arm(self, *, tasks: str | Path, agent_instruction: str | Path,
                             output: str | Path, report: str | Path,
-                            model: str = 'gpt-4.1-mini', limit: int | None = None,
+                            model: str = 'gpt-5.2', limit: int | None = None,
                             max_turns: int = 8,max_calls: int = 12,
                             max_tool_bytes: int = 65536,task_timeout: float = 600,
                             resume: bool = False,replace: bool = False,
@@ -285,6 +285,25 @@ class AstroAKDBench:
         from .three_arm import score_three_arm
         return score_three_arm(self.path(tasks),self.path(gold),self.path(runs),
                                self.path(output),self.path(report),replace=replace)
+
+    def build_scorable(self, *, source_tasks: str | Path, references: str | Path,
+                       tasks_output: str | Path, oracle_output: str | Path,
+                       answers_csv: str | Path, report: str | Path,
+                       count: int = 50, replace: bool = False) -> dict[str, Any]:
+        """Construct fixed-field snapshot-reference tasks; does not certify scientific truth."""
+        from .scorable import build_scorable
+        return build_scorable(self.path(source_tasks),self.path(references),
+                              self.path(tasks_output),self.path(oracle_output),
+                              self.path(answers_csv),self.path(report),count=count,replace=replace)
+
+    def score_scorable(self, *, tasks: str | Path, oracle: str | Path, runs: str | Path,
+                       comparison_csv: str | Path, summary_csv: str | Path,
+                       report: str | Path, replace: bool = False) -> dict[str, Any]:
+        """Export A/B/C full answers with frozen snapshot-reference exact match percentages."""
+        from .scorable import score_scorable
+        return score_scorable(self.path(tasks),self.path(oracle),self.path(runs),
+                              self.path(comparison_csv),self.path(summary_csv),
+                              self.path(report),replace=replace)
 
     def audit_diversity(self, *, tasks: str | Path | None = None,
                         references: str | Path | None = None) -> dict[str, Any]:

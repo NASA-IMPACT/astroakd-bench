@@ -6,6 +6,14 @@ AstroAKD-Bench is an **independent Python repository** for developing and evalua
 
 **Current version: 0.6.6 — GOLD_REFERENCE_AND_THREE_ARM_EVALUATION.** The default `generate` command now uses OpenAI to author diverse synthetic questions with workbook-derived instructions and the external Astroquery MCP server. `--backend template` retains the API-free legacy generator; `--no-mcp` uses OpenAI Responses `web_search` instead. OpenAI generation uses a separate API key/billing; offline audits and scoring do not.
 
+## 0.6.7: Fifty objectively scorable questions and GPT-5.2 three-arm evaluation
+
+The `build-scorable` command derives **new**, narrowly answerable one-field questions from the frozen 42 completed reference archive responses. It publishes a **50-question CSV with the reference answers** (kept separate from the agent), an immutable reference-snapshot oracle and a candidate file. Answers include an explicit record identifier plus field, numeric tolerance and source provenance; no LLM is allowed to invent the expected value.
+
+All three AstroAKD arms now default to **`gpt-5.2`**. Use `run-three-arm` with `--model gpt-5.2`; then `score-scorable` exports the question, reference-snapshot answer, all three actual agent answers (including wrong and free-text answers), and per-arm reference-match percentages. **These percentages compare to frozen archive snapshot values and are not independently verified scientific gold accuracy.** The original 32/10/8 Gold mixed dataset remains unchanged: this new 50-question objective pilot excludes multistep literature questions until their separate ADS/archival scientific references are approved.
+
+Offline qualification: **197 passed, 1 optional live test skipped, 26 subtests passed**. See [full instructions](docs/benchmark/reference_anchored_scorable_0_6_7.md), [install guide](INSTALL_ASTROAKD_BENCH_0_6_7.md), and [qualification record](QUALIFICATION_0_6_7.md).
+
 ## 0.6.6.1 — Export all benchmark questions, answers and success rates to CSV
 
 The new `export-answer-csv` command produces a 50-question reference-and-answer spreadsheet view,

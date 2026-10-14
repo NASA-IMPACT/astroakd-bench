@@ -228,7 +228,9 @@ class TracedMCPGateway:
             if name == 'astroquery_execute' and isinstance(arguments, dict) and \
                     self.question_archive is not None and \
                     arguments.get('module_name') in SAFE_METHODS and \
-                    arguments['module_name'] != self.question_archive:
+                    arguments['module_name'] != self.question_archive and not (
+                        self.extended_tools and arguments['module_name']=='simbad' and
+                        arguments.get('function_name')=='query_object'):
                 wanted = self.question_archive
                 raise AgentRunError(
                     f'The question explicitly requests {ARCHIVE_NAMES[wanted]}, not '
@@ -293,7 +295,7 @@ Respond with a concise scientific answer based only on query evidence.
 
 class OpenAIAgent:
     """Optional LLM-backed agent using OpenAI tool calling (SDK not a core dep)."""
-    def __init__(self, model: str = 'gpt-4.1-mini', *, sdk_client: Any = None, system_prompt: str | None = None):
+    def __init__(self, model: str = 'gpt-5.2', *, sdk_client: Any = None, system_prompt: str | None = None):
         self.model = model
         self.system_prompt = system_prompt
         if sdk_client is None:
@@ -339,6 +341,8 @@ class OpenAIAgent:
                 f'Use {archive_call_guidance(named)}. '
                 'The archive hint comes ONLY from the wording of the user question, '
                 'not from any hidden reference answer. '
+                'SIMBAD query_object is allowed only as an intermediate name-resolution step; '
+                'return the requested archive as evidence. '
                 'Do not use max_rows unless the module is MAST.'
             )
         messages: list[dict[str, Any]] = [
@@ -348,9 +352,15 @@ class OpenAIAgent:
         total_usage: dict[str, int] = {}
         recovery_prompt_sent = False
         for turn in range(max_turns):
+            options={}
+            if self.model.startswith('gpt-5.2'):
+                from .three_arm import ANSWER_JSON_SCHEMA
+                options={'response_format':{'type':'json_schema','json_schema':{
+                    'name':'astroakd_single_answer','strict':True,'schema':ANSWER_JSON_SCHEMA}}}
             completion = await self.sdk.chat.completions.create(
                 model=self.model, messages=messages, tools=tools, tool_choice='auto',
-                max_completion_tokens=2048,
+                max_completion_tokens=(4096 if self.model.startswith('gpt-5') else 2048),
+                **options,
             )
             usage = getattr(completion, 'usage', None)
             if usage is not None:
@@ -468,7 +478,7 @@ def _load_completed(journal: Path, dataset_hash: str) -> dict[str, dict[str, Any
 
 async def run_agents(tasks_file: Path, reference_file: Path, output: Path, report_path: Path, *,
                      url: str = DEFAULT_MCP_URL, timeout: float = 180,
-                     agent_name: str = 'openai', model: str = 'gpt-4.1-mini',
+                     agent_name: str = 'openai', model: str = 'gpt-5.2',
                      adapter: str | None = None, max_turns: int = 8,
                      max_calls: int = 12, max_tool_bytes: int = 65536,
                      task_timeout: float = 600, limit: int | None = None,

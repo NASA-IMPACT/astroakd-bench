@@ -129,7 +129,7 @@ async def check_literature_auth(*, url: str = DEFAULT_MCP_URL,
 
 async def research_literature(query: str, *, url: str = DEFAULT_MCP_URL,
                               max_results: int = 5, timeout: float = 180.0,
-                              model: str = 'gpt-4.1-mini', use_mcp: bool = True,
+                              model: str = 'gpt-5.2', use_mcp: bool = True,
                               session_factory: Callable | None = None,
                               openai_client_factory: Callable[[], Any] | None = None,
                               progress: Callable[[str], None] | None = None,
