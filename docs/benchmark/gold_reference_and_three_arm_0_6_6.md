@@ -1,6 +1,6 @@
 # 0.6.6 — Gold references and three-arm AstroAKD evaluation
 
-**Projects are distinct:** AstroAKD-Bench creates and scores tests. **AstroAKD** is the data-search agent being evaluated. `docs/agent/AstroAKD_Instruction.md` is an **AstroAKD agent instruction**, not the benchmark's synthetic-question generator prompt (`docs/benchmark/llm_generation_instructions_v1.md`).
+**Projects are distinct:** AstroAKD-Bench creates and scores tests. **AstroAKD** is the data-search agent being evaluated. `instructions/astroakd/AstroAKD_Instruction.md` is an **AstroAKD agent instruction**, not the benchmark's synthetic-question generator prompt (`instructions/astroakd_bench/llm_generation_instructions_v1.md`).
 
 ## Source data and acceptance state
 
@@ -88,7 +88,7 @@ Same **input questions** and selected OpenAI model; different tools and system i
 | Arm | Name | MCP tools | AstroAKD agent instruction | OpenAI web search |
 |---|---|---|---|---|
 | A | `mcp_only` | Yes, bounded read-only | No; minimal operational/safety formatting only | No |
-| B | `mcp_instruction` | Same as A | **Yes**, contents of `docs/agent/AstroAKD_Instruction.md` | No |
+| B | `mcp_instruction` | Same as A | **Yes**, contents of `instructions/astroakd/AstroAKD_Instruction.md` | No |
 | C | `web_only` | None | No; minimal operational/safety formatting only | Yes, hosted `web_search` |
 
 **Do not** give benchmark synthetic generation instructions to any arm. **Do not** give the reference journal or approved gold values to agents. A and B get function discovery, allowed `astroquery_execute`, plus read-only ADS `ads_query_compact`, `ads_get_paper` and `simbad_query_bibobj` when advertised by MCP. The server must already see `API_DEV_KEY` to use authenticated ADS; the runner will not disclose or bypass this. Web arm has **no MCP connection** and a required web-search tool call. If the MCP server cannot serve ADS, the MCP arms must handle that limitation without silently switching to web search; changing tool access would invalidate the A/B/C comparison.
@@ -96,7 +96,7 @@ Same **input questions** and selected OpenAI model; different tools and system i
 ```bash
 uv run --with openai python -m benchmark run-three-arm \
   --tasks datasets/generated/gold_mixed_065.jsonl \
-  --agent-instruction docs/agent/AstroAKD_Instruction.md \
+  --agent-instruction instructions/astroakd/AstroAKD_Instruction.md \
   --model gpt-4.1-mini --limit 5 \
   --max-turns 8 --max-calls 12 --task-timeout 600 \
   --output datasets/agent/astroakd_three_arm_runs.jsonl \

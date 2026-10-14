@@ -5,9 +5,17 @@ here. This history is separate from the external `astroquery-mcp` project's
 releases: AstroAKD-Bench versions track benchmark capabilities, not versions
 of Astroquery or the MCP server.
 
-The current implemented benchmark version is **0.6.7.3**.
+The current implemented benchmark version is **0.6.7.4**.
 Dates are in UTC. Release statuses distinguish **offline implementation
 qualification** from **real laptop / live-service qualification**.
+
+## [0.6.7.4] — DOCUMENTATION_AND_INSTRUCTION_SEPARATION (offline qualified; 2026-10-14)
+
+- Relocate the **AstroAKD agent instruction** unchanged to `instructions/astroakd/AstroAKD_Instruction.md` and the independent **AstroAKD-Bench synthetic-question-authoring instruction** unchanged to `instructions/astroakd_bench/llm_generation_instructions_v1.md`. Both files retain their original SHA-256 hashes. Neither specialized instruction is stored inside `docs/` anymore.
+- Update `benchmark.llm_generation.INSTRUCTIONS_PATH` to the relocated default question-generation instruction; `generate --instructions-file` continues to allow a custom prompt. Change current `run-three-arm` examples to the new agent instruction path. Runtime A/B/C model/tool policy is unchanged; the resume manifest records instruction **content hash**, not location.
+- Add `instructions/README.md` to explain the project boundary, and add `docs/index.md`, `docs/benchmark/quickstart.md`, and `docs/benchmark/experimental_methods.md` to make current usage and interpretation discoverable. Update active versioned guides to use the new paths; historical handoffs and prior release entries remain historical evidence.
+- Rewrite the overly long root README as a current-version project entry point covering setup, namespaced endpoint/token variables, current GPT-5.2 experiment, 50-question reference-snapshot evaluation, offline scoring/CSV/barplots, and scientific limitations. Preserve its 0.6.7.3 predecessor at `docs/history/README_0_6_7_3.md`.
+- Add `INSTALL_ASTROAKD_BENCH_0_6_7_4.md`, source-hash/layout regression checks, and documentation-link QA. No science or benchmark datasets, agent prompts, MCP transport policy, scoring logic, or existing journals are changed. An existing running 150-run experiment should finish before replacing source files; the moved prompt has the same hash for subsequent resumed runs.
 
 ## [0.6.7.3] — CONFIGURABLE_MCP_ENDPOINT_AND_BEARER_AUTH (offline qualified; remote host pending) — 2026-10-14
 

@@ -31,13 +31,13 @@ These output filenames are separate from all existing 0.6.5/0.6.6 data. The CSV 
 `OPENAI_API_KEY` must be set, and the standalone Astroquery MCP service must be running for arms A and B. `API_DEV_KEY` is needed only by the MCP server for authenticated ADS, but the new one-value dataset does not require ADS. The three modes are:
 
 - A `mcp_only`: Astroquery MCP functions, minimal safe tool prompt, **without** `AstroAKD_Instruction.md`.
-- B `mcp_instruction`: same MCP functions plus the **AstroAKD agent** instruction (`docs/agent/AstroAKD_Instruction.md`), not the benchmark's question-generation instructions.
+- B `mcp_instruction`: same MCP functions plus the **AstroAKD agent** instruction (`instructions/astroakd/AstroAKD_Instruction.md`), not the benchmark's question-generation instructions.
 - C `web_only`: OpenAI hosted `web_search` and no MCP.
 
 ```bash
 uv run --with openai python -m benchmark run-three-arm \
   --tasks datasets/generated/scorable_50.jsonl \
-  --agent-instruction docs/agent/AstroAKD_Instruction.md \
+  --agent-instruction instructions/astroakd/AstroAKD_Instruction.md \
   --model gpt-5.2 \
   --limit 5 \
   --max-turns 8 \

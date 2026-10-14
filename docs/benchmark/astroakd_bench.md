@@ -1,3 +1,5 @@
+> **Historical project overview.** For current version `0.6.7.4`, default model, prompt locations, authentication and GPT-5.2 commands, use the [documentation index](../index.md) or [current quick-start](quickstart.md). Versioned descriptions below may refer to older milestones.
+
 # AstroAKD-Bench
 
 **Reproducible synthetic astronomical queries and evidence-based evaluation of AI data-discovery agents.**

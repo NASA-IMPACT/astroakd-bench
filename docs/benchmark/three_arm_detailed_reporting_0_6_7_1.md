@@ -2,7 +2,7 @@
 
 ## Scientific boundary
 
-`AstroAKD` is the agent being evaluated; `AstroAKD-Bench` is the separate benchmark runner and evaluator. Agent instruction `docs/agent/AstroAKD_Instruction.md` applies **only** to B. Synthetic generation instructions **never** serve as the AstroAKD agent instruction.
+`AstroAKD` is the agent being evaluated; `AstroAKD-Bench` is the separate benchmark runner and evaluator. Agent instruction `instructions/astroakd/AstroAKD_Instruction.md` applies **only** to B. Synthetic generation instructions **never** serve as the AstroAKD agent instruction.
 
 All values in the `scorable_50_reference_oracle.jsonl` key derive from a **frozen MCP archive response**, and were not yet independently approved as scientific gold. Match rates must always be labeled **reference-snapshot match rates**, not verified astronomical truth. The results are also **pilot-only** until all 150 arm executions are complete.
 
