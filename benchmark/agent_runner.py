@@ -31,6 +31,7 @@ class AgentRunError(ValidationError):
     """Unsafe query, incomplete source, or inconsistent agent-run output."""
 
 
+EXTENDED_READ_ONLY = frozenset({'ads_query_compact', 'ads_get_paper', 'simbad_query_bibobj'})
 ALLOWED_TOOLS = frozenset({
     'astroquery_list_modules', 'astroquery_list_functions',
     'astroquery_get_function_info', 'astroquery_execute',
@@ -106,13 +107,13 @@ def _check_coordinates(c: Any) -> None:
     raise AgentRunError('unsupported coordinate type')
 
 
-def validate_tool_args(tool: str, args: Any) -> dict[str, Any]:
+def validate_tool_args(tool: str, args: Any, *, extended: bool = False) -> dict[str, Any]:
     """Restrict agent tools to discovery and narrowly bounded read-only queries.
 
     This is a runtime policy for the agent, separate from the stricter canonical
     reference dataset validation. It is not a general astroquery API gateway.
     """
-    if tool not in ALLOWED_TOOLS or not isinstance(args, dict):
+    if tool not in ALLOWED_TOOLS | (EXTENDED_READ_ONLY if extended else frozenset()) or not isinstance(args, dict):
         raise AgentRunError(f'Unapproved MCP tool: {tool}')
     try:
         encoded = json_bytes(args)
@@ -120,6 +121,25 @@ def validate_tool_args(tool: str, args: Any) -> dict[str, Any]:
         raise AgentRunError('Tool arguments must be JSON serializable') from exc
     if len(encoded) > MAX_ARGUMENT_BYTES:
         raise AgentRunError('Tool arguments exceed byte limit')
+    if extended and tool in EXTENDED_READ_ONLY:
+        if not args or len(args) > 5:
+            raise AgentRunError(f'{tool}: bounded read-only arguments required')
+        if tool == 'ads_query_compact':
+            if 'query_string' not in args or not isinstance(args['query_string'],str) or not 2 <= len(args['query_string']) <= 500:
+                raise AgentRunError('ADS query_string must be 2..500 chars')
+            if set(args) - {'query_string','fields','max_results'}:
+                raise AgentRunError('Unexpected ADS arguments')
+            if 'max_results' in args and (type(args['max_results']) is not int or not 1<=args['max_results']<=20):
+                raise AgentRunError('ADS max_results must be 1..20')
+        elif tool == 'ads_get_paper':
+            if not isinstance(args.get('bibcode'),str) or not 8 <= len(args['bibcode']) <= 80 or set(args)-{'bibcode'}:
+                raise AgentRunError('ads_get_paper requires bibcode')
+        elif tool == 'simbad_query_bibobj':
+            if not isinstance(args.get('bibcode'),str) or not 8 <= len(args['bibcode']) <= 80 or set(args)-{'bibcode'}:
+                raise AgentRunError('simbad_query_bibobj requires bibcode')
+        elif tool == 'astroquery_check_auth':
+            raise AgentRunError('Authentication diagnostics not needed for the agent')
+        return args
     if tool == 'astroquery_list_modules':
         if args:
             raise AgentRunError('list_modules takes no arguments')
@@ -176,19 +196,21 @@ class TracedMCPGateway:
 
     def __init__(self, client: AstroqueryMCPClient, *, max_calls: int = 12,
                  max_tool_bytes: int = 65536, available: list[dict[str, Any]] | None = None,
-                 question: str = ''):
+                 question: str = '', extended_tools: bool = False):
         self.client = client
         self.max_calls = max_calls
         self.max_tool_bytes = max_tool_bytes
         self.events: list[dict[str, Any]] = []
-        self.available = [item for item in (available or []) if item.get('name') in ALLOWED_TOOLS]
+        self.extended_tools = extended_tools
+        allowlist = ALLOWED_TOOLS | (EXTENDED_READ_ONLY if extended_tools else frozenset())
+        self.available = [item for item in (available or []) if item.get('name') in allowlist]
         self.calls = 0
         self.question_archive = explicit_question_archive(question)
 
     @property
     def successful_query_count(self) -> int:
-        return sum(e['tool'] == 'astroquery_execute' and e['status'] == 'ok'
-                   and e.get('response_success') is True for e in self.events)
+        return sum(e['tool'] in ('astroquery_execute','ads_query_compact','ads_get_paper','simbad_query_bibobj') and e['status'] == 'ok'
+                   and (e.get('response_success') is True if e['tool']=='astroquery_execute' else True) for e in self.events)
 
     def advertised_tools(self) -> list[dict[str, Any]]:
         # Return a copy without reference-call data. The MCP tool schemas are
@@ -215,7 +237,7 @@ class TracedMCPGateway:
                     'Use only coordinates, catalog and radius stated in the question. '
                     'Do not use top-level max_rows except for MAST.'
                 )
-            validate_tool_args(name, arguments)
+            validate_tool_args(name, arguments, extended=self.extended_tools)
             response = await self.client.call(name, arguments)
             clean = redact(response)
             blob = json_bytes(clean)
@@ -271,8 +293,9 @@ Respond with a concise scientific answer based only on query evidence.
 
 class OpenAIAgent:
     """Optional LLM-backed agent using OpenAI tool calling (SDK not a core dep)."""
-    def __init__(self, model: str = 'gpt-4.1-mini', *, sdk_client: Any = None):
+    def __init__(self, model: str = 'gpt-4.1-mini', *, sdk_client: Any = None, system_prompt: str | None = None):
         self.model = model
+        self.system_prompt = system_prompt
         if sdk_client is None:
             if not os.environ.get('OPENAI_API_KEY'):
                 raise AgentRunError('OPENAI_API_KEY is required for --agent openai')
@@ -308,7 +331,7 @@ class OpenAIAgent:
             tools.append({'type': 'function', 'function': {
                 'name': item['name'], 'description': description,
                 'parameters': schema}})
-        system_message = SYSTEM_PROMPT
+        system_message = self.system_prompt if self.system_prompt is not None else SYSTEM_PROMPT
         if gateway.question_archive is not None:
             named = gateway.question_archive
             system_message += '\n' + (

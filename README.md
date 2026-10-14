@@ -4,7 +4,13 @@
 
 AstroAKD-Bench is an **independent Python repository** for developing and evaluating agents that discover astronomical data through the [NASA IMPACT Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp). That server is an **external service**, not this repository or the owner of this benchmark. AstroAKD-Bench generates natural-language astronomy tasks, executes reference archive queries via MCP, collects independent agent traces, and scores observable execution and a bounded set of claims.
 
-**Current version: 0.6.5 — NATIVE_GOLD_MIXED_QUERY_GENERATION.** The default `generate` command now uses OpenAI to author diverse synthetic questions with workbook-derived instructions and the external Astroquery MCP server. `--backend template` retains the API-free legacy generator; `--no-mcp` uses OpenAI Responses `web_search` instead. OpenAI generation uses a separate API key/billing; offline audits and scoring do not.
+**Current version: 0.6.6 — GOLD_REFERENCE_AND_THREE_ARM_EVALUATION.** The default `generate` command now uses OpenAI to author diverse synthetic questions with workbook-derived instructions and the external Astroquery MCP server. `--backend template` retains the API-free legacy generator; `--no-mcp` uses OpenAI Responses `web_search` instead. OpenAI generation uses a separate API key/billing; offline audits and scoring do not.
+
+## 0.6.6 — Gold-answer review and three-arm AstroAKD science evaluation
+
+The 50-task native Gold mixed generation is now **real-host PASS**, but all 50 reference answers remain scientifically **unverified**. A five-task reference validation pilot (5/42 single-call tasks) was accepted structurally, and the original journal is preserved for `validate --resume`. 0.6.6 adds human-reviewed `gold-draft` / `gold-finalize` and independent `run-three-arm` / `score-three-arm` workflows. The three arms are **MCP only (no domain instruction)**, **MCP + AstroAKD agent instruction**, and **web search only (no MCP)**. The benchmark question-generation prompt is a separate artifact and is **not** used in the agent experiment.
+
+See [0.6.6 full protocol and commands](docs/benchmark/gold_reference_and_three_arm_0_6_6.md) and [current qualification](QUALIFICATION_0_6_6.md). Offline suite: **186 passed; 1 optional live skipped**. Actual gold science and three-arm run still pending.
 
 ## 0.6.5 — Native Gold-inspired mixed generation
 
@@ -24,7 +30,7 @@ uv run --with openai python -m benchmark generate \
   --report datasets/generated/gold_mixed_065_report.json --json-format pretty
 ```
 
-Only the 42 ordinary MCP-backed tasks can be sent to the existing single-call `validate` command. The eight literature tasks require a future multi-step paper-and-observation validation stage. `--no-mcp` works but makes all tasks research-only, not executable through the current one-call validator. You may also use `--no-instructions` or `--backend hybrid` as in 0.6.4.4. Offline qualification passed; the first live Gold mixed generation is pending.
+Only the 42 ordinary MCP-backed tasks can be sent to the existing single-call `validate` command. The eight literature tasks require a future multi-step paper-and-observation validation stage. `--no-mcp` works but makes all tasks research-only, not executable through the current one-call validator. You may also use `--no-instructions` or `--backend hybrid` as in 0.6.4.4. The native Gold mixed generation completed successfully on the user's laptop in 0.6.5; reference verification and real three-arm science evaluation remain pending.
 
 ## 0.6.4.4 — OpenAI-generated questions: quick start
 
@@ -530,3 +536,11 @@ make single-archive candidate tasks; literature-driven multi-stage tasks need a
 follow-on archive validation stage and cannot claim verified answers merely from
 ADS or web-search results. See
 [Gold Benchmark/ADS guide](docs/benchmark/gold_benchmark_dataset_and_ads.md).
+
+## 0.6.6 — Scientific gold references and AstroAKD three-arm evaluation
+
+**AstroAKD-Bench** constructs and scores the benchmark; **AstroAKD** is the evaluated agent. The user-provided AstroAKD agent instruction is retained unchanged in `docs/agent/AstroAKD_Instruction.md` and is never confused with the synthetic-generation instructions under `docs/benchmark/`.
+
+This release adds four native commands: `gold-draft`, `gold-finalize`, `run-three-arm`, and `score-three-arm`. The gold lifecycle **never equates MCP reference-table structural acceptance with scientific truth**. The three arms use: (A) MCP only without detailed AstroAKD agent instructions; (B) MCP plus the full AstroAKD agent instructions; (C) OpenAI hosted web search only, without MCP. All receive the same question set and model. The approved gold answers and reference journal are never supplied to the agents. Auditable runs include per-task tool traces, source URLs, model usage, latency, and structured answer extraction.
+
+Your real laptop dataset's 50 mixed tasks (32 archive / 10 coordinate / 8 literature) and the five completed single-call reference records are carried forward **unchanged**. No true gold answers have been approved yet. To continue the current 5/42 reference collection without restarting it, use `validate --resume` with the same `.jsonl` output and report names. See [0.6.6 Gold and three-arm guide](docs/benchmark/gold_reference_and_three_arm_0_6_6.md), [host installation and qualification](INSTALL_ASTROAKD_BENCH_0_6_6.md), and [full conversation handoff](CONVERSATION_HANDOFF_THROUGH_0_6_6.md).

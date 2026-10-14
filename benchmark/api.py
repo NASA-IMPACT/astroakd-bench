@@ -1,4 +1,4 @@
-"""Supported Python API for AstroAKD-Bench workflows (v0.6.1).
+"""Supported Python API for AstroAKD-Bench workflows (v0.6.6).
 
 AstroAKD-Bench is an independent project. The NASA IMPACT Astroquery MCP
 server is a separate service accessed through its HTTP MCP endpoint.
@@ -225,6 +225,49 @@ class AstroAKDBench:
                         pretty_output=self.path(pretty_output) if pretty_output is not None else None,
                         strict_accepted_020=strict_accepted_020, replace=replace,
                         json_format=json_format)
+
+    def gold_draft(self, *, tasks: str | Path, output: str | Path,
+                   report: str | Path, references: str | Path | None = None,
+                   reference_tasks: str | Path | None = None,
+                   replace: bool = False) -> dict[str, Any]:
+        """Produce an unapproved human-review gold sheet; no invented answers."""
+        from .gold import gold_draft
+        return gold_draft(self.path(tasks),self.path(output),self.path(report),
+             references=self.path(references) if references is not None else None,
+             reference_tasks=self.path(reference_tasks) if reference_tasks is not None else None,
+             replace=replace)
+
+    def gold_finalize(self, *, tasks: str | Path, reviewed: str | Path,
+                      output: str | Path, report: str | Path,
+                      allow_partial: bool = False, replace: bool = False) -> dict[str, Any]:
+        """Freeze human-reviewed scientific answers with cited evidence."""
+        from .gold import gold_finalize
+        return gold_finalize(self.path(tasks),self.path(reviewed),self.path(output),
+                             self.path(report),allow_partial=allow_partial,replace=replace)
+
+    async def run_three_arm(self, *, tasks: str | Path, agent_instruction: str | Path,
+                            output: str | Path, report: str | Path,
+                            model: str = 'gpt-4.1-mini', limit: int | None = None,
+                            max_turns: int = 8,max_calls: int = 12,
+                            max_tool_bytes: int = 65536,task_timeout: float = 600,
+                            resume: bool = False,replace: bool = False,
+                            mcp_factory: Callable | None = None,sdk: Any = None,
+                            progress: Callable[[str], None] | None = None) -> dict[str, Any]:
+        """Run matched AstroAKD A/B/C with no gold or reference access."""
+        from .three_arm import run_three_arm
+        return await run_three_arm(self.path(tasks),self.path(agent_instruction),
+            self.path(output),self.path(report),url=self.mcp_url,model=model,limit=limit,
+            max_turns=max_turns,max_calls=max_calls,max_tool_bytes=max_tool_bytes,
+            task_timeout=task_timeout,timeout=self.timeout,resume=resume,replace=replace,
+            mcp_factory=mcp_factory,sdk=sdk,progress=progress)
+
+    def score_three_arm(self, *, tasks: str | Path,gold: str | Path,runs: str | Path,
+                         output: str | Path,report: str | Path,
+                         replace: bool = False) -> dict[str, Any]:
+        """Strict scientific scores only on reviewed and frozen gold answers."""
+        from .three_arm import score_three_arm
+        return score_three_arm(self.path(tasks),self.path(gold),self.path(runs),
+                               self.path(output),self.path(report),replace=replace)
 
     def audit_diversity(self, *, tasks: str | Path | None = None,
                         references: str | Path | None = None) -> dict[str, Any]:

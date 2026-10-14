@@ -20,9 +20,19 @@ here. This history is separate from the external `astroquery-mcp` project's
 releases: AstroAKD-Bench versions track benchmark capabilities, not versions
 of Astroquery or the MCP server.
 
-The current implemented benchmark version is **0.6.4.4**.
+The current implemented benchmark version is **0.6.6**.
 Dates are in UTC. Release statuses distinguish **offline implementation
 qualification** from **real laptop / live-service qualification**.
+
+## 0.6.6 — GOLD_REFERENCE_AND_THREE_ARM_EVALUATION (offline qualification)
+
+- Added `gold-draft` to safely import completed, partial MCP validation journals with dataset SHA checks and generate an unapproved scientific answer review worksheet covering all 50 mixed tasks. **No automatic answer promotion**.
+- Added `gold-finalize` to freeze human-reviewed, provenance-linked set/text/numeric answers, with strict unit/tolerance checks, reviewer and independent source-host gates, truncated table review, and partial-gold support explicitly marked unscorable.
+- Added `run-three-arm` for clean AstroAKD comparisons (A: MCP without domain instruction, B: MCP with the complete user-provided **AstroAKD agent instruction**, C: web search without MCP), matched question set/model/tool budgets, auditable per-arm traces and interruption-safe journaling/resume. No gold/reference data are accepted as inputs to this runner.
+- Added a guarded read-only ADS literature tool policy for evaluated MCP agents (only when advertised by Astroquery MCP), with independent web-search tool isolation for arm C.
+- Added `score-three-arm`: strictly structured scientific gold answer matching for sets (F1), scalar numbers (specified units/tolerance), and text (normalized exact match), with REVIEW for unstructured answers, UNSCORABLE for pending gold, and paired-task coverage metrics.
+- Preserved the real five-task (of 42) structural validation journal and manifest; original Gold mixed, single-call and literature candidate hashes unchanged. Added new 0.6.6 guide, installation, qualification and conversation handoff.
+- Offline full suite: 186 passed, one optional live test skipped. **Live gold-answer approval and full AstroAKD three-arm science evaluation pending.**
 
 ## [Unreleased]
 

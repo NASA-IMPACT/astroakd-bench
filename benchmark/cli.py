@@ -26,7 +26,7 @@ DEFAULT_DATASET = Path("datasets/generated/synthetic_queries.jsonl")
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="astroakd-bench",
-        description="AstroAKD-Bench 0.6.5 including native Gold mixed-task generation.",
+        description="AstroAKD-Bench 0.6.6 gold-reference and three-arm evaluation.",
     )
     parser.add_argument("--version", action="version", version=__version__)
     common = argparse.ArgumentParser(add_help=False)
@@ -184,6 +184,45 @@ def build_parser() -> argparse.ArgumentParser:
     fixture.add_argument('--output', type=Path, default=Path('datasets/replay/reference_fixtures.json'))
     fixture.add_argument('--strict-accepted-020', action='store_true')
     fixture.add_argument('--replace', action='store_true')
+    gold = commands.add_parser('gold-draft', parents=[common],
+        help='Create 50-task human review worksheet from mixed tasks and optional partial reference journal')
+    gold.add_argument('--tasks', required=True, type=Path)
+    gold.add_argument('--references', type=Path, help='Completed references JSONL or partial journal')
+    gold.add_argument('--reference-tasks', type=Path, help='Single-call subset bound to validation journal SHA')
+    gold.add_argument('--output', required=True, type=Path)
+    gold.add_argument('--report', required=True, type=Path)
+    gold.add_argument('--replace', action='store_true')
+    freeze = commands.add_parser('gold-finalize', parents=[common],
+        help='Freeze reviewed gold answers with source evidence; fail incomplete by default')
+    freeze.add_argument('--tasks', required=True, type=Path)
+    freeze.add_argument('--reviewed', required=True, type=Path)
+    freeze.add_argument('--output', required=True, type=Path)
+    freeze.add_argument('--report', required=True, type=Path)
+    freeze.add_argument('--allow-partial', action='store_true')
+    freeze.add_argument('--replace', action='store_true')
+    tri = commands.add_parser('run-three-arm', parents=[common],
+        help='Gold-blind AstroAKD experiment: MCP only, MCP + instruction, web_search only')
+    tri.add_argument('--tasks', required=True, type=Path)
+    tri.add_argument('--agent-instruction', required=True, type=Path,
+                     help='AstroAKD Instruction, NOT benchmark question-generation instructions')
+    tri.add_argument('--output', required=True, type=Path)
+    tri.add_argument('--report', required=True, type=Path)
+    tri.add_argument('--model', default='gpt-4.1-mini')
+    tri.add_argument('--max-turns', type=int, default=8)
+    tri.add_argument('--max-calls', type=int, default=12)
+    tri.add_argument('--max-tool-bytes', type=int, default=65536)
+    tri.add_argument('--task-timeout', type=float, default=600)
+    tri.add_argument('--limit', type=int)
+    tri.add_argument('--resume', action='store_true')
+    tri.add_argument('--replace', action='store_true')
+    tri_score = commands.add_parser('score-three-arm', parents=[common],
+        help='Offline score against explicitly approved scientific gold; never treat reference queries as gold')
+    tri_score.add_argument('--tasks', required=True, type=Path)
+    tri_score.add_argument('--gold', required=True, type=Path)
+    tri_score.add_argument('--runs', required=True, type=Path)
+    tri_score.add_argument('--output', required=True, type=Path)
+    tri_score.add_argument('--report', required=True, type=Path)
+    tri_score.add_argument('--replace', action='store_true')
     inspect = commands.add_parser('inspect', parents=[common],
         help='Render a bounded JSONL sample or a JSON report for inspection')
     inspect.add_argument('--input', required=True, type=Path)
@@ -193,6 +232,25 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 async def _execute(args: argparse.Namespace) -> dict[str, Any]:
+    if args.command == 'gold-draft':
+        from .gold import gold_draft
+        return gold_draft(args.tasks,args.output,args.report,references=args.references,
+                          reference_tasks=args.reference_tasks,replace=args.replace)
+    if args.command == 'gold-finalize':
+        from .gold import gold_finalize
+        return gold_finalize(args.tasks,args.reviewed,args.output,args.report,
+                             allow_partial=args.allow_partial,replace=args.replace)
+    if args.command == 'run-three-arm':
+        from .three_arm import run_three_arm
+        return await run_three_arm(args.tasks,args.agent_instruction,args.output,args.report,
+            url=args.mcp_url,model=args.model,limit=args.limit,max_turns=args.max_turns,
+            max_calls=args.max_calls,max_tool_bytes=args.max_tool_bytes,timeout=args.timeout,
+            task_timeout=args.task_timeout,resume=args.resume,replace=args.replace,
+            progress=lambda msg: print(f'[AstroAKD-Bench three-arm] {msg}',file=sys.stderr,flush=True))
+    if args.command == 'score-three-arm':
+        from .three_arm import score_three_arm
+        return score_three_arm(args.tasks,args.gold,args.runs,args.output,args.report,
+                               replace=args.replace)
     if args.command == 'build-fixtures':
         from .replay import build_reference_fixtures
         return build_reference_fixtures(args.tasks, args.references, args.output,
@@ -352,7 +410,7 @@ def main(argv: list[str] | None = None) -> int:
                    "message": str(exc)}}
     output = json_text(payload, args.json_format)
     print(output)
-    report_destination = (None if args.command in {"validate", "run", "evaluate", "build-fixtures"} else
+    report_destination = (None if args.command in {"validate", "run", "evaluate", "build-fixtures", "gold-draft", "gold-finalize", "run-three-arm", "score-three-arm"} else
                           args.report if args.command in {"generate", "audit-diversity"} else args.output)
     if report_destination is not None:
         try:
