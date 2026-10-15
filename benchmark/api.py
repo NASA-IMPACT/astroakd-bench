@@ -1,4 +1,4 @@
-"""Supported Python API for AstroAKD-Bench workflows (v0.6.7.11.3).
+"""Supported Python API for AstroAKD-Bench workflows (v0.6.7.11.4).
 
 AstroAKD-Bench is an independent project. The NASA IMPACT Astroquery MCP
 server is a separate service accessed through its HTTP MCP endpoint.

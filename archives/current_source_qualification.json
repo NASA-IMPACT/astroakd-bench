@@ -1,0 +1,35 @@
+{
+  "version": "0.6.7.11.4",
+  "milestone": "CURRENT_DOCUMENTATION_AND_ADS_PREFLIGHT_CLOSURE",
+  "source_regression": "PASS",
+  "pytest_split_groups": [
+    {
+      "passed": 94,
+      "subtests": 10
+    },
+    {
+      "passed": 93,
+      "subtests": 22
+    },
+    {
+      "passed": 95,
+      "skipped": 1,
+      "subtests": 9
+    }
+  ],
+  "sum_passed": 282,
+  "sum_skipped": 1,
+  "sphinx_html": "NOT_BUILT_IN_THIS_ENVIRONMENT_DEPENDENCY_NETWORK_UNAVAILABLE",
+  "ads_live": "NOT_TESTED_REQUIRES_USER_SERVER_CREDENTIALS",
+  "old_uploaded_html_findings": [
+    "docs release was 0.6.7.9",
+    "version-based historical sidebar entries",
+    "duplicated quick-start and old documentation"
+  ],
+  "preservation": {
+    "archived_historical_markdown_files": 105,
+    "historical_documentation_archive_sha256": "fa5ccd8fa04ab850a178eb15ef2adb0d9169df1938d443bbbc5a80aab638ef69",
+    "frozen_50_task_sha256": "4744ae4df40381eea635a92a13d8af6f83fd69c0e2274c839e1dbb04f382bbb8",
+    "frozen_50_oracle_sha256": "58caf910963cdce4e333ae5a0a6d48501ece27bce71352b15664a10a76fc1d5e"
+  }
+}

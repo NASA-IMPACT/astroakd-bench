@@ -116,15 +116,49 @@ def _web_research_payload(response: Any, fallback_reason: str) -> dict[str, Any]
 
 async def check_literature_auth(*, url: str | None = None,
                                 timeout: float = 180.0,
-                                session_factory: Callable | None = None) -> dict[str, Any]:
-    """Read-only auth diagnostics via MCP, with no token or token length."""
-    async with AstroqueryMCPClient(url, timeout=timeout,
-                                   session_factory=session_factory) as mcp:
-        auth = await mcp.call('astroquery_check_auth')
-        tools = {t['name'] for t in await mcp.list_tools()}
-    return {'status':'PASS','benchmark_version':__version__,
-            'endpoint':url, 'ads_authenticated':_ads_server_enabled(auth),
-            'ads_tool_available':'ads_query_compact' in tools,
+                                session_factory: Callable | None = None,
+                                probe: bool = False) -> dict[str, Any]:
+    """Check server authentication and optionally perform one real ADS read.
+
+    Probe failures deliberately do not expose raw server exceptions or tokens.
+    The same probe is a fail-fast prerequisite for --require-ads generation.
+    """
+    try:
+        async with AstroqueryMCPClient(url, timeout=timeout,
+                                       session_factory=session_factory) as mcp:
+            auth = await mcp.call('astroquery_check_auth')
+            authenticated = _ads_server_enabled(auth)
+            tools = {t['name'] for t in await mcp.list_tools()}
+            available = 'ads_query_compact' in tools
+            result = {'status':'PASS','benchmark_version':__version__,
+                'endpoint':url, 'ads_authenticated':authenticated,
+                'ads_tool_available':available, 'token_values_exposed':False}
+            if not probe:
+                return result
+            if not authenticated:
+                reason = 'ads_not_configured'
+            elif not available:
+                reason = 'ads_tool_unavailable'
+            else:
+                try:
+                    # A small, known ADS bibcode probe. Successful auth status
+                    # alone cannot establish actual upstream search access.
+                    payload = await mcp.call('ads_query_compact', {
+                        'query_string':'bibcode:2022MNRAS.514.1217D',
+                        'fields':'minimal','max_results':1})
+                    papers = _safe_papers(payload, 1)
+                    reason = None if papers and isinstance(papers[0].get('bibcode'),str) else 'ads_probe_empty'
+                except Exception:
+                    reason = 'ads_search_unavailable'
+            result.update({'status':'PASS' if reason is None else 'FAIL',
+                'ads_probe_success':reason is None,'reason':reason})
+            return result
+    except Exception:
+        if not probe:
+            raise
+        return {'status':'FAIL','benchmark_version':__version__,
+            'endpoint':url,'ads_authenticated':False,'ads_tool_available':False,
+            'ads_probe_success':False,'reason':'mcp_auth_check_unavailable',
             'token_values_exposed':False}
 
 

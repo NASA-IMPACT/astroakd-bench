@@ -1,3 +1,14 @@
+# Changelog
+
+## 0.6.7.11.4 — CURRENT_DOCUMENTATION_AND_ADS_PREFLIGHT_CLOSURE
+
+- Current-only Sphinx guide and navigation; release read from `pyproject.toml`.
+- Moved 77 old root installation, qualification and handoff files and 28 old documentation pages into a separate checksum-indexed historical Markdown archive; no science fixture changes.
+- Updated `datasets/README.md` to describe a clean working directory without implying archived files are installed.
+- `create-queries --require-ads` now probes authenticated `ads_query_compact` **before any GPT question generation**. Failed authentication, unavailable tool, empty known-paper probe and ADS request failures report safe reasons without credential values.
+- `literature-auth --probe` enables explicit live ADS route diagnostics. The preflight does not supply scientific gold answers.
+- Kept the CLI/Python API and five named directory-creating workflows; updated tests and docs to current version.
+
 # AstroAKD-Bench Changelog
 
 All significant changes to the **independent AstroAKD-Bench project** are documented

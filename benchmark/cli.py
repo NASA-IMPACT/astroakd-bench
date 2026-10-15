@@ -130,6 +130,8 @@ def build_parser() -> argparse.ArgumentParser:
     lit_auth = commands.add_parser('literature-auth', parents=[common],
         help='Inspect MCP server ADS auth status safely (no credential values)')
     lit_auth.add_argument('--output', type=Path, help='Optional JSON auth report')
+    lit_auth.add_argument('--probe', action='store_true',
+        help='Perform a real read-only ADS query to verify the server route before generation')
     validation = commands.add_parser("validate", parents=[common],
         help="Run accepted candidate calls through live MCP, retaining all outcomes")
     validation.add_argument("--input", type=Path, default=DEFAULT_DATASET,
@@ -321,7 +323,7 @@ def build_parser() -> argparse.ArgumentParser:
     easy.add_argument('--mix', default='balanced100', help='balanced100, gold50, or explicit task family quotas')
     easy.add_argument('--modules', default='simbad,mast,heasarc,gaia,vizier')
     easy.add_argument('--batch-size', type=int, default=5)
-    easy.add_argument('--require-ads', action='store_true',help='Refuse literature web fallback if MCP ADS not authenticated')
+    easy.add_argument('--require-ads', action='store_true',help='Require ADS; test authentication, ADS tool and live ADS query before OpenAI generation')
     easy.add_argument('--with-reference-answers', action='store_true',
         help='After generation, collect archive observations for single-call tasks; literature/multi-archive tasks remain unreviewed and require separate evidence')
     easy.add_argument('--reference-limit', type=int,
@@ -466,7 +468,7 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
                         json_format=args.json_format,replace=args.replace)
     if args.command == 'literature-auth':
         from .literature import check_literature_auth
-        return await check_literature_auth(url=args.mcp_url, timeout=args.timeout)
+        return await check_literature_auth(url=args.mcp_url, timeout=args.timeout, probe=args.probe)
     if args.command == 'literature-search':
         from .literature import research_literature
         return await research_literature(args.query, url=args.mcp_url, max_results=args.max_results,

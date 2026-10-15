@@ -32,7 +32,7 @@ class ReadTheDocsBuildTests(unittest.TestCase):
     def test_current_doc_commands(self):
         for path in ('README.md','docs/benchmark/quickstart.md',
                      'docs/benchmark/documentation_build.md',
-                     'INSTALL_ASTROAKD_BENCH_0_6_7_6.md'):
+                     'INSTALL.md'):
             self.assertIn('make -C docs/sphinx html',(ROOT/path).read_text(),path)
         self.assertIn('make -C docs/sphinx clean',(ROOT/'README.md').read_text())
 

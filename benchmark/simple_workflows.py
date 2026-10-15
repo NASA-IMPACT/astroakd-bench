@@ -1,4 +1,4 @@
-"""0.6.7.11.3 convenience API: named datasets with optional single-call references.
+"""0.6.7.11.4 convenience API: named datasets with optional single-call references.
 
 No model-generated answer is a gold reference. Multi-step candidates are
 excluded from the independent single-call reference validator.
@@ -73,6 +73,21 @@ async def create_queries(*, name: str | None = None, root: str | Path = '.',
     recipe = parse_task_mix(mix, count=count)
     if recipe is None:
         raise ValueError('A mixed task recipe is required')
+    if require_ads and recipe.get('literature_driven', 0) and research_fn is None:
+        # Verify the *actual* server ADS query before costly LLM generation.
+        # Merely possessing an ADS token does not establish search access.
+        from .literature import check_literature_auth
+        if progress:
+            progress('ADS preflight START (authentication, tool, live query)')
+        diagnostic = await check_literature_auth(url=url, timeout=timeout, probe=True)
+        if diagnostic.get('status') != 'PASS':
+            reason = diagnostic.get('reason', 'unknown')
+            raise GenerationError('ADS preflight failed ('+str(reason)+'). '
+                'Check the Astroquery MCP server configuration and run '
+                '`uv run python -m benchmark literature-auth --probe`. '
+                'No OpenAI question-generation calls were made.')
+        if progress:
+            progress('ADS preflight PASS')
     tasks, report = await generate_mixed(url, count=count, seed=seed, modules=parse_modules(modules),
         mix=recipe, backend='openai', model=model, batch_size=batch_size,
         timeout=timeout, use_mcp=True, use_instructions=True, require_ads=require_ads,

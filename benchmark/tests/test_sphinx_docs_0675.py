@@ -52,19 +52,18 @@ class SphinxDocumentationTests(unittest.TestCase):
                 inside = False
             elif inside and stripped and not stripped.startswith(":"):
                 entries.append(stripped)
-        self.assertGreaterEqual(len(entries), 20)
+        self.assertEqual(len(entries), 7)
         for item in entries:
             self.assertTrue((ROOT / "docs" / f"{item}.md").is_file(), item)
 
     def test_readme_documents_all_user_workflows(self):
-        text = (ROOT / "README.md").read_text()
-        self.assertIn("Run all 50 questions (new experiment; no `--resume`)", text)
-        self.assertIn("Pilot run (`--limit 5`)", text)
-        self.assertIn("Resume a partial pilot (`--resume`)", text)
-        self.assertIn("Score and generate CSV reports / plots", text)
-        self.assertIn("make -C docs/sphinx html", text)
-        self.assertIn("AstroAKD-Bench_Instruction.md", text)
-        self.assertNotIn("Re-score and regenerate CSV reports / plots", text)
+        text = (ROOT / 'README.md').read_text()
+        for command in ('create-queries','collect-references','reference-report',
+                        'run-benchmark','agent-report','literature-auth --probe'):
+            self.assertIn(command,text)
+        self.assertIn('make -C docs/sphinx html',text)
+        self.assertIn('AstroAKD-Bench_Instruction.md',text)
+        self.assertNotIn('0.6.7.3.md', (ROOT/'docs/index.md').read_text())
 
     def test_qualification_records_no_live_build(self):
         self.assertIn("HTML", (ROOT / "CHANGELOG.md").read_text())
