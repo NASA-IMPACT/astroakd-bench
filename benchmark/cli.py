@@ -132,6 +132,7 @@ def build_parser() -> argparse.ArgumentParser:
     lit_auth.add_argument('--output', type=Path, help='Optional JSON auth report')
     lit_auth.add_argument('--probe', action='store_true',
         help='Perform a real read-only ADS query to verify the server route before generation')
+    lit_auth.add_argument('--query', help='Probe a specific ADS literature query, not only the generic bibcode')
     validation = commands.add_parser("validate", parents=[common],
         help="Run accepted candidate calls through live MCP, retaining all outcomes")
     validation.add_argument("--input", type=Path, default=DEFAULT_DATASET,
@@ -477,7 +478,7 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
                         json_format=args.json_format,replace=args.replace)
     if args.command == 'literature-auth':
         from .literature import check_literature_auth
-        return await check_literature_auth(url=args.mcp_url, timeout=args.timeout, probe=args.probe)
+        return await check_literature_auth(url=args.mcp_url, timeout=args.timeout, probe=args.probe, query=args.query)
     if args.command == 'literature-search':
         from .literature import research_literature
         return await research_literature(args.query, url=args.mcp_url, max_results=args.max_results,

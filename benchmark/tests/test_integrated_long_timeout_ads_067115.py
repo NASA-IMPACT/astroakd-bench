@@ -70,8 +70,9 @@ def test_reference_deadline_rejected_before_generator(tmp_path):
 
 def test_ads_query_canonicalization_includes_target_form():
     candidates=_ads_query_candidates('Which X-ray outflows of PG 1211+143 are observed?')
-    assert len(candidates)==2
+    assert len(candidates)==3
     assert '"PG 1211+143"' in candidates
+    assert '"PG 1211 143"' in candidates
 
 
 def test_require_ads_never_web_fallback_on_query_error():
@@ -80,7 +81,7 @@ def test_require_ads_never_web_fallback_on_query_error():
         asyncio.run(research_literature('PG 1211+143 X-ray outflows',require_ads=True,
             session_factory=lambda url:fake,
             openai_client_factory=lambda: (_ for _ in ()).throw(AssertionError('web invoked'))))
-    assert [name for name,_ in fake.calls].count('ads_query_compact')==4
+    assert [name for name,_ in fake.calls].count('ads_query_compact')==3
 
 
 def test_ads_plans_checked_before_openai_and_cached(tmp_path):

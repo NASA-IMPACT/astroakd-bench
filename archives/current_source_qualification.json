@@ -1,39 +1,38 @@
 {
-  "version": "0.6.7.11.5",
-  "milestone": "ADS_RESEARCH_AND_DURABLE_GENERATION_CLOSURE",
+  "version": "0.6.7.11.6",
+  "milestone": "ADS_EXACT_QUERY_DIAGNOSTICS_AND_README_CLOSURE",
   "source_regression": "PASS_OFFLINE_SPLIT",
   "pytest_split_groups": [
     {
-      "passed": 111,
+      "passed": 110,
+      "subtests": 8
+    },
+    {
+      "passed": 6,
+      "plotting_tests": true
+    },
+    {
+      "passed": 112,
       "subtests": 24
     },
     {
       "passed": 81,
       "skipped": 1,
       "subtests": 9
-    },
-    {
-      "passed": 96,
-      "subtests": 8
-    },
-    {
-      "passed": 6
-    },
-    {
-      "passed": 5
     }
   ],
-  "sum_passed": 299,
+  "sum_passed": 309,
   "sum_skipped": 1,
   "subtests": 41,
-  "ads_live": "NOT_TESTED_REQUIRES_EXTERNAL_MCP_AND_TOKEN",
+  "ads_live": "NOT_TESTED_UPSTREAM_ADS_SEARCH_REQUIRES_REAL_HOST",
   "sphinx_html": "NOT_REBUILT_CURRENT_DOC_SOURCE_CHECKS_PASS",
-  "source_baseline": "0.6.7.11.4",
+  "source_baseline": "0.6.7.11.5",
   "checkpoint_status": "Mocked late ADS/generation failure preserved partial batches; resume reused already paid GPT batches",
   "preservation": {
     "archived_historical_markdown_files": 105,
     "historical_documentation_archive_sha256": "fa5ccd8fa04ab850a178eb15ef2adb0d9169df1938d443bbbc5a80aab638ef69",
     "frozen_50_task_sha256": "4744ae4df40381eea635a92a13d8af6f83fd69c0e2274c839e1dbb04f382bbb8",
     "frozen_50_oracle_sha256": "58caf910963cdce4e333ae5a0a6d48501ece27bce71352b15664a10a76fc1d5e"
-  }
+  },
+  "details": "Target-aware ADS query fallback for plans lacking source names; exact-query diagnostic with token-safe HTTP class; frozen inputs unchanged. Live ADS host result pending."
 }

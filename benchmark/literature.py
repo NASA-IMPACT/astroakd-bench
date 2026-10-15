@@ -9,6 +9,7 @@ from __future__ import annotations
 from .mcp_config import resolve_mcp_url
 
 import asyncio
+from collections import Counter
 import re
 from typing import Any, Callable
 
@@ -45,57 +46,118 @@ def _safe_papers(payload: Any, limit: int) -> list[dict[str, Any]]:
             for record in records[:limit] if isinstance(record, dict)]
 
 
-def _ads_query_candidates(query: str) -> list[str]:
-    """Try the authored ADS query, then a conservative target-only search.
+def _ads_query_candidates(query: str, *, target_hint: str | None = None) -> list[str]:
+    """Bounded, provenance-preserving alternatives for an ADS/Solr query.
 
-    The fallback is a search formulation, never an inferred paper/answer.
-    Solr can reject unescaped punctuation in long natural-language queries.
+    These are search attempts, not a claim that any paper is scientifically
+    relevant. Keep original terms; avoid inferring a bibcode or answer.
     """
-    choices = [query.strip()]
+    choices = []
+    # Mixed-generation research plans sometimes describe the science without
+    # containing their own target name (e.g. PG 1211+143). An independently
+    # supplied plan target is a search constraint, not a fabricated citation.
+    if isinstance(target_hint, str):
+        anchor = re.fullmatch(r'\s*(?:PG\s*\d{3,5}\s*\+\s*\d{2,4}|NGC\s*\d{1,5}|Haro\s*\d{1,4})\s*',target_hint,re.I)
+        if anchor:
+            label = ' '.join(target_hint.strip().split())
+            choices.append('"' + label + '"')
+            if '+' in label:
+                choices.append('"' + label.replace('+',' ') + '"')
+    choices.append(query.strip())
     target = re.search(r'\b(?:PG\s*\d{3,5}\s*\+\s*\d{2,4}|NGC\s*\d{1,5}|Haro\s*\d{1,4})\b', query, re.I)
     if target:
-        choices.append('"' + ' '.join(target.group(0).split()) + '"')
+        name = ' '.join(target.group(0).split())
+        choices.append('"' + name + '"')
+        # Some ADS/Solr configurations reject literal punctuation or operators
+        # in free-text searches. Search the same identifier without symbols.
+        if '+' in name:
+            choices.append('"' + name.replace('+', ' ') + '"')
     else:
         bibcode = re.search(r'\b\d{4}[A-Za-z&.0-9]{10,16}\b', query)
         if bibcode:
             choices.append('bibcode:' + bibcode.group(0))
         else:
-            # Do not blindly forward Solr operators or punctuation such as /.
-            safe = re.sub(r'[^A-Za-z0-9 ]+', ' ', query)
-            safe = ' '.join(safe.split()[:7])
+            safe = ' '.join(re.sub(r'[^A-Za-z0-9 ]+', ' ', query).split()[:7])
             if safe and safe != query:
                 choices.append(safe)
     return list(dict.fromkeys(choices))
 
 
-async def _search_ads(mcp: AstroqueryMCPClient, query: str, max_results: int):
-    """Return real paper evidence or fail without fabricating bibliographic records.
+def _ads_error_class(exc: Exception) -> str:
+    """Safe ADS error reason; never echo the original server message or token.
 
-    Keep failures classified and auditable, but never store raw upstream errors
-    that might contain credentials or sensitive connection details.
+    The MCP server wraps Astroquery errors in SERVICE_ERROR. Its *message* can
+    contain an HTTP status, but may also contain URL/token material. Only a
+    small hard-coded vocabulary is ever returned to the CLI or stored.
+    """
+    from .errors import MCPToolError, MCPTransportError
+    if isinstance(exc, MCPTransportError):
+        return 'mcp_transport_error'
+    if not isinstance(exc, MCPToolError):
+        return 'invalid_mcp_response'
+    code = str(exc.code).upper()
+    raw = str(exc.message)
+    payload = exc.payload
+    if isinstance(payload, dict):
+        details = payload.get('details')
+        if isinstance(details, dict):
+            raw += ' ' + str(details.get('error', ''))
+    for http_code, label in (('401', 'upstream_http_401_authentication'),
+                             ('403', 'upstream_http_403_forbidden'),
+                             ('429', 'upstream_http_429_rate_limit'),
+                             ('400', 'upstream_http_400_bad_query'),
+                             ('404', 'upstream_http_404'),
+                             ('408', 'upstream_http_408_timeout'),
+                             ('500', 'upstream_http_500'),
+                             ('502', 'upstream_http_502'),
+                             ('503', 'upstream_http_503'),
+                             ('504', 'upstream_http_504_timeout')):
+        if re.search(r'(?<!\d)(?:HTTP[ /:]*)?' + http_code + r'(?!\d)',raw, re.I):
+            return label
+    if 'RATE_LIMIT' in code or re.search(r'rate.limit|too many requests',raw,re.I):
+        return 'upstream_rate_limit'
+    if ('AUTHENTICATION' in code or 'TOKEN_' in code
+            or re.search(r'unauthorized|invalid token|expired token',raw,re.I)):
+        return 'upstream_authentication_error'
+    if 'INVALID_QUERY' in code or 'VALIDATION' in code:
+        return 'upstream_query_validation_error'
+    if 'TIMEOUT' in code or re.search(r'timed? ?out',raw,re.I):
+        return 'upstream_timeout'
+    if re.search(r'SSL|certificate|TLS',raw,re.I):
+        return 'upstream_tls_error'
+    if re.search(r'proxy|connection refused|name resolution|dns',raw,re.I):
+        return 'upstream_network_error'
+    return 'mcp_ads_tool_error_unclassified'
+
+
+async def _search_ads(mcp: AstroqueryMCPClient, query: str, max_results: int,
+                      *, target_hint: str | None = None):
+    """Request genuine ADS evidence, or provide token-safe failure categories.
+
+    ADS MCP presets filter *after* ADS.query_simple; retrying standard after
+    minimal runs the identical upstream query and generally adds no value.
+    Limit each distinct query formulation to one minimal read.
     """
     attempts = []
-    for candidate in _ads_query_candidates(query):
-        for fields in ('standard', 'minimal'):
-            try:
-                result = await mcp.call('ads_query_compact', {
-                    'query_string':candidate, 'fields':fields,
-                    'max_results':max_results})
-                papers = _safe_papers(result, max_results)
-                if papers and any(isinstance(p.get('bibcode'), str) and p['bibcode'] for p in papers):
-                    attempts.append({'query':candidate, 'fields':fields, 'result':'accepted'})
-                    return papers, candidate, attempts
-                attempts.append({'query':candidate,'fields':fields, 'result':'empty_or_missing_bibcodes'})
-            except Exception as exc:
-                # Do not write raw ADS exception bodies; they can echo credentials.
-                from .errors import MCPToolError, MCPTransportError
-                category = ('tool_error' if isinstance(exc, MCPToolError) else
-                            'transport_error' if isinstance(exc, MCPTransportError) else
-                            'invalid_response')
-                attempts.append({'query':candidate,'fields':fields,'result':category})
+    for candidate in _ads_query_candidates(query, target_hint=target_hint):
+        try:
+            result = await mcp.call('ads_query_compact', {
+                'query_string': candidate, 'fields': 'minimal',
+                'max_results': max_results})
+            papers = _safe_papers(result, max_results)
+            if papers and any(isinstance(p.get('bibcode'), str) and p['bibcode'] for p in papers):
+                attempts.append({'query':candidate, 'fields':'minimal', 'result':'accepted'})
+                return papers, candidate, attempts
+            attempts.append({'query':candidate, 'fields':'minimal', 'result':'empty_or_missing_bibcodes'})
+        except Exception as exc:
+            attempts.append({'query':candidate, 'fields':'minimal',
+                             'result':_ads_error_class(exc)})
+    reasons = ', '.join(f'{k}={n}' for k,n in sorted(Counter(
+        attempt['result'] for attempt in attempts).items()))
     raise GenerationError('ADS search returned no usable bibliographic evidence '
-                          f'({len(attempts)} query form(s) attempted; '
-                          + ', '.join(item['result'] for item in attempts) + ')')
+                          f'({len(attempts)} distinct query formulation(s); {reasons}). '
+                          'Run `python -m benchmark literature-auth --probe '
+                          '--query "<your literature query>"` for a matching ADS diagnostic.')
 
 
 def _message_citation_urls(response: Any) -> set[str]:
@@ -171,12 +233,17 @@ def _web_research_payload(response: Any, fallback_reason: str) -> dict[str, Any]
 async def check_literature_auth(*, url: str | None = None,
                                 timeout: float = 180.0,
                                 session_factory: Callable | None = None,
-                                probe: bool = False) -> dict[str, Any]:
+                                probe: bool = False,
+                                query: str | None = None) -> dict[str, Any]:
     """Check server authentication and optionally perform one real ADS read.
 
     Probe failures deliberately do not expose raw server exceptions or tokens.
     The same probe is a fail-fast prerequisite for --require-ads generation.
     """
+    if query is not None:
+        if not isinstance(query, str) or not 5 <= len(query.strip()) <= 1500:
+            raise ValueError('--query must contain 5..1500 characters')
+        probe = True
     try:
         async with AstroqueryMCPClient(url, timeout=timeout,
                                        session_factory=session_factory) as mcp:
@@ -197,13 +264,24 @@ async def check_literature_auth(*, url: str | None = None,
                 try:
                     # A small, known ADS bibcode probe. Successful auth status
                     # alone cannot establish actual upstream search access.
-                    payload = await mcp.call('ads_query_compact', {
-                        'query_string':'bibcode:2022MNRAS.514.1217D',
-                        'fields':'minimal','max_results':1})
-                    papers = _safe_papers(payload, 1)
+                    if query is not None:
+                        result['query_probe'] = True
+                        papers, used, attempts = await _search_ads(mcp, query, 3)
+                        result['query_formulations_attempted'] = len(attempts)
+                        result['successful_query'] = used
+                    else:
+                        payload = await mcp.call('ads_query_compact', {
+                            'query_string':'bibcode:2022MNRAS.514.1217D',
+                            'fields':'minimal','max_results':1})
+                        papers = _safe_papers(payload, 1)
                     reason = None if papers and isinstance(papers[0].get('bibcode'),str) else 'ads_probe_empty'
-                except Exception:
+                except GenerationError as exc:
                     reason = 'ads_search_unavailable'
+                    # Only the safe, already classified aggregate text is reported.
+                    result['query_failure_summary'] = str(exc)
+                except Exception as exc:
+                    reason = 'ads_search_unavailable'
+                    result['probe_error_class'] = _ads_error_class(exc)
             result.update({'status':'PASS' if reason is None else 'FAIL',
                 'ads_probe_success':reason is None,'reason':reason})
             return result
@@ -223,6 +301,7 @@ async def research_literature(query: str, *, url: str | None = None,
                               openai_client_factory: Callable[[], Any] | None = None,
                               progress: Callable[[str], None] | None = None,
                               require_ads: bool = False,
+                              target_hint: str | None = None,
                               ) -> dict[str, Any]:
     """Research a literature-driven prompt; fail over to LLM web research.
 
@@ -250,7 +329,7 @@ async def research_literature(query: str, *, url: str | None = None,
                     ads_tool_available = 'ads_query_compact' in tools
                     if ads_tool_available:
                         try:
-                            papers, used, attempts = await _search_ads(mcp, query, max_results)
+                            papers, used, attempts = await _search_ads(mcp, query, max_results, target_hint=target_hint)
                             return {'status':'PASS','benchmark_version':__version__,
                                 'query':query,'task_type':'literature_driven',
                                 'research_provider':'astroquery_mcp_ads',

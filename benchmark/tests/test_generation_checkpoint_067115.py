@@ -104,7 +104,7 @@ def test_checkpoint_cli_accepts_resume():
     assert args.resume is True
 
 
-def test_ads_minimal_fields_salvage_standard_query_error():
+def test_ads_minimal_fields_avoids_redundant_standard_query():
     from benchmark.literature import research_literature
     from benchmark.tests.test_literature_0643 import FakeMCP
     from types import SimpleNamespace as N
@@ -120,5 +120,6 @@ def test_ads_minimal_fields_salvage_standard_query_error():
         openai_client_factory=lambda: (_ for _ in ()).throw(AssertionError('web invoked'))))
     assert result['research_provider']=='astroquery_mcp_ads'
     assert result['papers'][0]['bibcode']
-    assert result['ads_query_attempts'][0]['fields']=='standard'
-    assert result['ads_query_attempts'][1]['fields']=='minimal'
+    assert result['ads_query_attempts'][0]['fields']=='minimal'
+    assert len(result['ads_query_attempts']) == 1
+    assert all(args['fields']=='minimal' for name,args in fake.calls if name=='ads_query_compact')

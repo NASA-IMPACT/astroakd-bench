@@ -1,3 +1,12 @@
+## 0.6.7.11.6 — ADS_EXACT_QUERY_DIAGNOSTICS_AND_README_CLOSURE
+
+- Added `literature-auth --probe --query "PG 1211+143"` to test the actual failing query.
+- Classify upstream MCP/ADS errors into a strictly bounded vocabulary of HTTP/auth/rate-limit/timeout/network categories; never print opaque server exception bodies or token-bearing diagnostics.
+- Reduce ADS retry traffic: request each unique search formulation only once with the compact `minimal` preset, since MCP presets filter the same upstream ADS.query_simple call.
+- Add a symbol-normalized query alternative for plus-sign source identifiers without fabricating paper references. Pass the curated literature plan's target name explicitly into ADS search, correcting the earlier PG 1211+143 plan whose long search text omitted that target entirely.
+- Revise README, INSTALL and current Sphinx guidance to distinguish passing authentication probes from failing literature searches and to explain strict ADS versus labeled web fallback.
+- Scientific datasets, frozen fixtures and agent scoring remain unchanged. No live ADS recovery claimed until tested on the user's server.
+
 ## 0.6.7.11.5 — ADS_RESEARCH_AND_DURABLE_GENERATION_CLOSURE
 
 - Fix the mismatch between generic ADS authentication preflight and actual literature research: inspect all planned research queries **before** paid GPT batches and reuse the resulting ADS evidence.

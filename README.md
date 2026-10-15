@@ -1,18 +1,22 @@
 # AstroAKD-Bench
 
-**Current version: 0.6.7.11.5** · Benchmark for astronomy archive-search agents using an independent [Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp). Benchmark questions, archive observations, independently reviewed gold answers, and agent responses remain distinct.
+**Current version: 0.6.7.11.6** · Benchmark for astronomy archive-search agents using an independent [Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp). Benchmark questions, archive observations, independently reviewed gold answers, and agent responses remain distinct.
 
 ## Quick start: 100 new questions with references
 
 Requirements: Python 3.11+, `uv`, an `OPENAI_API_KEY`, and the external Astroquery MCP server listening at `http://127.0.0.1:8000/mcp`. To require ADS literature research, configure an ADS token **on the MCP server** before starting it.
 
-**Check ADS before spending OpenAI credits:**
+**Verify both ADS access and the actual literature-search route before spending OpenAI credits:**
 
 ```bash
+# General authentication plus read-only known-bibcode lookup
 uv run python -m benchmark literature-auth --probe
+
+# Important: directly test the query that previously failed
+uv run python -m benchmark literature-auth --probe --query 'PG 1211+143'
 ```
 
-Only proceed with `--require-ads` if the probe succeeds. The benchmark also probes **all planned ADS literature queries** (with both standard and minimal ADS fields when needed) before spending GPT question-generation credits. A generic bibcode probe alone is not enough.
+A successful known-bibcode lookup does **not** establish that general literature searches work. `--require-ads` probes the real literature plans before GPT generation and refuses an OpenAI web-search fallback. The strict default is intentional: when ADS errors persist, it is safer to stop than label web evidence as ADS evidence. The literature plan's *target name* is now supplied to ADS even when the old science-topic search string omitted the object identifier (as it did for PG 1211+143). Query retries use distinct ADS formulations and a compact field list; no citation is fabricated.
 
 ```bash
 uv run --with openai python -m benchmark create-queries \
@@ -72,15 +76,17 @@ The three arms are **A** (MCP only), **B** (MCP with the [AstroAKD instruction](
 
 ## Troubleshoot ADS literature generation
 
-If you see `ADS route unavailable (ads_search_unavailable)`, the MCP ADS query failed; it does **not** uniquely identify a missing token. From the benchmark directory run:
+If the known-bibcode probe passes but PG 1211+143 fails, **do not increase `--archive-timeouts` or `--reference-deadline`**: these control later archive references, not ADS literature searches. Diagnose the *same* target search:
 
 ```bash
-uv run python -m benchmark literature-auth --probe
+uv run python -m benchmark literature-auth --probe --query 'PG 1211+143'
 ```
 
-The [current Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp) expects the ADS credential in its own process environment (typically `API_DEV_KEY`, or `ADS_API_KEY` fallback). After configuring/restarting that server, verify the probe again. The benchmark does not log credentials. `--require-ads` now checks each planned ADS research query *before* authoring questions; if you do not require ADS literature, omit that flag to allow explicitly labeled web-search fallback evidence.
+Version 0.6.7.11.6 reports safe failure classes such as `upstream_http_400_bad_query`, `upstream_http_401_authentication`, `upstream_http_403_forbidden`, `upstream_http_429_rate_limit`, `upstream_timeout`, `mcp_transport_error`, or `mcp_ads_tool_error_unclassified`. Raw upstream exception text and credentials are **not** written into diagnostic reports. The server-side ADS error/HTTP status is necessary to resolve an unclassified failure. Check the **server logs privately** without copying token values into tickets or chats.
 
-See [ADS and MCP troubleshooting](docs/benchmark/ads_and_mcp.md) for detailed diagnostic reasons and safe setup. Never share tokens in logs or issue reports.
+The [Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp) requires the ADS credential in the **server process** (typically `API_DEV_KEY`, with an `ADS_API_KEY` fallback). A valid configured token does not guarantee the remote ADS API will accept every search. If ADS is inaccessible and ADS-specific provenance is not required, you may omit `--require-ads`, which allows an explicitly labeled OpenAI web-search fallback; it **must not** be represented as ADS evidence. This route uses OpenAI credits and is not equivalent to strict ADS qualification.
+
+For the reference/agent timeout examples see [Create synthetic queries](docs/benchmark/create_queries.md). For detailed failure diagnosis see [ADS and MCP](docs/benchmark/ads_and_mcp.md).
 
 ## Files and scientific integrity
 

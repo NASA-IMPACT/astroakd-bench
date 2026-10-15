@@ -275,7 +275,8 @@ async def generate_mixed(url: str | None = None, *, count: int = 50, seed: int =
         if progress:
             progress(f'Literature START {j}/{mix["literature_driven"]} ({target})')
         evidence = await search(query, url=url, max_results=5, timeout=timeout,
-             model=model, use_mcp=use_mcp, session_factory=session_factory,
+             model=model, use_mcp=use_mcp, target_hint=target,
+             session_factory=session_factory,
              openai_client_factory=openai_client_factory, progress=progress)
         if evidence.get('status') != 'PASS':
             raise GenerationError(f'Literature research {j} did not pass')

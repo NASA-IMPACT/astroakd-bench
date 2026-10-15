@@ -120,6 +120,7 @@ async def create_queries(*, name: str | None = None, root: str | Path = '.',
             try:
                 evidence = await research_literature(research_query, url=url,
                     max_results=5, timeout=timeout, model=model, require_ads=True,
+                    target_hint=target,
                     openai_client_factory=openai_client_factory)
             except GenerationError as exc:
                 raise GenerationError(f'ADS literature plan {index}/{len(plans)} ({target}) '

@@ -6,11 +6,15 @@ ADS literature research is performed by the **external Astroquery MCP server**, 
 
 ```bash
 uv run python -m benchmark literature-auth --probe
+# Test the exact target that failed after the generic bibcode probe passed:
+uv run python -m benchmark literature-auth --probe --query 'PG 1211+143'
 ```
 
 This performs a read-only authentication/tool inspection and a small real ADS bibliographic query. Successful configuration alone is insufficient: the request itself must succeed. The tool reports safe booleans and a diagnostic reason without printing credentials.
 
 Failure reasons include `ads_not_configured`, `ads_tool_unavailable`, `ads_search_unavailable`, `ads_probe_empty`, and `mcp_auth_check_unavailable`.
+
+The specific-query probe reports only sanitized error *classes* (for example `upstream_http_400_bad_query`, `upstream_http_401_authentication`, `upstream_http_403_forbidden`, `upstream_http_429_rate_limit`, `upstream_timeout`, or `mcp_ads_tool_error_unclassified`), not the server's original exception text. The client cannot resolve an unclassified upstream error without a private inspection of the MCP server logs. The benchmark explicitly sends the curated research target as a query hint (including PG 1211+143 even when the plan's long prose omitted it) and retries distinct query formulations using one compact ADS request each (the MCP server's field presets filter the results after the same upstream Astroquery call). All literature results remain unreviewed evidence, never gold answers.
 
 The current Astroquery MCP server uses the `API_DEV_KEY` environment variable for ADS, with an `ADS_API_KEY` fallback. **Set the token in the environment of the MCP server process before starting the server**, not merely in the benchmark terminal. The token should never be checked into the repository or included in logs.
 
@@ -18,7 +22,7 @@ A failure of `ads_search_unavailable` means the MCP ADS request failed despite r
 
 ## Required vs optional ADS
 
-With `--require-ads`, a failed ADS preflight stops `create-queries` before any question-generation OpenAI calls. The preflight now checks **each planned research query** with both standard and minimal ADS field selections and a narrower target-based query where available; success of a generic bibcode probe is not enough. No question files are published when all ADS research alternatives fail. On errors after GPT authoring, completed batches are retained in `generated/<name>.progress.jsonl`; use `create-queries --resume` after correcting the service. Without that flag, a failed ADS research route may use an OpenAI web-search fallback, labeled with its true provenance; it is not ADS evidence.
+With `--require-ads`, a failed ADS preflight stops `create-queries` before any question-generation OpenAI calls. The preflight now checks **each planned research query** with distinct query formulations and compact ADS field selection; success of a generic bibcode probe is not enough. Increasing archive reference timeouts does not correct an ADS HTTP 400/401/403/429 error. When strict ADS research is optional, omit `--require-ads` to allow explicitly labeled OpenAI web-search fallback instead. No question files are published when all ADS research alternatives fail. On errors after GPT authoring, completed batches are retained in `generated/<name>.progress.jsonl`; use `create-queries --resume` after correcting the service. Without that flag, a failed ADS research route may use an OpenAI web-search fallback, labeled with its true provenance; it is not ADS evidence.
 
 ## MCP endpoint
 
