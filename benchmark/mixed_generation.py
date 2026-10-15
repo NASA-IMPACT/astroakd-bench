@@ -202,6 +202,10 @@ async def generate_mixed(url: str | None = None, *, count: int = 50, seed: int =
                          llm_fn: Callable | None = None,
                          targets: tuple[SkyTarget,...] | None = None,
                          require_ads: bool = False,
+                         on_batch: Callable[[int, list[dict]], None] | None = None,
+                         cached_batches: dict[int, list[dict]] | None = None,
+                         on_literature: Callable[[int, dict], None] | None = None,
+                         cached_literature: dict[int, dict] | None = None,
                          ) -> tuple[list[dict[str,Any]], dict[str,Any]]:
     if backend not in ('openai','hybrid'):
         raise GenerationError('Mixed Gold generation requires --backend openai or hybrid for literature authoring')
@@ -227,7 +231,9 @@ async def generate_mixed(url: str | None = None, *, count: int = 50, seed: int =
         backend=backend, model=model, use_instructions=use_instructions,
         use_mcp=use_mcp, instructions_file=instructions_file, batch_size=batch_size,
         session_factory=session_factory, progress=progress, targets=filtered,
-        openai_client_factory=openai_client_factory)
+        openai_client_factory=openai_client_factory,
+        **({'on_batch': on_batch, 'cached_batches': cached_batches} if
+           generate_fn is generate_llm and (on_batch is not None or cached_batches) else {}))
     # Select coordinate slots among the modules that can express a sky position.
     coords = [i for i,t in enumerate(tasks) if t['module'] in ('mast','heasarc','gaia','vizier')
               and isinstance(t.get('constraints',{}).get('center_icrs'),dict)]
@@ -251,6 +257,21 @@ async def generate_mixed(url: str | None = None, *, count: int = 50, seed: int =
     auth_stats = Counter()
     for j,plan in enumerate(LITERATURE_PLANS[:mix['literature_driven']],1):
         mod, target, goal, query = plan
+        saved = (cached_literature or {}).get(j)
+        if saved is not None:
+            if saved.get('target') != target or saved.get('constraints', {}).get('literature_query') != query \
+                    or saved.get('task_type') != 'literature_driven':
+                raise GenerationError(f'Literature checkpoint {j} differs from the planned research target')
+            provider = saved.get('research_evidence', {}).get('research_provider')
+            if require_ads and provider != 'astroquery_mcp_ads':
+                raise GenerationError('Cannot reuse literature lacking required ADS evidence')
+            if provider not in ('astroquery_mcp_ads', 'openai_web_search'):
+                raise GenerationError('Invalid research provider in literature checkpoint')
+            literature.append(saved)
+            auth_stats[provider] += 1
+            if progress:
+                progress(f'Literature REUSED {j}/{mix["literature_driven"]} ({target})')
+            continue
         if progress:
             progress(f'Literature START {j}/{mix["literature_driven"]} ({target})')
         evidence = await search(query, url=url, max_results=5, timeout=timeout,
@@ -322,6 +343,8 @@ async def generate_mixed(url: str | None = None, *, count: int = 50, seed: int =
               'instructions_used':use_instructions,'research_query':query,'gold_mixed_generation':True},
         }
         literature.append(record)
+        if on_literature is not None:
+            on_literature(j, record)
     # Interleave the three families with deterministic positions, assigning IDs
     # *after* authoring; the model never assigns authoritative identifiers.
     all_tasks = tasks + literature

@@ -9,6 +9,7 @@ from __future__ import annotations
 from .mcp_config import resolve_mcp_url
 
 import asyncio
+import re
 from typing import Any, Callable
 
 from . import DEFAULT_MCP_URL, __version__
@@ -42,6 +43,59 @@ def _safe_papers(payload: Any, limit: int) -> list[dict[str, Any]]:
     return [dict((k, v[:1200] if isinstance(v,str) else v)
                  for k in keys if (v := record.get(k)) is not None)
             for record in records[:limit] if isinstance(record, dict)]
+
+
+def _ads_query_candidates(query: str) -> list[str]:
+    """Try the authored ADS query, then a conservative target-only search.
+
+    The fallback is a search formulation, never an inferred paper/answer.
+    Solr can reject unescaped punctuation in long natural-language queries.
+    """
+    choices = [query.strip()]
+    target = re.search(r'\b(?:PG\s*\d{3,5}\s*\+\s*\d{2,4}|NGC\s*\d{1,5}|Haro\s*\d{1,4})\b', query, re.I)
+    if target:
+        choices.append('"' + ' '.join(target.group(0).split()) + '"')
+    else:
+        bibcode = re.search(r'\b\d{4}[A-Za-z&.0-9]{10,16}\b', query)
+        if bibcode:
+            choices.append('bibcode:' + bibcode.group(0))
+        else:
+            # Do not blindly forward Solr operators or punctuation such as /.
+            safe = re.sub(r'[^A-Za-z0-9 ]+', ' ', query)
+            safe = ' '.join(safe.split()[:7])
+            if safe and safe != query:
+                choices.append(safe)
+    return list(dict.fromkeys(choices))
+
+
+async def _search_ads(mcp: AstroqueryMCPClient, query: str, max_results: int):
+    """Return real paper evidence or fail without fabricating bibliographic records.
+
+    Keep failures classified and auditable, but never store raw upstream errors
+    that might contain credentials or sensitive connection details.
+    """
+    attempts = []
+    for candidate in _ads_query_candidates(query):
+        for fields in ('standard', 'minimal'):
+            try:
+                result = await mcp.call('ads_query_compact', {
+                    'query_string':candidate, 'fields':fields,
+                    'max_results':max_results})
+                papers = _safe_papers(result, max_results)
+                if papers and any(isinstance(p.get('bibcode'), str) and p['bibcode'] for p in papers):
+                    attempts.append({'query':candidate, 'fields':fields, 'result':'accepted'})
+                    return papers, candidate, attempts
+                attempts.append({'query':candidate,'fields':fields, 'result':'empty_or_missing_bibcodes'})
+            except Exception as exc:
+                # Do not write raw ADS exception bodies; they can echo credentials.
+                from .errors import MCPToolError, MCPTransportError
+                category = ('tool_error' if isinstance(exc, MCPToolError) else
+                            'transport_error' if isinstance(exc, MCPTransportError) else
+                            'invalid_response')
+                attempts.append({'query':candidate,'fields':fields,'result':category})
+    raise GenerationError('ADS search returned no usable bibliographic evidence '
+                          f'({len(attempts)} query form(s) attempted; '
+                          + ', '.join(item['result'] for item in attempts) + ')')
 
 
 def _message_citation_urls(response: Any) -> set[str]:
@@ -168,6 +222,7 @@ async def research_literature(query: str, *, url: str | None = None,
                               session_factory: Callable | None = None,
                               openai_client_factory: Callable[[], Any] | None = None,
                               progress: Callable[[str], None] | None = None,
+                              require_ads: bool = False,
                               ) -> dict[str, Any]:
     """Research a literature-driven prompt; fail over to LLM web research.
 
@@ -183,6 +238,7 @@ async def research_literature(query: str, *, url: str | None = None,
     fallback_reason = 'mcp_disabled' if not use_mcp else 'ads_not_configured'
     server_ads_authenticated = False
     ads_tool_available = False
+    ads_error_category = None
     if use_mcp:
         try:
             async with AstroqueryMCPClient(url, timeout=timeout,
@@ -194,22 +250,20 @@ async def research_literature(query: str, *, url: str | None = None,
                     ads_tool_available = 'ads_query_compact' in tools
                     if ads_tool_available:
                         try:
-                            payload = await mcp.call('ads_query_compact',
-                                    {'query_string':query,'fields':'standard',
-                                     'max_results':max_results})
-                            papers = _safe_papers(payload, max_results)
+                            papers, used, attempts = await _search_ads(mcp, query, max_results)
                             return {'status':'PASS','benchmark_version':__version__,
                                 'query':query,'task_type':'literature_driven',
                                 'research_provider':'astroquery_mcp_ads',
                                 'mcp_tool':'ads_query_compact', 'papers':papers,
+                                'ads_query_used':used, 'ads_query_attempts':attempts,
                                 'research_sources': ['https://ui.adsabs.harvard.edu/abs/' + p['bibcode']
                                     for p in papers if isinstance(p.get('bibcode'),str)],
                                 'ads_authenticated':True,'web_search_calls':0,
                                 'scientific_truth_verified':False,
                                 'archive_observation_validation':'not_performed'}
-                        except Exception:
-                            # MCP returned a tool error (including expired ADS token)
-                            # or malformed response: do not leak raw error payload.
+                        except GenerationError as exc:
+                            # Log a safe summary, never the server's raw exception.
+                            ads_error_category = str(exc)
                             fallback_reason = 'ads_search_unavailable'
                     else:
                         fallback_reason = 'ads_tool_unavailable'
@@ -217,6 +271,10 @@ async def research_literature(query: str, *, url: str | None = None,
                     fallback_reason = 'ads_not_configured'
         except Exception:
             fallback_reason = 'mcp_auth_check_unavailable'
+    if require_ads:
+        details = ': ' + ads_error_category if ads_error_category else ''
+        raise GenerationError('ADS required: actual literature search unavailable '
+                              f'({fallback_reason}){details}. No OpenAI web-search fallback was invoked.')
     if progress is not None:
         progress(f"ADS route unavailable ({fallback_reason}); using OpenAI web_search")
     client = _openai_client(openai_client_factory)

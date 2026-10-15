@@ -1,3 +1,13 @@
+## 0.6.7.11.5 — ADS_RESEARCH_AND_DURABLE_GENERATION_CLOSURE
+
+- Fix the mismatch between generic ADS authentication preflight and actual literature research: inspect all planned research queries **before** paid GPT batches and reuse the resulting ADS evidence.
+- Try conservative, grounded target-query forms and `minimal` ADS fields when the `standard` request fails; do not invent papers or silently allow OpenAI web research with `--require-ads`.
+- Support `--archive-timeouts`, `--archive-attempts`, and `--reference-deadline` directly in the short `create-queries --with-reference-answers` command and Python API.
+- Save each validated GPT question batch in an fsynced, checksummed progress journal and a separately labeled non-gold partial JSONL. Persist completed literature questions as well.
+- Add `create-queries --resume` to reuse successful GPT batches and literature questions after failures, checking inputs and immutable scientific task bindings before reuse. Remove partial files after successful final publication.
+- Update current-only README, installation guide and Sphinx workflow documentation. Earlier failed v0.6.7.11.4 runs without a progress journal cannot be recovered from the console log.
+- Offline host qualification does not establish live ADS connectivity; verify with the external MCP server before using real data.
+
 # Changelog
 
 ## 0.6.7.11.4 — CURRENT_DOCUMENTATION_AND_ADS_PREFLIGHT_CLOSURE

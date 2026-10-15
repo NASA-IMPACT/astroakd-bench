@@ -18,7 +18,7 @@ A failure of `ads_search_unavailable` means the MCP ADS request failed despite r
 
 ## Required vs optional ADS
 
-With `--require-ads`, a failed ADS preflight stops `create-queries` before any question-generation OpenAI calls. No question files are published. Without that flag, a failed ADS research route may use an OpenAI web-search fallback, labeled with its true provenance; it is not ADS evidence.
+With `--require-ads`, a failed ADS preflight stops `create-queries` before any question-generation OpenAI calls. The preflight now checks **each planned research query** with both standard and minimal ADS field selections and a narrower target-based query where available; success of a generic bibcode probe is not enough. No question files are published when all ADS research alternatives fail. On errors after GPT authoring, completed batches are retained in `generated/<name>.progress.jsonl`; use `create-queries --resume` after correcting the service. Without that flag, a failed ADS research route may use an OpenAI web-search fallback, labeled with its true provenance; it is not ADS evidence.
 
 ## MCP endpoint
 

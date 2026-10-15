@@ -305,6 +305,8 @@ async def generate_llm(url: str | None = None, *, count: int = 50, seed: int = 4
                        progress: Callable[[str], None] | None = None,
                        targets: tuple[SkyTarget, ...] | None = None,
                        openai_client_factory: Callable[[], Any] | None = None,
+                       on_batch: Callable[[int, list[dict]], None] | None = None,
+                       cached_batches: dict[int, list[dict]] | None = None,
                        ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     if backend not in ('openai', 'hybrid'):
         raise GenerationError('LLM generator requires --backend openai or hybrid')
@@ -339,8 +341,33 @@ async def generate_llm(url: str | None = None, *, count: int = 50, seed: int = 4
     archive_name_repairs = 0
     task_id_repairs = 0
     openai_retries = 0
+    reused_batches = 0
+    from .generation_checkpoint import slot_signature
     for i in range(0, len(tasks), batch_size):
         batch = tasks[i:i + batch_size]
+        batch_number = i // batch_size + 1
+        cached = (cached_batches or {}).get(batch_number)
+        if cached is not None:
+            if len(cached) != len(batch):
+                raise GenerationError(f'Resumed batch {batch_number} size mismatch')
+            for task, saved in zip(batch, cached):
+                if saved.get('signature') != slot_signature(task):
+                    raise GenerationError(f'Resumed batch {batch_number} slot signature differs')
+                authored = saved.get('task', {})
+                if authored.get('id') != task['id'] or not isinstance(authored.get('question'), str):
+                    raise GenerationError(f'Resumed batch {batch_number} lacks its validated question')
+                question, _ = _prepare_authored_question(authored['question'], task, use_mcp=use_mcp)
+                key = ' '.join(question.casefold().split())
+                if key in seen_questions:
+                    raise GenerationError('Duplicate question in resumed generation')
+                seen_questions.add(key)
+                task['question'] = authored['question']
+                task['provenance'] = authored['provenance']
+                task['execution_track'] = authored['execution_track']
+            reused_batches += 1
+            if progress:
+                progress(f'OpenAI REUSED batch {batch_number} from durable journal ({len(batch)} questions)')
+            continue
         opts: dict[str, Any] = {'model': model,
                                 'input': [{'role': 'system', 'content': system},
                                           {'role': 'user', 'content': _slots_prompt(batch, mode=backend, use_mcp=use_mcp)}]}
@@ -428,6 +455,8 @@ async def generate_llm(url: str | None = None, *, count: int = 50, seed: int = 4
                 task['answer_spec']['expected_answer_status'] = 'unverified_web_research'
             else:
                 task['execution_track'] = 'astroquery_mcp'
+        if on_batch is not None:
+            on_batch(batch_number, batch)
     check = analyze_candidates(tasks)
     if any(check['counts'].values()):
         raise GenerationError('Generated questions fail diversity audit')
@@ -438,6 +467,8 @@ async def generate_llm(url: str | None = None, *, count: int = 50, seed: int = 4
                     'openai_requests': model_calls, 'web_search_calls': web_calls,
                     'archive_name_repairs': archive_name_repairs,
                     'task_id_repairs': task_id_repairs, 'openai_batch_retries': openai_retries,
+                    'resumed_openai_batches': reused_batches,
+                    'openai_requests_this_invocation': model_calls,
                     'scientific_truth_verified': False,
                     'expected_answers_verified': 0,
                     'archive_queries_executed': 0,

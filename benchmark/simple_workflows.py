@@ -1,4 +1,4 @@
-"""0.6.7.11.4 convenience API: named datasets with optional single-call references.
+"""0.6.7.11.5 convenience API: named datasets with optional single-call references.
 
 No model-generated answer is a gold reference. Multi-step candidates are
 excluded from the independent single-call reference validator.
@@ -33,6 +33,8 @@ def dataset_paths(root: str | Path = '.', name: str = 'synthetic_100',
         'generation_report': data / 'generated' / (name + '_generation_report.json'),
         'single_calls': data / 'generated' / (name + '_single_call.jsonl'),
         'multistep': data / 'generated' / (name + '_multistep.jsonl'),
+        'generation_journal': data / 'generated' / (name + '.progress.jsonl'),
+        'generation_partial': data / 'generated' / (name + '_partial.jsonl'),
         'references': data / 'validated' / (name + '_references.jsonl'),
         'references_csv': data / 'validated' / (name + '_references.csv'),
         'references_report': data / 'validated' / (name + '_references_report.json'),
@@ -55,14 +57,33 @@ async def create_queries(*, name: str | None = None, root: str | Path = '.',
                          mix: str = 'balanced100', modules: str = 'simbad,mast,heasarc,gaia,vizier',
                          batch_size: int = 5, url: str | None = None, timeout: float = 180,
                          require_ads: bool = False, replace: bool = False,
+                         resume: bool = False,
                          with_reference_answers: bool = False, reference_limit: int | None = None,
+                         archive_timeouts: str = 'mast=60,simbad=30,heasarc=60,gaia=60,vizier=45',
+                         archive_attempts: str = 'mast=1,simbad=1,heasarc=1,gaia=1,vizier=1',
+                         reference_deadline: float = 70.,
                          progress=None, research_fn=None, llm_fn=None, openai_client_factory=None) -> dict[str,Any]:
     if reference_limit is not None and not with_reference_answers:
         raise ValueError('--reference-limit requires --with-reference-answers')
     if reference_limit is not None and reference_limit <= 0:
         raise ValueError('--reference-limit must be a positive integer')
+    # Validate reference-only overrides before paid GPT/ADS generation, even if
+    # reference collection is not selected (catch misspelled input).
+    from .validator import parse_archive_overrides
+    parse_archive_overrides(archive_timeouts, kind='timeouts')
+    parse_archive_overrides(archive_attempts, kind='attempts')
+    if not math.isfinite(reference_deadline) or reference_deadline <= 0:
+        raise ValueError('--reference-deadline must be finite and positive')
     name = name if name is not None else f'synthetic_{count}'
+    if resume and replace:
+        raise ValueError('--resume cannot be used with --replace')
     paths = dataset_paths(root, name, output_dir=output_dir)
+    if resume and not paths['generation_journal'].is_file():
+        raise FileNotFoundError(f'No unfinished generation checkpoint: {paths["generation_journal"]}')
+    if not resume and not replace and (paths['generation_journal'].exists() or
+                                       paths['generation_partial'].exists()):
+        raise FileExistsError('Unfinished question generation exists; retry with --resume '
+                              'to reuse completed GPT batches (or choose a new --name)')
     if with_reference_answers and not replace:
         reference_files = (paths['references'], paths['references_csv'], paths['references_report'],
             paths['references'].with_name(paths['references'].name + '.progress.jsonl'))
@@ -74,9 +95,12 @@ async def create_queries(*, name: str | None = None, root: str | Path = '.',
     if recipe is None:
         raise ValueError('A mixed task recipe is required')
     if require_ads and recipe.get('literature_driven', 0) and research_fn is None:
-        # Verify the *actual* server ADS query before costly LLM generation.
-        # Merely possessing an ADS token does not establish search access.
-        from .literature import check_literature_auth
+        # A successful generic bibcode probe does not establish that *the actual
+        # planned literature query* will work. Run every planned query before
+        # any paid GPT generation; reuse the evidence so a later transient ADS
+        # failure cannot invalidate the expensive generated questions.
+        from .literature import check_literature_auth, research_literature
+        from .mixed_generation import LITERATURE_PLANS
         if progress:
             progress('ADS preflight START (authentication, tool, live query)')
         diagnostic = await check_literature_auth(url=url, timeout=timeout, probe=True)
@@ -87,12 +111,49 @@ async def create_queries(*, name: str | None = None, root: str | Path = '.',
                 '`uv run python -m benchmark literature-auth --probe`. '
                 'No OpenAI question-generation calls were made.')
         if progress:
-            progress('ADS preflight PASS')
+            progress('ADS preflight PASS; verifying actual literature research plans')
+        prepared = {}
+        plans = LITERATURE_PLANS[:recipe['literature_driven']]
+        for index, (_, target, _, research_query) in enumerate(plans, 1):
+            if progress:
+                progress(f'ADS literature {index}/{len(plans)} START ({target})')
+            try:
+                evidence = await research_literature(research_query, url=url,
+                    max_results=5, timeout=timeout, model=model, require_ads=True,
+                    openai_client_factory=openai_client_factory)
+            except GenerationError as exc:
+                raise GenerationError(f'ADS literature plan {index}/{len(plans)} ({target}) '
+                    f'failed before GPT generation: {exc}') from exc
+            prepared[research_query] = evidence
+            if progress:
+                progress(f'ADS literature {index}/{len(plans)} READY '
+                    f'({len(evidence["papers"])} papers)')
+        async def _prepared_research(query, **kwargs):
+            if query not in prepared:
+                raise GenerationError('Unprobed ADS literature plan requested')
+            return dict(prepared[query])
+        research_fn = _prepared_research
+    from .generation_checkpoint import GenerationJournal
+    from .mcp_config import resolve_mcp_url
+    journal = GenerationJournal(paths['generation_journal'], paths['generation_partial'], {
+        'name': name, 'count': count, 'seed': seed, 'model': model,
+        'mix': recipe, 'modules': parse_modules(modules), 'batch_size': batch_size,
+        'require_ads': require_ads, 'mcp_url': resolve_mcp_url(url),
+    })
+    if resume:
+        journal.load()
+        if progress:
+            progress(f'Resuming {len(journal.batches)} completed GPT batches, '
+                     f'{len(journal.literature)} literature questions from {journal.path}')
+    else:
+        journal.start(replace=replace)
     tasks, report = await generate_mixed(url, count=count, seed=seed, modules=parse_modules(modules),
         mix=recipe, backend='openai', model=model, batch_size=batch_size,
         timeout=timeout, use_mcp=True, use_instructions=True, require_ads=require_ads,
         progress=progress, research_fn=research_fn, llm_fn=llm_fn,
-        openai_client_factory=openai_client_factory)
+        openai_client_factory=openai_client_factory,
+        on_batch=journal.save_batch, cached_batches=journal.batches,
+        on_literature=journal.save_literature, cached_literature=journal.literature)
     regular = [t for t in tasks if t['task_type'] in ('archive_driven', 'coordinate_driven')]
     multi = [t for t in tasks if t['task_type'] in ('multi_archive', 'literature_driven')]
     # Publish only once each task family and every output destination has been checked.
@@ -102,7 +163,7 @@ async def create_queries(*, name: str | None = None, root: str | Path = '.',
     report['single_call_sha256'] = write_jsonl(paths['single_calls'], regular, replace=replace)
     report['multistep_sha256'] = write_jsonl(paths['multistep'], multi, replace=replace)
     save_views(tasks, csv_path=paths['tasks_csv'], kind='candidate', replace=replace)
-    report.update({'milestone': '0.6.7.11 - MIXED_100_SIMPLE_WORKFLOWS',
+    report.update({'milestone': '0.6.7.11.5 - RESUMABLE_DURABLE_GENERATION',
         'task_dataset': str(paths['tasks']), 'question_csv': str(paths['tasks_csv']),
         'single_call_dataset': str(paths['single_calls']),
         'multistep_dataset': str(paths['multistep']),
@@ -118,13 +179,18 @@ async def create_queries(*, name: str | None = None, root: str | Path = '.',
         'gold_verified': 0,
     }
     _save_json(paths['generation_report'], report, replace=replace)
+    # At this point the *full* dataset, independently split subsets and report
+    # are published. Partial checkpoints must no longer be mistaken for inputs.
+    journal.finish()
     if with_reference_answers:
         if progress:
             progress(f'Collecting single-call evidence for {len(regular)} tasks; '
                      f'{len(multi)} literature/multi-archive tasks need separate multi-step evidence')
         reference_result = await collect_references(
             name=name, root=root, output_dir=output_dir, url=url, limit=reference_limit,
-            replace=replace, resume=False, timeout=timeout, progress=progress)
+            replace=replace, resume=False, timeout=timeout,
+            archive_timeouts=archive_timeouts,archive_attempts=archive_attempts,
+            reference_deadline=reference_deadline, progress=progress)
         report['reference_collection'] = {
             'status': reference_result['status'],
             'quality_gate': reference_result.get('quality_gate'),

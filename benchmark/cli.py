@@ -27,7 +27,7 @@ DEFAULT_DATASET = Path("datasets/generated/synthetic_queries.jsonl")
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="astroakd-bench",
-        description="AstroAKD-Bench 0.6.7.11 astronomical agent benchmarking.",
+        description="AstroAKD-Bench astronomical agent benchmarking.",
     )
     parser.add_argument("--version", action="version", version=__version__)
     common = argparse.ArgumentParser(add_help=False)
@@ -323,11 +323,19 @@ def build_parser() -> argparse.ArgumentParser:
     easy.add_argument('--mix', default='balanced100', help='balanced100, gold50, or explicit task family quotas')
     easy.add_argument('--modules', default='simbad,mast,heasarc,gaia,vizier')
     easy.add_argument('--batch-size', type=int, default=5)
-    easy.add_argument('--require-ads', action='store_true',help='Require ADS; test authentication, ADS tool and live ADS query before OpenAI generation')
+    easy.add_argument('--require-ads', action='store_true',help='Require ADS; verify actual literature ADS queries before OpenAI generation')
     easy.add_argument('--with-reference-answers', action='store_true',
         help='After generation, collect archive observations for single-call tasks; literature/multi-archive tasks remain unreviewed and require separate evidence')
     easy.add_argument('--reference-limit', type=int,
         help='Bound the initial single-call reference pilot; continue with collect-references --resume')
+    easy.add_argument('--archive-timeouts',default='mast=60,simbad=30,heasarc=60,gaia=60,vizier=45',
+        help='Per-archive timeout seconds for --with-reference-answers (e.g. mast=900,gaia=900)')
+    easy.add_argument('--archive-attempts',default='mast=1,simbad=1,heasarc=1,gaia=1,vizier=1',
+        help='Per-archive retry counts for --with-reference-answers')
+    easy.add_argument('--reference-deadline',type=float,default=70,
+        help='Total wall-clock seconds allowed per reference task (default: 70)')
+    easy.add_argument('--resume', action='store_true',
+        help='Resume unfinished generation from saved validated GPT batches without regenerating them')
     easy.add_argument('--replace', action='store_true')
 
     collect = commands.add_parser('collect-references', parents=[common],
@@ -383,7 +391,8 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
             model=args.model,mix=args.mix,modules=args.modules,batch_size=args.batch_size,
             url=args.mcp_url,timeout=args.timeout,require_ads=args.require_ads,
             with_reference_answers=args.with_reference_answers,reference_limit=args.reference_limit,
-            replace=args.replace, progress=lambda msg: print(f'[AstroAKD-Bench create] {msg}',file=sys.stderr,flush=True))
+            archive_timeouts=args.archive_timeouts,archive_attempts=args.archive_attempts,
+            reference_deadline=args.reference_deadline, replace=args.replace, resume=args.resume, progress=lambda msg: print(f'[AstroAKD-Bench create] {msg}',file=sys.stderr,flush=True))
     if args.command == 'collect-references':
         from .simple_workflows import collect_references
         return await collect_references(name=args.name,output_dir=args.output_dir,url=args.mcp_url,

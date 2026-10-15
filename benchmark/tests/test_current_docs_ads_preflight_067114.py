@@ -68,7 +68,7 @@ def test_current_site_and_archival_separation():
     manifest=json.loads((ROOT/'archives/historical_documentation_manifest_0_6_7_11_4.json').read_text())
     assert manifest['root_historical_count']>70
     assert manifest['docs_source_count']>20
-    assert '0.6.7.11.4' in (ROOT/'pyproject.toml').read_text()
+    assert 'version = "'+__import__('benchmark').__version__+'"' in (ROOT/'pyproject.toml').read_text()
     assert '118 files' not in (ROOT/'datasets/README.md').read_text()
     index=(ROOT/'docs/index.md').read_text()
     assert '0_6_7' not in index

@@ -1,6 +1,6 @@
 # AstroAKD-Bench
 
-**Current version: 0.6.7.11.4** · Benchmark for astronomy archive-search agents using an independent [Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp). Benchmark questions, archive observations, independently reviewed gold answers, and agent responses remain distinct.
+**Current version: 0.6.7.11.5** · Benchmark for astronomy archive-search agents using an independent [Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp). Benchmark questions, archive observations, independently reviewed gold answers, and agent responses remain distinct.
 
 ## Quick start: 100 new questions with references
 
@@ -12,7 +12,7 @@ Requirements: Python 3.11+, `uv`, an `OPENAI_API_KEY`, and the external Astroque
 uv run python -m benchmark literature-auth --probe
 ```
 
-Only proceed with `--require-ads` if the probe succeeds. The benchmark checks automatically as well and **fails before generating any questions** when ADS cannot execute a real query.
+Only proceed with `--require-ads` if the probe succeeds. The benchmark also probes **all planned ADS literature queries** (with both standard and minimal ADS fields when needed) before spending GPT question-generation credits. A generic bibcode probe alone is not enough.
 
 ```bash
 uv run --with openai python -m benchmark create-queries \
@@ -25,7 +25,19 @@ uv run --with openai python -m benchmark create-queries \
 
 `--name` sets the file prefix; `--count` selects 1–100 questions; `--output-dir` is the study root. The `--seed` option is optional (default `20261018`); fixed seeds do **not** guarantee byte-identical results from remote GPT models. To reproduce an evaluation, **reuse the saved JSONL**. New outputs create their own subdirectories; there is no need for manual `mkdir`.
 
-For 100 questions, the default mix contains **60 archive-driven, 20 coordinate-driven, 8 ADS-literature, and 12 multi-archive** questions. `--with-reference-answers` collects live, **unreviewed** archive evidence for up to 80 eligible single-call questions; the 20 multi-step questions remain pending separately. Collected observations are **not** independently verified scientific answers. For question generation only, omit `--with-reference-answers`.
+For 100 questions, the default mix contains **60 archive-driven, 20 coordinate-driven, 8 ADS-literature, and 12 multi-archive** questions. `--with-reference-answers` collects live, **unreviewed** archive evidence for up to 80 eligible single-call questions; the 20 multi-step questions remain pending separately. Collected observations are **not** independently verified scientific answers. For question generation only, omit `--with-reference-answers`. To allow slow archives, pass `--archive-timeouts mast=900,simbad=180,heasarc=900,gaia=900,vizier=300 --archive-attempts mast=2,simbad=1,heasarc=2,gaia=2,vizier=1 --reference-deadline 2100` to the same one-step command.
+
+### Recover from interrupted question generation
+
+Each successful GPT batch is now written to a durable journal at `datasets/generated/astroakd_100.progress.jsonl` and a human-inspectable **partial, unvalidated** file at `datasets/generated/astroakd_100_partial.jsonl`. If a later literature request, model call or archive step fails before final question publication, these records preserve already completed work. Once ADS/service problems are corrected, **reuse the same inputs** and add `--resume`:
+
+```bash
+uv run --with openai python -m benchmark create-queries \
+  --name astroakd_100 --count 100 --output-dir datasets \
+  --require-ads --with-reference-answers --resume
+```
+
+Resume must use the original name, count, seed, model, mix, module list, batch size, MCP endpoint and ADS requirement. Completed batches are not sent to GPT again. The partial file is **not** a valid final evaluation dataset and must never be treated as reviewed gold. After all questions and output files pass final checks, the progress files are removed and the ordinary `astroakd_100.jsonl`/CSV outputs are published. A preflight failure *before* any GPT batch makes no progress journal because no paid generation has been completed. Versions 0.6.7.11.4 and earlier did not save such checkpoints: prior unsaved GPT responses cannot be recovered from console output.
 
 ### Finish reference collection / make plots
 
@@ -66,7 +78,7 @@ If you see `ADS route unavailable (ads_search_unavailable)`, the MCP ADS query f
 uv run python -m benchmark literature-auth --probe
 ```
 
-The [current Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp) expects the ADS credential in its own process environment (typically `API_DEV_KEY`, or `ADS_API_KEY` fallback). After configuring/restarting that server, verify the probe again. The benchmark does not log credentials. `--require-ads` now checks actual ADS query availability *before* authoring questions; if you do not require ADS literature, omit that flag to allow explicitly labeled web-search fallback evidence.
+The [current Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp) expects the ADS credential in its own process environment (typically `API_DEV_KEY`, or `ADS_API_KEY` fallback). After configuring/restarting that server, verify the probe again. The benchmark does not log credentials. `--require-ads` now checks each planned ADS research query *before* authoring questions; if you do not require ADS literature, omit that flag to allow explicitly labeled web-search fallback evidence.
 
 See [ADS and MCP troubleshooting](docs/benchmark/ads_and_mcp.md) for detailed diagnostic reasons and safe setup. Never share tokens in logs or issue reports.
 
