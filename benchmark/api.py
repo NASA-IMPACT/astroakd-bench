@@ -1,4 +1,4 @@
-"""Supported Python API for AstroAKD-Bench workflows (v0.6.7.9).
+"""Supported Python API for AstroAKD-Bench workflows (v0.6.7.11).
 
 AstroAKD-Bench is an independent project. The NASA IMPACT Astroquery MCP
 server is a separate service accessed through its HTTP MCP endpoint.
@@ -59,6 +59,36 @@ class AstroAKDBench:
              resolve(summary_csv),resolve(report),runs=resolve(runs),references=resolve(references),
              reference_tasks=resolve(reference_tasks),gold=resolve(gold),
              reference_values_csv=resolve(reference_values_csv),per_arm_dir=resolve(per_arm_dir),replace=replace)
+
+    # One-line named dataset APIs introduced in 0.6.7.11. Complex workflows
+    # remain available through the detailed methods below.
+    async def create_synthetic_queries(self, *, name='synthetic_100', count=100,
+                                       seed=20261018, mix='balanced100',
+                                       model='gpt-5.2', require_ads=False,
+                                       replace=False, **kwargs):
+        from .simple_workflows import create_queries
+        return await create_queries(name=name, root=self.root, count=count,seed=seed,
+            mix=mix,model=model,require_ads=require_ads,replace=replace,
+            url=self.mcp_url,timeout=self.timeout,**kwargs)
+
+    async def collect_named_references(self, *, name='synthetic_100',
+                                       resume=False,limit=None,**kwargs):
+        from .simple_workflows import collect_references
+        return await collect_references(name=name,root=self.root,url=self.mcp_url,
+            resume=resume,limit=limit,**kwargs)
+
+    def create_reference_report(self, *, name='synthetic_100', plots=True,
+                                replace=False):
+        from .simple_workflows import reference_report
+        return reference_report(name=name,root=self.root,plots=plots,replace=replace)
+
+    def create_agent_report(self, *, name='synthetic_100', plots=True,
+                            replace=False):
+        from .simple_workflows import dataset_paths
+        from .operational_report import create_operational_report
+        paths=dataset_paths(self.root,name)
+        return create_operational_report(paths['tasks'],paths['runs'],paths['plots']/'agents',
+            plots=plots,replace=replace)
 
     @property
     def tasks_path(self) -> Path:

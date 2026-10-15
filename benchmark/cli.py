@@ -27,7 +27,7 @@ DEFAULT_DATASET = Path("datasets/generated/synthetic_queries.jsonl")
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="astroakd-bench",
-        description="AstroAKD-Bench 0.6.7.10 astronomical agent benchmarking.",
+        description="AstroAKD-Bench 0.6.7.11 astronomical agent benchmarking.",
     )
     parser.add_argument("--version", action="version", version=__version__)
     common = argparse.ArgumentParser(add_help=False)
@@ -77,9 +77,11 @@ def build_parser() -> argparse.ArgumentParser:
     gen.add_argument('--quiet-progress', action='store_true', help='Hide OpenAI generation batch progress on stderr')
     gen.add_argument('--batch-size', type=int, default=5,
                      help='Questions per OpenAI call, 1..10 (default: 5)')
-    gen.add_argument('--task-mix', help='Native mixed generation: gold50 or archive_driven=32,coordinate_driven=10,literature_driven=8')
+    gen.add_argument('--task-mix', help='Mixed generation: balanced100, gold50, or archive_driven=N,coordinate_driven=N,literature_driven=N,multi_archive=N')
     gen.add_argument('--single-call-output', type=Path, help='Optional subset JSONL for ordinary single-call validation')
     gen.add_argument('--literature-output', type=Path, help='Optional subset JSONL for multistep literature tasks')
+    gen.add_argument('--multistep-output', type=Path, help='Optional subset JSONL for all multi-archive and literature tasks')
+    gen.add_argument('--require-ads', action='store_true',help='Require genuine authenticated MCP ADS research, refuse web fallback')
     gen.add_argument("--count", type=int, default=50, help="Number of candidates, 1..500 (default: 50)")
     gen.add_argument("--seed", type=int, default=42, help="Deterministic seed (default: 42)")
     gen.add_argument("--modules", default=",".join(SUPPORTED_MODULES),
@@ -308,6 +310,53 @@ def build_parser() -> argparse.ArgumentParser:
     scorable_score.add_argument('--paired-plots-dir', type=Path, help='Four paired A/B and A/B/C diagnostic figures (PNG and SVG)')
     scorable_score.add_argument('--plots-dir', type=Path, help='Five barplots as PNG and SVG (three A/B/C and two MCP A/B); needs matplotlib')
     scorable_score.add_argument('--replace', action='store_true')
+    # Short, predictable named-dataset workflows (v0.6.7.11).
+    easy = commands.add_parser('create-queries', parents=[common],
+        help='Create a fresh synthetic_100 mix (archive, coordinate, ADS literature, multi-archive)')
+    easy.add_argument('--name', default='synthetic_100')
+    easy.add_argument('--count', type=int, default=100)
+    easy.add_argument('--seed', type=int, default=20261018)
+    easy.add_argument('--model', default='gpt-5.2')
+    easy.add_argument('--mix', default='balanced100', help='balanced100, gold50, or explicit task family quotas')
+    easy.add_argument('--modules', default='simbad,mast,heasarc,gaia,vizier')
+    easy.add_argument('--batch-size', type=int, default=5)
+    easy.add_argument('--require-ads', action='store_true',help='Refuse literature web fallback if MCP ADS not authenticated')
+    easy.add_argument('--replace', action='store_true')
+
+    collect = commands.add_parser('collect-references', parents=[common],
+        help='Collect/live-resume only the named single-call subset, never multistep answers')
+    collect.add_argument('--name',default='synthetic_100')
+    collect.add_argument('--limit',type=int)
+    collect.add_argument('--resume',action='store_true')
+    collect.add_argument('--replace',action='store_true')
+    collect.add_argument('--archive-timeouts',default='mast=60,simbad=30,heasarc=60,gaia=60,vizier=45')
+    collect.add_argument('--archive-attempts',default='mast=1,simbad=1,heasarc=1,gaia=1,vizier=1')
+    collect.add_argument('--reference-deadline',type=float,default=70)
+
+    refrep = commands.add_parser('reference-report', parents=[common],
+        help='Offline one-command archive and completeness CSV/PNG/SVG reports')
+    refrep.add_argument('--name',default='synthetic_100')
+    refrep.add_argument('--no-plots',action='store_true')
+    refrep.add_argument('--replace',action='store_true')
+
+    runeasy = commands.add_parser('run-benchmark',parents=[common],
+        help='Run resumable A/B/C experiment for a named question dataset')
+    runeasy.add_argument('--name',default='synthetic_100')
+    runeasy.add_argument('--model',default='gpt-5.2')
+    runeasy.add_argument('--limit',type=int)
+    runeasy.add_argument('--resume',action='store_true')
+    runeasy.add_argument('--replace',action='store_true')
+    runeasy.add_argument('--max-turns',type=int,default=8)
+    runeasy.add_argument('--max-calls',type=int,default=12)
+    runeasy.add_argument('--max-tool-bytes',type=int,default=65536)
+    runeasy.add_argument('--task-timeout',type=float,default=900)
+
+    agrep = commands.add_parser('agent-report',parents=[common],
+        help='Offline A/B/C completion, time, token, tool-use and response plots; never infer correctness')
+    agrep.add_argument('--name',default='synthetic_100')
+    agrep.add_argument('--no-plots',action='store_true')
+    agrep.add_argument('--replace',action='store_true')
+
     inspect = commands.add_parser('inspect', parents=[common],
         help='Render a bounded JSONL sample or a JSON report for inspection')
     inspect.add_argument('--input', required=True, type=Path)
@@ -317,6 +366,38 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 async def _execute(args: argparse.Namespace) -> dict[str, Any]:
+    if args.command == 'create-queries':
+        from .simple_workflows import create_queries
+        return await create_queries(name=args.name,count=args.count,seed=args.seed,
+            model=args.model,mix=args.mix,modules=args.modules,batch_size=args.batch_size,
+            url=args.mcp_url,timeout=args.timeout,require_ads=args.require_ads,
+            replace=args.replace, progress=lambda msg: print(f'[AstroAKD-Bench create] {msg}',file=sys.stderr,flush=True))
+    if args.command == 'collect-references':
+        from .simple_workflows import collect_references
+        return await collect_references(name=args.name,url=args.mcp_url,
+            limit=args.limit,resume=args.resume,replace=args.replace,
+            timeout=args.timeout,archive_timeouts=args.archive_timeouts,
+            archive_attempts=args.archive_attempts,reference_deadline=args.reference_deadline,
+            progress=lambda msg: print(f'[AstroAKD-Bench reference] {msg}',file=sys.stderr,flush=True))
+    if args.command == 'reference-report':
+        from .simple_workflows import reference_report
+        return reference_report(name=args.name,plots=not args.no_plots,replace=args.replace)
+    if args.command == 'run-benchmark':
+        from .simple_workflows import dataset_paths
+        from .three_arm import run_three_arm
+        paths=dataset_paths(name=args.name)
+        return await run_three_arm(paths['tasks'],Path('instructions/astroakd/AstroAKD_Instruction.md'),
+            paths['runs'],paths['run_report'],url=args.mcp_url,model=args.model,
+            limit=args.limit,max_turns=args.max_turns,max_calls=args.max_calls,
+            max_tool_bytes=args.max_tool_bytes,timeout=args.timeout,task_timeout=args.task_timeout,
+            resume=args.resume,replace=args.replace,
+            progress=lambda msg: print(f'[AstroAKD-Bench A/B/C] {msg}',file=sys.stderr,flush=True))
+    if args.command == 'agent-report':
+        from .simple_workflows import dataset_paths
+        from .operational_report import create_operational_report
+        paths=dataset_paths(name=args.name)
+        return create_operational_report(paths['tasks'],paths['runs'],paths['plots']/'agents',
+            replace=args.replace,plots=not args.no_plots)
     if args.command == 'build-scorable':
         from .scorable import build_scorable
         return build_scorable(args.source_tasks,args.references,args.tasks_output,
@@ -454,7 +535,7 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
         from .exports import check_destinations, save_views
         from .mixed_generation import parse_task_mix
         mix = parse_task_mix(args.task_mix, count=args.count)
-        split_outputs = tuple(p for p in (args.single_call_output, args.literature_output) if p is not None)
+        split_outputs = tuple(p for p in (args.single_call_output, args.literature_output, args.multistep_output) if p is not None)
         if split_outputs and mix is None:
             raise GenerationError('--single-call-output/--literature-output require --task-mix')
         check_destinations(None, args.output, args.report, args.pretty_output,
@@ -472,7 +553,7 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
                 mix=mix, timeout=args.timeout, uniqueness=args.uniqueness,
                 backend=args.backend, model=args.model, use_instructions=args.instructions,
                 use_mcp=args.mcp, instructions_file=args.instructions_file,
-                batch_size=args.batch_size,
+                batch_size=args.batch_size, require_ads=args.require_ads,
                 progress=(None if args.quiet_progress else lambda message: print(
                     f'[AstroAKD-Bench generate] {message}', file=sys.stderr, flush=True)),
             )
@@ -496,15 +577,19 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
                 question_style=args.question_style, backend=args.backend,
                 model=args.model, use_instructions=args.instructions,
                 use_mcp=args.mcp, instructions_file=args.instructions_file,
-                batch_size=args.batch_size,
+                batch_size=args.batch_size, require_ads=args.require_ads,
                 progress=(None if args.quiet_progress else lambda message: print(f'[AstroAKD-Bench generate] {message}', file=sys.stderr, flush=True)),
             )
         # Publish only after every task has passed the mixed/single-track audit.
         if mix is not None:
             if args.single_call_output is not None:
                 summary['single_call_sha256'] = write_jsonl(args.single_call_output,
-                    [t for t in candidates if t['task_type'] != 'literature_driven'], replace=args.replace)
+                    [t for t in candidates if t['task_type'] not in ('literature_driven','multi_archive')], replace=args.replace)
                 summary['single_call_output'] = str(args.single_call_output)
+            if args.multistep_output is not None:
+                summary['multistep_sha256'] = write_jsonl(args.multistep_output,
+                    [t for t in candidates if t['task_type'] in ('literature_driven','multi_archive')], replace=args.replace)
+                summary['multistep_output'] = str(args.multistep_output)
             if args.literature_output is not None:
                 summary['literature_sha256'] = write_jsonl(args.literature_output,
                     [t for t in candidates if t['task_type'] == 'literature_driven'], replace=args.replace)
@@ -575,7 +660,7 @@ def main(argv: list[str] | None = None) -> int:
                    "message": sanitize_mcp_error(exc, args.mcp_token)}}
     output = json_text(payload, args.json_format)
     print(output)
-    report_destination = (None if args.command in {"validate", "run", "evaluate", "build-fixtures", "gold-draft", "reference-review-draft", "gold-finalize", "run-three-arm", "score-three-arm", "export-answer-csv", "build-scorable", "score-scorable"} else
+    report_destination = (None if args.command in {"validate", "run", "evaluate", "build-fixtures", "gold-draft", "reference-review-draft", "gold-finalize", "run-three-arm", "score-three-arm", "export-answer-csv", "build-scorable", "score-scorable", "create-queries", "collect-references", "reference-report", "run-benchmark", "agent-report"} else
                           args.report if args.command in {"generate", "audit-diversity"} else args.output)
     if report_destination is not None:
         try:

@@ -1,3 +1,14 @@
+## 0.6.7.11 — MIXED_100_SIMPLE_WORKFLOWS_AND_NATIVE_REFERENCE_REPORT (2026-10-15)
+
+- New short, first-class named commands: `create-queries`, `collect-references`, `reference-report`, `run-benchmark`, and `agent-report`. The default name is **`synthetic_100`**, not `synthetic_100_new_with_refs`.
+- Mixed 100-question generation includes 60 archive, 20 coordinate, 8 ADS/literature, and 12 genuine two-archive questions. Cross-archive queries combine pre-bound same-target calls and do not forge a gold answer or pretend to be a single-call validator input. Multi-step questions retain their distinct evidence contract.
+- Strict optional `--require-ads` refuses OpenAI-web fallback when authenticated MCP ADS research is requested. Standard mode records ADS versus web provenance and remains explicit when ADS is unavailable.
+- `collect-references` validates only the 80 single-call subset with per-module timeouts; multi-step tasks remain pending separate evidence. Resume is safeguarded by existing dataset/schema/endpoint manifests.
+- Native offline `reference-report`: per-task/per-archive CSV and JSON, with PNG/SVG archive distributions, answer shapes, completeness/review flags, truncated/null counts and response-time distributions. Dataset hashes and individual call contracts are verified.
+- Native offline `agent-report`: CSV with full retained A/B/C answers, operational metrics and PNG/SVG plots. No correctness/accuracy claim without human-verified gold.
+- Python `AstroAKDBench` convenience methods match the CLI. Current README and Sphinx/MyST guide are simplified; the frozen 50/150 GPT-5.2 experiment, accepted oracles, datasets and instruction hashes are unchanged.
+- Offline suite: see `QUALIFICATION_0_6_7_11.md`. Live MCP, authenticated ADS, OpenAI generation and 300-arm scientific evaluation remain **host-pending**; no new live dataset or verified science answer is claimed in the release.
+
 # AstroAKD-Bench Changelog
 
 All significant changes to the **independent AstroAKD-Bench project** are documented

@@ -1,3 +1,5 @@
+> **0.6.7.11:** For the simplest supported workflow with ADS literature and multi-archive questions, use [the named `synthetic_100` guide](easy_mixed_100_workflow_0_6_7_11.md). This page also documents older or advanced flows.
+
 # Current workflow — AstroAKD-Bench 0.6.7.10
 
 This is the **current command guide**. Versioned documentation under `docs/benchmark/`

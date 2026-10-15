@@ -49,7 +49,9 @@ LITERATURE_PLANS = (
 def parse_task_mix(value: str | None, *, count: int) -> dict[str, int] | None:
     if value is None:
         return None
-    if value.strip().casefold() in ('gold50', 'gold-50', 'gold'):
+    if value.strip().casefold() in ('balanced100', 'mixed100', 'science100'):
+        result = {'archive_driven':60, 'coordinate_driven':20, 'literature_driven':8, 'multi_archive':12}
+    elif value.strip().casefold() in ('gold50', 'gold-50', 'gold'):
         result = {'archive_driven':32, 'coordinate_driven':10, 'literature_driven':8}
     else:
         result: dict[str,int] = {}
@@ -57,13 +59,14 @@ def parse_task_mix(value: str | None, *, count: int) -> dict[str, int] | None:
             if part.count('=') != 1:
                 raise GenerationError('--task-mix must be gold50 or archive_driven=N,coordinate_driven=N,literature_driven=N')
             key, number = (x.strip() for x in part.split('='))
-            if key not in ('archive_driven','coordinate_driven','literature_driven') or key in result:
+            if key not in ('archive_driven','coordinate_driven','literature_driven','multi_archive') or key in result:
                 raise GenerationError(f'Invalid or repeated --task-mix family: {key!r}')
             if not number.isascii() or not number.isdecimal():
                 raise GenerationError(f'Invalid --task-mix count for {key}: {number!r}')
             result[key] = int(number)
-        if set(result) != {'archive_driven','coordinate_driven','literature_driven'}:
-            raise GenerationError('--task-mix must specify all three task families')
+        if not {'archive_driven','coordinate_driven','literature_driven'}.issubset(result):
+            raise GenerationError('--task-mix requires archive_driven,coordinate_driven,literature_driven; multi_archive optional')
+        result.setdefault('multi_archive', 0)
     if sum(result.values()) != count:
         raise GenerationError(f'--task-mix requests {sum(result.values())} tasks but --count is {count}')
     if result['archive_driven']+result['coordinate_driven'] < 1:
@@ -72,6 +75,61 @@ def parse_task_mix(value: str | None, *, count: int) -> dict[str, int] | None:
         raise GenerationError(f'Only {len(LITERATURE_PLANS)} literature seed plans available; cannot generate '
                               f'{result["literature_driven"]} literature tasks. Expand seed plans first.')
     return result
+
+
+def build_multi_archive_tasks(tasks: list[dict[str, Any]], count: int, *, seed: int) -> list[dict[str, Any]]:
+    """Convert distinct single-call slots into two-archive tasks, without fabricating evidence.
+
+    The second archive is a separate pre-generated candidate for the same target.
+    It remains a normal standalone question; a multi-archive task has no
+    single-call reference key and must be separately reviewed after multi-step
+    evidence collection. Choosing a unique target for each composite avoids
+    treating two multi-step questions as independent confirmations.
+    """
+    from collections import defaultdict
+    by_target: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for task in tasks:
+        if task['task_type'] == 'archive_driven' and isinstance(task.get('reference_call'), dict):
+            by_target[task['target'].casefold()].append(task)
+    rng = random.Random(seed + 777)
+    eligible = [key for key, group in by_target.items() if len({t['module'] for t in group}) >= 2]
+    rng.shuffle(eligible)
+    if len(eligible) < count:
+        raise GenerationError(f'Only {len(eligible)} cross-archive target pairs available; need {count}. '
+                              'Change the task mix/target inventory rather than inventing a second archive call.')
+    selected = []
+    for key in eligible[:count]:
+        group = by_target[key]
+        first = next(t for t in group if t not in selected)
+        other = next(t for t in group if t['module'] != first['module'])
+        modules = [first['module'], other['module']]
+        original_call = first['reference_call']
+        original_fields = first['answer_spec'].get('expected_columns', [])
+        original_question = first['question']
+        other_question = other['question']
+        first['task_type'] = 'multi_archive'
+        first['module'] = 'multi_archive'
+        first['source_archive'] = ' + '.join(m.upper() for m in modules)
+        first['category'] = 'multi_archive_cross_check'
+        first['intent'] = 'cross_archive_evidence_and_association'
+        first['question'] = (f'For {first["target"]}, consult both {modules[0].upper()} and '
+                             f'{modules[1].upper()}. {original_question.rstrip(" ?")}? '
+                             f'Also investigate: {other_question.rstrip(" ?")}? '
+                             'Report results separately by archive and discuss whether their '
+                             'different observations can be associated; do not assume every row matches.')
+        first['constraints'] = {'multi_archive_steps': [
+            {'module': modules[0], 'reference_call': original_call,
+             'expected_columns': original_fields},
+            {'module': modules[1], 'reference_call': other['reference_call'],
+             'expected_columns': other['answer_spec'].get('expected_columns', [])}]}
+        first['answer_spec'] = {'answer_type': 'multi_archive_comparison',
+                                'expected_columns': [], 'expected_answer_status': 'unverified_candidate'}
+        first['reference_call'] = None
+        first['validation_status'] = 'multistep_candidate_unvalidated'
+        first['execution_track'] = 'mcp_multi_archive_two_step'
+        first['provenance']['multi_archive_composition'] = 'two_generated_same_target_archive_steps'
+        selected.append(first)
+    return selected
 
 
 def _coordinate_variant(task: dict[str,Any]) -> None:
@@ -133,6 +191,7 @@ async def generate_mixed(url: str | None = None, *, count: int = 50, seed: int =
                          research_fn: Callable | None = None,
                          llm_fn: Callable | None = None,
                          targets: tuple[SkyTarget,...] | None = None,
+                         require_ads: bool = False,
                          ) -> tuple[list[dict[str,Any]], dict[str,Any]]:
     if backend not in ('openai','hybrid'):
         raise GenerationError('Mixed Gold generation requires --backend openai or hybrid for literature authoring')
@@ -140,7 +199,7 @@ async def generate_mixed(url: str | None = None, *, count: int = 50, seed: int =
     if uniqueness == 'global-target' and count > len(TARGETS):
         raise GenerationError('global-target mixed Gold generation requires more distinct science targets; '
                               'use archive-target or provide an expanded curated seed catalog')
-    non_literature = mix['archive_driven']+mix['coordinate_driven']
+    non_literature = mix['archive_driven']+mix['coordinate_driven']+mix.get('multi_archive', 0)
     if sum(mix.values()) != count:
         raise GenerationError('Mixed family counts must total --count')
     if mix['coordinate_driven'] and not any(x in modules for x in ('mast','heasarc','gaia','vizier')):
@@ -172,6 +231,7 @@ async def generate_mixed(url: str | None = None, *, count: int = 50, seed: int =
         else:
             t['task_type'] = 'archive_driven'
         t['provenance']['gold_mixed_generation'] = True
+    multi = build_multi_archive_tasks(tasks, mix.get('multi_archive', 0), seed=seed)
     # Run real research *at generation time*. These are research and drafting
     # calls, not archive result validation. Keep all source and routing metadata.
     search = research_fn or research_literature
@@ -191,6 +251,9 @@ async def generate_mixed(url: str | None = None, *, count: int = 50, seed: int =
         provider = evidence.get('research_provider')
         if provider not in ('astroquery_mcp_ads','openai_web_search'):
             raise GenerationError('Literature evidence has unknown research provider')
+        if require_ads and provider != 'astroquery_mcp_ads':
+            raise GenerationError('ADS required, but literature research used '+str(provider)+
+                                  '; configure authenticated MCP ADS and retry with a fresh output path')
         auth_stats[provider] += 1
         context = _evidence_snippet(evidence)
         prompt = (
@@ -274,10 +337,11 @@ async def generate_mixed(url: str | None = None, *, count: int = 50, seed: int =
        'scientific_truth_verified':False,'single_call_candidates':len(tasks),
        'executable_single_call_candidates':len(tasks) if use_mcp else 0,
        'multistep_literature_candidates':len(literature),
+       'multistep_multi_archive_candidates':len(multi),
        'distinct_archive_target_pairs':audit['distinct_archive_target_pairs'],
        'duplicate_counts':audit['counts'],
        'notes': ['All tasks are created inside AstroAKD-Bench, not using an external dataset builder.',
                  'MCP ADS/search and model question drafting are performed live for literature tasks.',
-                 'Literature tasks are multistep unverified candidates excluded from single-call validation.',
+                 'Literature and multi-archive tasks are multistep, unverified candidates excluded from single-call validation.',
                  'An OpenAI-generated question, successful search, or source citation is not a validated answer.']})
     return all_tasks,summary

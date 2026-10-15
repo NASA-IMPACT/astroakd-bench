@@ -1,34 +1,16 @@
 # AstroAKD-Bench
 
-**Reproducible astronomical data-discovery benchmarks, source-anchored answers,
-and three-arm AI-agent evaluation.**
+**Reproducible synthetic astronomy questions and three-arm agent evaluation.**
 
-AstroAKD-Bench is an **independent Python project** that produces synthetic
-astronomical questions, collects archived reference data through an external
-[Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp), runs AI
-agents and exports reproducible answer comparisons, scores and performance plots.
-**AstroAKD** is the *agent being evaluated*; **AstroAKD-Bench** is the *benchmark*;
-**astroquery-mcp** is a *separate MCP service*. They are not interchangeable.
+**Current version: 0.6.7.11** — easy named-dataset workflows; ADS/literature and multi-archive questions; native offline archive-reference and A/B/C reports with PNG/SVG plots.
 
-**Current version: `0.6.7.10` — archive-specific reference budgets, consolidated answer-review CSVs, and offline scientific review / gold finalization.**
-[Documentation index](docs/index.md) · [Current quick-start](docs/benchmark/quickstart.md)
-· [Change history](CHANGELOG.md) · [Instruction layout](instructions/README.md)
+AstroAKD-Bench is the **benchmark**. AstroAKD is the **evaluated agent**. The independent [NASA IMPACT Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp) is the **archive backend**. Benchmark questions, archive observations, independently reviewed scientific answers, and agent predictions remain separate objects.
 
-## Quick start
+[Simple 100-question guide](docs/benchmark/easy_mixed_100_workflow_0_6_7_11.md) · [Python API](docs/benchmark/python_api.md) · [Documentation](docs/index.md) · [CHANGELOG](CHANGELOG.md)
 
-Install Python 3.11+ and [uv](https://docs.astral.sh/uv/). Work from the
-AstroAKD-Bench repository root:
+## Setup
 
-```bash
-uv sync
-uv run python -m benchmark --version
-```
-
-### Run the external Astroquery MCP server locally
-
-The benchmark is a client of NASA IMPACT's
-[`astroquery-mcp`](https://github.com/NASA-IMPACT/astroquery-mcp), not the
-server itself. In **terminal 1**, clone that separate repository and launch it:
+Requires Python 3.11+, [uv](https://docs.astral.sh/uv/), an `OPENAI_API_KEY` for question generation/agent runs, and a running external Astroquery MCP service for MCP-powered tasks. In a separate terminal, start that server:
 
 ```bash
 git clone https://github.com/NASA-IMPACT/astroquery-mcp.git
@@ -37,350 +19,113 @@ uv sync
 uv run fastmcp run server.py --transport http --host 127.0.0.1 --port 8000
 ```
 
-Leave this terminal running. The local endpoint is
-`http://127.0.0.1:8000/mcp`. Bind to loopback rather than exposing the
-server's dynamic archive executor to the public Internet. In **terminal 2**,
-from your AstroAKD-Bench repository root, check connectivity:
+From **this** repository root, verify the connection:
 
 ```bash
-export ASTROAKD_MCP_URL='http://127.0.0.1:8000/mcp'
-unset ASTROAKD_MCP_TOKEN
-uv run python -m benchmark doctor --fast --json-format pretty
+uv sync
+uv run python -m benchmark --version
+uv run python -m benchmark doctor --fast
+export OPENAI_API_KEY='YOUR_API_KEY'  # set securely; do not commit credentials
 ```
 
-`doctor` connects to an **already running** compatible MCP service. To use a
-remote authenticated endpoint instead, configure:
+The default server is `http://127.0.0.1:8000/mcp`; `ASTROAKD_MCP_URL` and `ASTROAKD_MCP_TOKEN` select a remote server if needed. MCP ADS literature search may require credentials *in the server configuration*. Do not put an ADS token in benchmark output or in a question.
+
+## Five short commands for `synthetic_100`
+
+### 1. Create 100 fresh synthetic questions
 
 ```bash
-# Default localhost (no authentication)
-export ASTROAKD_MCP_URL='http://127.0.0.1:8000/mcp'
-unset ASTROAKD_MCP_TOKEN
-
-# OR remote HTTPS endpoint
-export ASTROAKD_MCP_URL='https://coming-gray-slug.fastmcp.app/mcp'
-export ASTROAKD_MCP_TOKEN='REPLACE_WITH_YOUR_TOKEN'
+uv run --with openai python -m benchmark create-queries \
+  --name synthetic_100 --model gpt-5.2 --seed 20261018
 ```
 
-Endpoint priority: explicit `--mcp-url` / `--mcp-server`, then
-`ASTROAKD_MCP_URL`, then `http://127.0.0.1:8000/mcp`.
-Authentication: explicit `--mcp-token` / `--mcp-server-token`, then
-`ASTROAKD_MCP_TOKEN`, then no token. Generic `MCP_URL` and `MCP_TOKEN` are **ignored**.
-An unreachable server returns a diagnostic naming the selected URL, never the
-secret. Prefer environment variables over command-line tokens. See
-[MCP configuration and security](docs/benchmark/mcp_endpoint_auth_0_6_7_3.md).
+The default **balanced100** mix is:
 
-## Repository layout: documentation vs. instructions
+| Question family | Count | Evidence plan |
+| --- | ---: | --- |
+| Archive-driven | 60 | Single MCP archive call |
+| Coordinate-driven | 20 | Single MCP archive call with a defined ICRS region |
+| Literature-driven | 8 | Publication discovery via authenticated MCP ADS when available, plus archive follow-up |
+| Multi-archive | 12 | At least two different Astroquery archive calls on the same target |
+| **Total** | **100** | **80 single-call + 20 multi-step** |
 
-```text
-AstroAKD-Bench/
-├── benchmark/                         # Source code, command-line interface, tests
-├── datasets/                          # Frozen input sets, reference oracles, runs, reports
-├── instructions/                      # Prompts and agent instructions, NOT user docs
-│   ├── astroakd/
-│   │   └── AstroAKD_Instruction.md    # Specialist instruction: arm B only
-│   └── astroakd_bench/
-│       └── AstroAKD-Bench_Instruction.md       # Synthetic-question authoring
-├── docs/                              # Sphinx/MyST documentation sources
-│   ├── sphinx/Makefile                 # Build documentation from any directory
-│   ├── conf.py                        # Sphinx configuration
-│   ├── index.md                       # Documentation home
-│   ├── benchmark/                     # Current and versioned technical guides
-│   └── history/                       # Archived historical README
-├── scripts/                           # Supporting utilities
-├── README.md                           # Concise current landing page
-├── CHANGELOG.md                        # Benchmark release history
-└── pyproject.toml
-```
+For ADS-backed literature **without any web fallback**, add `--require-ads`. This fails rather than mislabeling web evidence as ADS. Without it, literature research can explicitly fall back to OpenAI web search when ADS is unavailable; the provenance records the provider. The model writes **questions, never gold answers**. The 20 multi-step tasks are not validated by pretending their two or more calls are a single MCP call.
 
-The **AstroAKD** specialist instruction belongs to *the evaluated agent*, not
-to synthetic query generation. The **AstroAKD-Bench** instruction controls how
-candidate questions are authored, not how the tested agent answers them. They
-are separate files under `instructions/` and are **byte-identical** to their
-0.6.7.3 predecessors. See [instruction migration](instructions/README.md).
+The generator saves `datasets/generated/synthetic_100.jsonl` and `synthetic_100.csv`, alongside `synthetic_100_single_call.jsonl`, `synthetic_100_multistep.jsonl`, and `synthetic_100_generation_report.json`. Choose a new `--name` for an independent dataset; `--replace` intentionally replaces outputs and should **not** be used for a frozen experiment. A seed does not guarantee byte-identical OpenAI API output.
 
-The old `docs/agent/AstroAKD_Instruction.md` and
-`docs/benchmark/llm_generation_instructions_v1.md` paths have moved; update
-any shell commands or scripts using those paths. Version 0.6.7.5 additionally
-renamed the generator prompt to `AstroAKD-Bench_Instruction.md`. The `docs/` directory now
-contains only documentation and preserved technical background.
-
-## Generate synthetic questions **with real reference answers**
-
-AstroAKD-Bench 0.6.7.10 retains the integrated, explicit
-`generate --with-reference-answers` workflow. The question-writing model
-**never supplies reference answers**. Instead the benchmark executes each
-candidate's allowed read-only Astroquery MCP call, keeps actual serialized
-archive tables and provenance, and exports field observations in CSV.
-These are **unreviewed reference snapshots**, not independently verified
-scientific ground truth. Collection can take considerably longer than question
-writing and may encounter empty or unavailable archive responses.
-
-Start the [local MCP server](#start-an-independent-local-astroquery-mcp-server)
-first, and configure `OPENAI_API_KEY`. Use fresh filenames:
+### 2. Collect real reference evidence for the 80 single-call questions
 
 ```bash
-uv run --with openai python -m benchmark generate \
-  --backend openai --instructions --mcp \
-  --model gpt-5.2 --count 100 --batch-size 5 --seed 20261016 \
-  --modules simbad,mast,heasarc,gaia,vizier \
-  --uniqueness archive-target --question-style answer-oriented \
-  --with-reference-answers \
-  --output datasets/generated/synthetic_100_with_refs.jsonl \
-  --csv-output datasets/generated/synthetic_100_with_refs.csv \
-  --report datasets/generated/synthetic_100_with_refs_report.json \
-  --json-format pretty
+uv run python -m benchmark collect-references --name synthetic_100 --limit 5
+uv run python -m benchmark collect-references --name synthetic_100 --resume
 ```
 
-Reference outputs are automatically written under `datasets/validated/`:
-`synthetic_100_with_refs_references.jsonl` (complete only when all 100 have
-been attempted), `synthetic_100_with_refs_references.jsonl.progress.jsonl`
-(fsynced per-task journal), `synthetic_100_with_refs_references.csv` (questions,
-status, matching field observations), and the corresponding references report.
-Use `--reference-limit 5` to collect a five-task pilot, then finish with a
-**separate** `validate --resume` command using the same inputs and limits.
-Do not rerun `generate` for resumption.
+The collector uses conservative archive-specific timeouts/retry limits. It writes immutable-evidence JSONL and a per-task progress journal under `datasets/validated/`. The **20 literature/multi-archive questions require a separate multi-step evidence/review workflow** and deliberately remain pending in reference reports. Do not pass the full mixed JSONL to the single-call validator.
 
-**For your already-generated 100 questions**, do **not** call `generate`
-again. Collect their actual archive responses directly:
+### 3. Create native reference reports and plots (offline)
 
 ```bash
-uv run python -m benchmark validate \
-  --input datasets/generated/synthetic_100_gpt52.jsonl \
-  --output datasets/validated/synthetic_100_gpt52_references.jsonl \
-  --csv-output datasets/validated/synthetic_100_gpt52_references.csv \
-  --report datasets/validated/synthetic_100_gpt52_references_report.json \
-  --attempts 2 --delay 2 --timeout 180 \
-  --json-format pretty
+uv run --with matplotlib python -m benchmark reference-report --name synthetic_100
 ```
 
-The CSV contains `reference_answer_values_json` and
-`reference_answer_status`. Values are extracted only when an expected column
-is genuinely present; no model-written answer is substituted for missing
-archive evidence. Empty, truncated and rejected responses remain visible for
-review. A strict 100-question scorable oracle additionally requires sufficient
-nonempty unambiguous evidence; do not interpret a `generate`/`validate` `PASS`
-as 100 scientifically verified answers. See the
-[100-query workflow](docs/benchmark/new_100_query_workflow.md).
+Look in `datasets/reports/synthetic_100/references/`. It contains summary JSON, per-question and per-archive CSV, and PNG/SVG plots for archive balance, answer shapes, dispositions, missing/null/truncated values, and reference response times. **No OpenAI or MCP calls** occur. Add `--replace` to regenerate reports, never reference evidence. It also works before collection and labels missing evidence accurately.
 
-## Scientific review of the completed 100-question reference collection (0.6.7.10)
-
-The generated question CSV **does not** contain reference values. The validated
-reference CSV has `reference_answer_values_json` and
-`reference_answer_status`, and now has an automatically generated companion
-`*_references_review.csv`: **one row per question** with its text, archive,
-target, observed answer preview, cardinality, ambiguity and review flags.
-
-For the existing 100 finished references, run this **offline**; no new OpenAI
-or MCP calls are needed:
+### 4. Run a resumable A/B/C experiment
 
 ```bash
-uv run python -m benchmark reference-review-draft \
-  --tasks datasets/generated/synthetic_100_with_refs.jsonl \
-  --references datasets/validated/synthetic_100_with_refs_references.jsonl \
-  --output datasets/gold/synthetic_100_review_draft.jsonl \
-  --csv-output datasets/gold/synthetic_100_science_review.csv \
-  --report datasets/gold/synthetic_100_review_report.json \
-  --json-format pretty
+uv run --with openai python -m benchmark run-benchmark --name synthetic_100 --limit 5
+uv run --with openai python -m benchmark run-benchmark --name synthetic_100 --resume
 ```
 
-The editable JSONL is compatible with `gold-finalize`, **after independent
-human review**, author attribution and two independent source citations.
-Multi-row responses and truncated archive subsets are not automatically
-scorable. Archive-specific `--archive-timeouts mast=60,...`,
-`--archive-attempts mast=1,...`, and `--reference-deadline 70` can be supplied
-to *new* `validate`/reference-enabled `generate` runs without changing the
-prior default policy. Refer to the
-[0.6.7.10 scientific-review guide](docs/benchmark/archive_policy_scientific_review_0_6_7_10.md).
+Same GPT-5.2 model and prompts across arms: A = MCP only, B = MCP with the AstroAKD specialist instruction, C = Web only. A full run has **300 question–arm executions**. Resume requires the same model, MCP endpoint, instruction hash, and resource settings. Archive references/gold answers are **never given to agents**.
 
-## Current 50-question GPT-5.2 experiment
-
-The scorable test set contains **50 narrowly answerable questions**, derived
-from **42 accepted single-call archive reference responses** across SIMBAD,
-MAST, HEASARC, Gaia and VizieR. Each question has a frozen expected field value,
-units/tolerance where applicable, and provenance. It measures **agreement with
-an archive snapshot**, not independently verified scientific truth.
-
-| Arm | Tools | Specialist AstroAKD instruction |
-| --- | --- | --- |
-| **A — MCP only** | Astroquery MCP | No |
-| **B — MCP + Instruction** | Same Astroquery MCP | Yes |
-| **C — Web only** | OpenAI web search | No |
-
-All three arms run `gpt-5.2`. Gold/reference answers are **never provided to the
-agent runner**. The original 50-question mixed dataset (32 archive, 10
-coordinate, 8 literature) is retained separately, and its literature-derived
-scientific truth is not implied by the scorable dataset.
-
-The initial five-question pilot yielded **snapshot matches** of A **5/5**, B
-**5/5**, C **1/5**; these are **not** independently verified science accuracy,
-and were only 5/50 questions. Its mean runtimes were **21.46, 7.58 and 16.95
-seconds** and recorded token totals **276,739, 308,724 and 101,552**,
-respectively. The full 150-run GPT-5.2 experiment subsequently completed on the host:
-A **48/50**, B **49/50**, and C **12/50** source-snapshot matches (run-journal
-SHA-256 `58824a2b71e7063b550c3fa16592f70307f11f6ace7293bf7fe81a47c334daaf`).
-These are **not** independently reviewed scientific accuracy values.
-
-### Run all 50 questions (new experiment; no `--resume`)
-
-With `OPENAI_API_KEY` configured and the external MCP endpoint running,
-use **fresh output paths** for a new experiment. The three arms use GPT-5.2
-and the same tasks and budgets:
+### 5. Create A/B/C reports and plots (offline)
 
 ```bash
-uv run --with openai python -m benchmark run-three-arm \
-  --tasks datasets/generated/scorable_50.jsonl \
-  --agent-instruction instructions/astroakd/AstroAKD_Instruction.md \
-  --model gpt-5.2 \
-  --max-turns 8 --max-calls 12 \
-  --max-tool-bytes 262144 --timeout 180 --task-timeout 900 \
-  --output datasets/agent/gpt52_fresh_runs.jsonl \
-  --report datasets/agent/gpt52_fresh_report.json \
-  --json-format pretty
+uv run --with matplotlib python -m benchmark agent-report --name synthetic_100
 ```
 
-The command runs 50 questions × 3 arms = **150 executions**. The example
-uses fresh names because the release already contains an earlier GPT-5.2 pilot
-journal. If the output exists, the runner refuses to overwrite it.
+Look in `datasets/reports/synthetic_100/agents/`: a three-arm answer CSV, per-task/arm trace metrics, per-arm operating summaries, MCP frequencies, and PNG/SVG completion, runtime, token, tool-use and web-search plots. Supports partial journals. Completion **is not scientific accuracy**.
 
-### Pilot run (`--limit 5`)
+## Review and scientific validity
 
-To examine five questions per arm before executing all 50, use a **different
-fresh output prefix**:
+A successful archive response is **unreviewed observational evidence**, not an independently reviewed gold answer. Row association, units, multiple matches, truncated catalogs, null measurements, ambiguous targets, literature citations and multi-archive cross-matches require manual review. Gold finalization must use evidence-backed reviewer approvals. Existing `reference-review-draft` and `gold-finalize` commands remain available for ordinary single-call datasets and qualified reviewed sources; **do not use the generated question CSV as a gold oracle**.
+
+The historical 50-question / 150-run GPT-5.2 experiment and its hashes, journals, oracles, and instruction files are retained untouched. The 0.6.7.11 code **does not itself regenerate live 100 questions in a source package**; run command 1 with your own connected MCP and OpenAI credentials to produce the new independent dataset.
+
+## Python API
+
+```python
+import asyncio
+from benchmark.api import AstroAKDBench
+
+bench = AstroAKDBench('.')
+asyncio.run(bench.create_synthetic_queries(name='synthetic_100', seed=20261018))
+# After archive collection (CLI or bench.collect_named_references):
+reference_summary = bench.create_reference_report(name='synthetic_100')
+# After A/B/C runs:
+agent_summary = bench.create_agent_report(name='synthetic_100')
+```
+
+The older detailed `generate`, `validate`, `run-three-arm`, `export-answer-csv`, `gold-finalize`, `score-three-arm`, and `score-scorable` interfaces continue to work. For custom quotas, `--mix archive_driven=60,coordinate_driven=20,literature_driven=8,multi_archive=12` is equivalent to `balanced100`. [Advanced CLI, science qualifications, and Python examples](docs/benchmark/easy_mixed_100_workflow_0_6_7_11.md).
+
+## Documentation build
 
 ```bash
-uv run --with openai python -m benchmark run-three-arm \
-  --tasks datasets/generated/scorable_50.jsonl \
-  --agent-instruction instructions/astroakd/AstroAKD_Instruction.md \
-  --model gpt-5.2 --limit 5 \
-  --max-turns 8 --max-calls 12 \
-  --max-tool-bytes 262144 --timeout 180 --task-timeout 900 \
-  --output datasets/agent/gpt52_new_pilot_runs.jsonl \
-  --report datasets/agent/gpt52_new_pilot_report.json \
-  --json-format pretty
+uv run --extra docs make -C docs/sphinx html
 ```
 
-The pilot writes `gpt52_new_pilot_runs.jsonl.progress.jsonl` containing 15
-entries. Partial progress is deliberately marked `PARTIAL`; it does not
-represent success on the full dataset.
+The site is written to `docs/_build/html/index.html`; this build is independent of the live agent or archive.
 
-### Resume a partial pilot (`--resume`)
+## Historical 50-question experiment (preserved, not the new default)
 
-Use the **same** task file, model, instruction *content*, MCP URL, budgets,
-output path and report path as the original limited run; **remove `--limit`**:
+The earlier 50-task GPT-5.2 workflow is still supported and documented in the [historical quick-start](docs/benchmark/quickstart.md). Its four documented stages are **Run all 50 questions (new experiment; no `--resume`)**, **Pilot run (`--limit 5`)**, **Resume a partial pilot (`--resume`)**, and **Score and generate CSV reports / plots**. These instructions apply to the historical single-field reference oracle, **not** to the new literature/multi-archive `synthetic_100` mix.
 
-```bash
-uv run --with openai python -m benchmark run-three-arm \
-  --tasks datasets/generated/scorable_50.jsonl \
-  --agent-instruction instructions/astroakd/AstroAKD_Instruction.md \
-  --model gpt-5.2 \
-  --max-turns 8 --max-calls 12 \
-  --max-tool-bytes 262144 --timeout 180 --task-timeout 900 \
-  --output datasets/agent/gpt52_new_pilot_runs.jsonl \
-  --report datasets/agent/gpt52_new_pilot_report.json \
-  --resume --json-format pretty
-```
+The original, scientifically frozen prompts are `instructions/astroakd/AstroAKD_Instruction.md` (the evaluated agent's specialist instruction) and `instructions/astroakd_bench/AstroAKD-Bench_Instruction.md` (question generation). Their bytes are unchanged.
 
-Resume skips already recorded task/arm pairs. A completed run publishes the
-final `.jsonl`, and an interrupted run remains in the `.progress.jsonl` journal.
-To resume the existing historical GPT-5.2 pilot instead, use the original
-`scorable_50_gpt52_runs.jsonl` output prefix and match its saved manifest.
-**Do not** use `--replace` to resume or change the endpoint during one run.
-
-### Score and generate CSV reports / plots
-
-**After the run** (no previous scoring required), use `score-scorable` to
-compare actual replies against the frozen reference-answer snapshot:
-
-```bash
-uv run --with matplotlib python -m benchmark score-scorable \
-  --tasks datasets/generated/scorable_50.jsonl \
-  --oracle datasets/gold/scorable_50_reference_oracle.jsonl \
-  --runs datasets/agent/gpt52_fresh_runs.jsonl \
-  --comparison-csv datasets/reports/gpt52_fresh_ABC_answers.csv \
-  --summary-csv datasets/reports/gpt52_fresh_rates.csv \
-  --detailed-csv datasets/reports/gpt52_fresh_detailed_150.csv \
-  --performance-csv datasets/reports/gpt52_fresh_performance.csv \
-  --task-performance-csv datasets/reports/gpt52_fresh_per_task_performance.csv \
-  --mcp-calls-csv datasets/reports/gpt52_fresh_mcp_calls.csv \
-  --mcp-tool-frequency-csv datasets/reports/gpt52_fresh_mcp_tool_frequency.csv \
-  --overall-csv datasets/reports/gpt52_fresh_overall_results.csv \
-  --mcp-ab-summary-csv datasets/reports/gpt52_fresh_mcp_ab_summary.csv \
-  --paired-questions-csv datasets/reports/gpt52_fresh_paired_questions.csv \
-  --paired-summary-csv datasets/reports/gpt52_fresh_paired_summary.csv \
-  --mismatch-audit-csv datasets/reports/gpt52_fresh_mismatch_audit.csv \
-  --paired-plots-dir datasets/reports/gpt52_fresh_paired_plots \
-  --plots-dir datasets/reports/gpt52_fresh_plots \
-  --report datasets/reports/gpt52_fresh_scores.json \
-  --json-format pretty
-```
-
-This command reads the **fresh full-run** example above. For the five-question
-pilot, point `--runs` to
-`datasets/agent/gpt52_new_pilot_runs.jsonl.progress.jsonl` and use different
-report destinations. When refreshing **existing** reports, add `--replace`;
-it is not required on the first score. The offline scorer preserves wrong,
-blank, unstructured and abstained answers and produces A/B/C match-rate,
-mean-runtime and total-token bar plots, plus **average MCP tool calls** and **per-function MCP call frequencies** for arms A/B, in PNG and SVG. Reference matches are
-**not independently verified scientific accuracy**. See the
-[reporting guide](docs/benchmark/three_arm_detailed_reporting_0_6_7_1.md) and
-[per-query MCP tool-call reporting](docs/benchmark/mcp_tool_call_reporting_0_6_7_7.md). The 0.6.7.8 extension also exports a **combined A/B/C overall-results CSV**,
-**A/B MCP summary CSV**, 50-row question-paired answer/efficiency table,
-three-row paired comparison summary with exact McNemar testing and
-fixed-seed paired bootstrap intervals, and an independently reviewable
-mismatch audit. Four supplementary paired PNG/SVG figures are saved separately;
-see the [paired-analysis guide](docs/benchmark/paired_analysis_0_6_7_8.md).
-For a full completed journal stored in an older release directory, supply
-its **absolute path** to `--runs`; do not accidentally score the bundled
-15-record pilot. Model/MCP replay is not required.
-
-## HTML documentation (Sphinx + MyST)
-
-From the repository root, build all current and historical Markdown guides:
+Documentation commands from the repository root:
 
 ```bash
 make -C docs/sphinx html
+make -C docs/sphinx clean
 ```
-
-This installs the optional documentation dependencies through `uv` and writes
-`docs/_build/html/index.html`. Run `make -C docs/sphinx clean` to delete build outputs. If
-Sphinx is already installed, use `make -C docs/sphinx html SPHINXBUILD=sphinx-build`.
-The build Makefile lives at `docs/sphinx/Makefile`; the Sphinx configuration lives in `docs/conf.py`; see the
-[documentation build guide](docs/benchmark/documentation_build.md).
-
-[0.6.7.10 offline qualification](QUALIFICATION_0_6_7_10.md) and [0.6.7.10 conversation handoff](CONVERSATION_HANDOFF_THROUGH_0_6_7_10.md) document the new review safeguards and remaining live-host checks.
-
-## Synthetic questions, evidence and scientific qualification
-
-Synthetic generation may use deterministic templates, MCP-backed OpenAI
-question authoring, or web-only research. Question-generation instructions
-are read automatically from
-[`instructions/astroakd_bench/AstroAKD-Bench_Instruction.md`](instructions/astroakd_bench/AstroAKD-Bench_Instruction.md)
-when enabled, and can be replaced with `--instructions-file`. Candidate
-questions are not verified scientific answers until separately checked.
-
-`validate` collected **42/42 structurally accepted, nonempty archive responses**
-for the old single-call task subset. Scientific gold approval is a separate
-manual and archival-verification workflow (`gold-draft`, `gold-finalize`).
-Reference-snapshot agreement (`score-scorable`), operational completion and
-scientific accuracy must not be conflated.
-
-Read [experimental methods and limitations](docs/benchmark/experimental_methods.md),
-[the generator guide](docs/benchmark/llm_generation_0_6_4.md),
-[the scientific-gold workflow](docs/benchmark/gold_reference_and_three_arm_0_6_6.md),
-and [the Python API](docs/benchmark/python_api.md).
-
-## Testing and release history
-
-```bash
-uv run python -m unittest discover -s benchmark/tests -q
-```
-
-Offline tests cover data/agent separation, resume integrity, MCP configuration,
-answer scoring and report outputs. Online/OpenAI/remote MCP acceptance requires
-running the corresponding workflows on your own host; unit tests alone do not
-qualify a remote service or scientifically validate the oracle.
-
-- [Documentation index](docs/index.md)
-- [0.6.7.4 installation and migration notes](INSTALL_ASTROAKD_BENCH_0_6_7_4.md)
-- [0.6.7.4 qualification record](QUALIFICATION_0_6_7_4.md)
-- [Changelog](CHANGELOG.md) and [historical README (0.6.7.3)](docs/history/README_0_6_7_3.md)
