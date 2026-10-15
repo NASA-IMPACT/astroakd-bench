@@ -235,3 +235,7 @@ and remove `--limit`. Do not use `--strict-accepted-020` for new seeds.
 CSV and pretty JSON views are updated after each successful command invocation,
 including pilot runs, and contain only processed records. The final canonical
 reference `.jsonl` is published when all input tasks have dispositions.
+
+## v0.6.7.11.1 — custom counts and output directories
+
+The `create-queries` shortcut now accepts `--count N` (1..100) with an automatically scaled mixed design and `--output-dir PATH` for output placement. For example `uv run --with openai python -m benchmark create-queries --count 40 --output-dir /scratch/astroakd/study1` saves `synthetic_40` below `/scratch/astroakd/study1/generated/`. Pass the same `--output-dir` and `--name synthetic_40` to `collect-references`, `reference-report`, `run-benchmark`, and `agent-report`. The older `datasets/` locations are unchanged when the option is omitted. Python APIs accept `count` and `output_dir` too; see the [mixed workflow](easy_mixed_100_workflow_0_6_7_11.md). Existing reference/gold scientific review rules remain unchanged.

@@ -2,7 +2,7 @@
 
 **Reproducible synthetic astronomy questions and three-arm agent evaluation.**
 
-**Current version: 0.6.7.11** — easy named-dataset workflows; ADS/literature and multi-archive questions; native offline archive-reference and A/B/C reports with PNG/SVG plots.
+**Current version: 0.6.7.11.1** — easy named-dataset workflows; ADS/literature and multi-archive questions; native offline archive-reference and A/B/C reports with PNG/SVG plots.
 
 AstroAKD-Bench is the **benchmark**. AstroAKD is the **evaluated agent**. The independent [NASA IMPACT Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp) is the **archive backend**. Benchmark questions, archive observations, independently reviewed scientific answers, and agent predictions remain separate objects.
 
@@ -32,12 +32,31 @@ The default server is `http://127.0.0.1:8000/mcp`; `ASTROAKD_MCP_URL` and `ASTRO
 
 ## Five short commands for `synthetic_100`
 
-### 1. Create 100 fresh synthetic questions
+### 1. Create synthetic questions (choose count and destination)
 
 ```bash
 uv run --with openai python -m benchmark create-queries \
   --name synthetic_100 --model gpt-5.2 --seed 20261018
 ```
+
+You can select **any count from 1 through 100** using `--count`; the mixed proportions are adjusted automatically without writing a manual `--mix`. Set `--output-dir` to put **all artifacts** into a chosen folder. If you omit `--name`, it becomes `synthetic_N` (for example `synthetic_40`), while the default remains `synthetic_100`.
+
+```bash
+uv run --with openai python -m benchmark create-queries \
+  --count 40 --seed 20261018 \
+  --output-dir /scratch/astroakd/study1 --require-ads
+```
+
+This saves `/scratch/astroakd/study1/generated/synthetic_40.jsonl`, its CSV and split subsets, and its generation report. Follow-up commands use the **same `--output-dir` and `--name`**:
+
+```bash
+uv run python -m benchmark collect-references --name synthetic_40 \
+  --output-dir /scratch/astroakd/study1 --limit 5
+uv run --with matplotlib python -m benchmark reference-report \
+  --name synthetic_40 --output-dir /scratch/astroakd/study1
+```
+
+Other output subdirectories are `validated/`, `agent/`, and `reports/` beneath the chosen directory. Without `--output-dir`, the historical paths under `datasets/` are unchanged. The current curated target catalog limits the automatic mixed generator to **100 questions maximum**; larger counts require more unique science targets.
 
 The default **balanced100** mix is:
 
@@ -100,7 +119,8 @@ import asyncio
 from benchmark.api import AstroAKDBench
 
 bench = AstroAKDBench('.')
-asyncio.run(bench.create_synthetic_queries(name='synthetic_100', seed=20261018))
+asyncio.run(bench.create_synthetic_queries(name='synthetic_100', count=100, seed=20261018))
+# Alternative: asyncio.run(bench.create_synthetic_queries(count=40, output_dir='/scratch/astroakd/study1'))
 # After archive collection (CLI or bench.collect_named_references):
 reference_summary = bench.create_reference_report(name='synthetic_100')
 # After A/B/C runs:

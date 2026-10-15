@@ -113,7 +113,7 @@ class EasyWorkflowTests(unittest.TestCase):
 
     def test_named_cli_available(self):
         parser=build_parser()
-        self.assertEqual(parser.parse_args(['create-queries']).name,'synthetic_100')
+        self.assertIsNone(parser.parse_args(['create-queries']).name)
         self.assertEqual(parser.parse_args(['reference-report','--no-plots']).no_plots,True)
         self.assertEqual(parser.parse_args(['run-benchmark','--limit','5']).limit,5)
 

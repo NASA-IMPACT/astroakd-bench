@@ -8,7 +8,7 @@ not under `docs/`.
 Start with the repository `README.md` for an overview, or the
 [current quick-start](benchmark/quickstart.md) for tested commands.
 
-## Current guides (0.6.7.11)
+## Current guides (0.6.7.11.1)
 
 | Topic | Guide |
 | --- | --- |

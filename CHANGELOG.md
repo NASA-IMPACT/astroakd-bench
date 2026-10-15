@@ -1,4 +1,22 @@
-## 0.6.7.11 — MIXED_100_SIMPLE_WORKFLOWS_AND_NATIVE_REFERENCE_REPORT (2026-10-15)
+# AstroAKD-Bench Changelog
+
+All significant changes to the **independent AstroAKD-Bench project** are documented
+here. This history is separate from the external `astroquery-mcp` project's
+releases: AstroAKD-Bench versions track benchmark capabilities, not versions
+of Astroquery or the MCP server.
+
+The current implemented benchmark version is **0.6.7.11.1**.
+Dates are in UTC. Release statuses distinguish **offline implementation
+qualification** from **real laptop / live-service qualification**.
+
+## [0.6.7.11.1] — CONFIGURABLE_SYNTHETIC_COUNT_AND_OUTPUT_ROOT (offline qualification; 2026-10-15)
+
+- `create-queries --count N` now works with the default scaled `balanced100` mix for N=1..100, without manually spelling quotas; N=100 retains the same 60/20/8/12 design. Counts above the curated seed capacity are rejected early and are not silently padded with duplicate targets.
+- `create-queries --output-dir PATH` saves generated questions and sidecars to `PATH/generated/`; the four downstream short commands accept the same `--output-dir` and place references, agent journals and reports under `PATH/validated/`, `PATH/agent/`, and `PATH/reports/`.
+- Default dataset name is `synthetic_N` when `--name` is omitted (still `synthetic_100` with default count). Python convenience APIs mirror count/path selection. Existing default `datasets/` paths and all frozen experiment data remain untouched.
+- Qualification: offline tests and archive checks recorded in `QUALIFICATION_0_6_7_11_1.md`. Live OpenAI, MCP and ADS generation remain host-pending.
+
+## [0.6.7.11] — MIXED_100_SIMPLE_WORKFLOWS_AND_NATIVE_REFERENCE_REPORT (2026-10-15)
 
 - New short, first-class named commands: `create-queries`, `collect-references`, `reference-report`, `run-benchmark`, and `agent-report`. The default name is **`synthetic_100`**, not `synthetic_100_new_with_refs`.
 - Mixed 100-question generation includes 60 archive, 20 coordinate, 8 ADS/literature, and 12 genuine two-archive questions. Cross-archive queries combine pre-bound same-target calls and do not forge a gold answer or pretend to be a single-call validator input. Multi-step questions retain their distinct evidence contract.
@@ -8,17 +26,6 @@
 - Native offline `agent-report`: CSV with full retained A/B/C answers, operational metrics and PNG/SVG plots. No correctness/accuracy claim without human-verified gold.
 - Python `AstroAKDBench` convenience methods match the CLI. Current README and Sphinx/MyST guide are simplified; the frozen 50/150 GPT-5.2 experiment, accepted oracles, datasets and instruction hashes are unchanged.
 - Offline suite: see `QUALIFICATION_0_6_7_11.md`. Live MCP, authenticated ADS, OpenAI generation and 300-arm scientific evaluation remain **host-pending**; no new live dataset or verified science answer is claimed in the release.
-
-# AstroAKD-Bench Changelog
-
-All significant changes to the **independent AstroAKD-Bench project** are documented
-here. This history is separate from the external `astroquery-mcp` project's
-releases: AstroAKD-Bench versions track benchmark capabilities, not versions
-of Astroquery or the MCP server.
-
-The current implemented benchmark version is **0.6.7.10**.
-Dates are in UTC. Release statuses distinguish **offline implementation
-qualification** from **real laptop / live-service qualification**.
 
 ## [0.6.7.10] — ARCHIVE_REFERENCE_POLICY_AND_SCIENTIFIC_REVIEW (offline qualified; live host pending; 2026-10-15)
 

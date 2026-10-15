@@ -1,11 +1,40 @@
-# AstroAKD-Bench 0.6.7.11: simple mixed 100-question workflow
+# AstroAKD-Bench 0.6.7.11.1: flexible mixed-question workflow
 
 This is the current supported quick-start. Earlier `*_with_refs` guides describe **single-call** experiments, not the new mixed one. Every command below runs from the repository root. `OPENAI_API_KEY` and the external Astroquery MCP service must be configured for live model/archive commands; reports only read saved files.
 
-## 1. Create `synthetic_100`
+## 1. Create `synthetic_100` or choose a different count and destination
 
 ```bash
 uv run --with openai python -m benchmark create-queries --name synthetic_100 --seed 20261018
+```
+
+**Count and custom output directory:**
+
+```bash
+uv run --with openai python -m benchmark create-queries \
+  --count 40 --seed 20261018 \
+  --output-dir /scratch/astroakd/experiment_A --require-ads
+```
+
+The automatic name is `synthetic_40`, and outputs are under `/scratch/astroakd/experiment_A/generated/` (main file `synthetic_40.jsonl`, CSV, subset JSONLs and generation report). The folder also contains `validated/`, `agent/`, and `reports/` after subsequent steps. Keep `--output-dir /scratch/astroakd/experiment_A --name synthetic_40` on all later short commands. If you prefer another name, specify `--name my_study` on generation and all later commands. Relative output directories are relative to the selected project root (the command's working directory in CLI mode).
+
+The default `balanced100` mix scales automatically when `--count` is from **1 to 100**; a small pilot does not force a multi-archive pair when there are too few repeated targets. For more than 100, extend the curated target pool before running generation; it is not supported by this shortcut. The advanced `--mix` accepts exact manually specified family counts, which must sum to `--count`.
+
+**Continue a custom-directory experiment:**
+
+```bash
+uv run python -m benchmark collect-references \
+  --name synthetic_40 --output-dir /scratch/astroakd/experiment_A --limit 5
+uv run python -m benchmark collect-references \
+  --name synthetic_40 --output-dir /scratch/astroakd/experiment_A --resume
+uv run --with matplotlib python -m benchmark reference-report \
+  --name synthetic_40 --output-dir /scratch/astroakd/experiment_A
+uv run --with openai python -m benchmark run-benchmark \
+  --name synthetic_40 --output-dir /scratch/astroakd/experiment_A --limit 5
+uv run --with openai python -m benchmark run-benchmark \
+  --name synthetic_40 --output-dir /scratch/astroakd/experiment_A --resume
+uv run --with matplotlib python -m benchmark agent-report \
+  --name synthetic_40 --output-dir /scratch/astroakd/experiment_A
 ```
 
 Uses GPT-5.2 plus AstroAKD-Bench question-authoring instructions and discovered MCP signatures. Mix: **60 archive**, **20 coordinate**, **8 literature**, **12 multi-archive**. This produces:
@@ -83,7 +112,8 @@ import asyncio
 from benchmark.api import AstroAKDBench
 
 bench = AstroAKDBench(root='.', mcp_url='http://127.0.0.1:8000/mcp')
-created = asyncio.run(bench.create_synthetic_queries(name='synthetic_100', seed=20261018))
+created = asyncio.run(bench.create_synthetic_queries(name='synthetic_100', count=100, seed=20261018))
+# Alternative: created = asyncio.run(bench.create_synthetic_queries(count=40, output_dir='/scratch/astroakd/experiment_A'))
 pilot = asyncio.run(bench.collect_named_references(name='synthetic_100', limit=5))
 finished = asyncio.run(bench.collect_named_references(name='synthetic_100', resume=True))
 references = bench.create_reference_report(name='synthetic_100', plots=True)

@@ -313,7 +313,8 @@ def build_parser() -> argparse.ArgumentParser:
     # Short, predictable named-dataset workflows (v0.6.7.11).
     easy = commands.add_parser('create-queries', parents=[common],
         help='Create a fresh synthetic_100 mix (archive, coordinate, ADS literature, multi-archive)')
-    easy.add_argument('--name', default='synthetic_100')
+    easy.add_argument('--name', help='Dataset name (default: synthetic_COUNT)')
+    easy.add_argument('--output-dir', type=Path, help='Artifact directory; generated/, validated/, agent/, reports/ live underneath')
     easy.add_argument('--count', type=int, default=100)
     easy.add_argument('--seed', type=int, default=20261018)
     easy.add_argument('--model', default='gpt-5.2')
@@ -326,6 +327,7 @@ def build_parser() -> argparse.ArgumentParser:
     collect = commands.add_parser('collect-references', parents=[common],
         help='Collect/live-resume only the named single-call subset, never multistep answers')
     collect.add_argument('--name',default='synthetic_100')
+    collect.add_argument('--output-dir', type=Path, help='Same artifact directory used by create-queries')
     collect.add_argument('--limit',type=int)
     collect.add_argument('--resume',action='store_true')
     collect.add_argument('--replace',action='store_true')
@@ -336,12 +338,14 @@ def build_parser() -> argparse.ArgumentParser:
     refrep = commands.add_parser('reference-report', parents=[common],
         help='Offline one-command archive and completeness CSV/PNG/SVG reports')
     refrep.add_argument('--name',default='synthetic_100')
+    refrep.add_argument('--output-dir', type=Path, help='Same artifact directory used by create-queries')
     refrep.add_argument('--no-plots',action='store_true')
     refrep.add_argument('--replace',action='store_true')
 
     runeasy = commands.add_parser('run-benchmark',parents=[common],
         help='Run resumable A/B/C experiment for a named question dataset')
     runeasy.add_argument('--name',default='synthetic_100')
+    runeasy.add_argument('--output-dir', type=Path, help='Same artifact directory used by create-queries')
     runeasy.add_argument('--model',default='gpt-5.2')
     runeasy.add_argument('--limit',type=int)
     runeasy.add_argument('--resume',action='store_true')
@@ -354,6 +358,7 @@ def build_parser() -> argparse.ArgumentParser:
     agrep = commands.add_parser('agent-report',parents=[common],
         help='Offline A/B/C completion, time, token, tool-use and response plots; never infer correctness')
     agrep.add_argument('--name',default='synthetic_100')
+    agrep.add_argument('--output-dir', type=Path, help='Same artifact directory used by create-queries')
     agrep.add_argument('--no-plots',action='store_true')
     agrep.add_argument('--replace',action='store_true')
 
@@ -368,24 +373,24 @@ def build_parser() -> argparse.ArgumentParser:
 async def _execute(args: argparse.Namespace) -> dict[str, Any]:
     if args.command == 'create-queries':
         from .simple_workflows import create_queries
-        return await create_queries(name=args.name,count=args.count,seed=args.seed,
+        return await create_queries(name=args.name,output_dir=args.output_dir,count=args.count,seed=args.seed,
             model=args.model,mix=args.mix,modules=args.modules,batch_size=args.batch_size,
             url=args.mcp_url,timeout=args.timeout,require_ads=args.require_ads,
             replace=args.replace, progress=lambda msg: print(f'[AstroAKD-Bench create] {msg}',file=sys.stderr,flush=True))
     if args.command == 'collect-references':
         from .simple_workflows import collect_references
-        return await collect_references(name=args.name,url=args.mcp_url,
+        return await collect_references(name=args.name,output_dir=args.output_dir,url=args.mcp_url,
             limit=args.limit,resume=args.resume,replace=args.replace,
             timeout=args.timeout,archive_timeouts=args.archive_timeouts,
             archive_attempts=args.archive_attempts,reference_deadline=args.reference_deadline,
             progress=lambda msg: print(f'[AstroAKD-Bench reference] {msg}',file=sys.stderr,flush=True))
     if args.command == 'reference-report':
         from .simple_workflows import reference_report
-        return reference_report(name=args.name,plots=not args.no_plots,replace=args.replace)
+        return reference_report(name=args.name,output_dir=args.output_dir,plots=not args.no_plots,replace=args.replace)
     if args.command == 'run-benchmark':
         from .simple_workflows import dataset_paths
         from .three_arm import run_three_arm
-        paths=dataset_paths(name=args.name)
+        paths=dataset_paths(name=args.name,output_dir=args.output_dir)
         return await run_three_arm(paths['tasks'],Path('instructions/astroakd/AstroAKD_Instruction.md'),
             paths['runs'],paths['run_report'],url=args.mcp_url,model=args.model,
             limit=args.limit,max_turns=args.max_turns,max_calls=args.max_calls,
@@ -395,7 +400,7 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
     if args.command == 'agent-report':
         from .simple_workflows import dataset_paths
         from .operational_report import create_operational_report
-        paths=dataset_paths(name=args.name)
+        paths=dataset_paths(name=args.name,output_dir=args.output_dir)
         return create_operational_report(paths['tasks'],paths['runs'],paths['plots']/'agents',
             replace=args.replace,plots=not args.no_plots)
     if args.command == 'build-scorable':

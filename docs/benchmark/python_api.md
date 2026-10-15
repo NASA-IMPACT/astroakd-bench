@@ -307,3 +307,16 @@ asyncio.run(main())
 
 For a second call, set `resume=True`, omit `limit`, and use the same paths.
 Canonical JSONL and frozen SHA-256 values do not change when exporting.
+
+## Flexible synthetic generation (0.6.7.11.1)
+
+```python
+import asyncio
+from benchmark.api import AstroAKDBench
+
+bench = AstroAKDBench(root='.')
+asyncio.run(bench.create_synthetic_queries(count=40, output_dir='/scratch/astroakd/study1', seed=20261018))
+bench.create_reference_report(name='synthetic_40', output_dir='/scratch/astroakd/study1')
+```
+
+`output_dir` chooses the base folder containing `generated/`, `validated/`, `agent/`, and `reports/`. All named Python convenience methods accept it. Existing datasets are never overwritten without explicit `replace=True`.

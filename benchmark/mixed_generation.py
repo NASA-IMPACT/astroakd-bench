@@ -50,7 +50,17 @@ def parse_task_mix(value: str | None, *, count: int) -> dict[str, int] | None:
     if value is None:
         return None
     if value.strip().casefold() in ('balanced100', 'mixed100', 'science100'):
-        result = {'archive_driven':60, 'coordinate_driven':20, 'literature_driven':8, 'multi_archive':12}
+        if not 1 <= count <= 100:
+            raise GenerationError('The current mixed generator supports 1..100 unique tasks with the built-in astronomical target catalog; expand targets for larger datasets')
+        # Preserve the qualified 60/20/8/12 mix at N=100. Smaller pilot
+        # datasets avoid multi-archive pairs until there are sufficient
+        # independently generated same-target archive candidates.
+        literature = min(8, round(count * .08))
+        coordinate = round(count * .20)
+        multi = round(count * .12) if count >= 30 else 0
+        archive = count - literature - coordinate - multi
+        result = {'archive_driven':archive, 'coordinate_driven':coordinate,
+                  'literature_driven':literature, 'multi_archive':multi}
     elif value.strip().casefold() in ('gold50', 'gold-50', 'gold'):
         result = {'archive_driven':32, 'coordinate_driven':10, 'literature_driven':8}
     else:

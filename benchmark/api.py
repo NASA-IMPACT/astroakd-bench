@@ -62,31 +62,32 @@ class AstroAKDBench:
 
     # One-line named dataset APIs introduced in 0.6.7.11. Complex workflows
     # remain available through the detailed methods below.
-    async def create_synthetic_queries(self, *, name='synthetic_100', count=100,
+    async def create_synthetic_queries(self, *, name=None, count=100,
+                                       output_dir=None,
                                        seed=20261018, mix='balanced100',
                                        model='gpt-5.2', require_ads=False,
                                        replace=False, **kwargs):
         from .simple_workflows import create_queries
-        return await create_queries(name=name, root=self.root, count=count,seed=seed,
+        return await create_queries(name=name, root=self.root, output_dir=output_dir, count=count,seed=seed,
             mix=mix,model=model,require_ads=require_ads,replace=replace,
             url=self.mcp_url,timeout=self.timeout,**kwargs)
 
-    async def collect_named_references(self, *, name='synthetic_100',
+    async def collect_named_references(self, *, name='synthetic_100', output_dir=None,
                                        resume=False,limit=None,**kwargs):
         from .simple_workflows import collect_references
-        return await collect_references(name=name,root=self.root,url=self.mcp_url,
+        return await collect_references(name=name,root=self.root,output_dir=output_dir,url=self.mcp_url,
             resume=resume,limit=limit,**kwargs)
 
-    def create_reference_report(self, *, name='synthetic_100', plots=True,
+    def create_reference_report(self, *, name='synthetic_100', output_dir=None, plots=True,
                                 replace=False):
         from .simple_workflows import reference_report
-        return reference_report(name=name,root=self.root,plots=plots,replace=replace)
+        return reference_report(name=name,root=self.root,output_dir=output_dir,plots=plots,replace=replace)
 
-    def create_agent_report(self, *, name='synthetic_100', plots=True,
+    def create_agent_report(self, *, name='synthetic_100', output_dir=None, plots=True,
                             replace=False):
         from .simple_workflows import dataset_paths
         from .operational_report import create_operational_report
-        paths=dataset_paths(self.root,name)
+        paths=dataset_paths(self.root,name,output_dir=output_dir)
         return create_operational_report(paths['tasks'],paths['runs'],paths['plots']/'agents',
             plots=plots,replace=replace)
 

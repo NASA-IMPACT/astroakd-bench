@@ -21,22 +21,24 @@ from .validator import load_jsonl, validate
 from .reference_review import review_detail
 
 
-def dataset_paths(root: str | Path = '.', name: str = 'synthetic_100') -> dict[str, Path]:
+def dataset_paths(root: str | Path = '.', name: str = 'synthetic_100',
+                  output_dir: str | Path | None = None) -> dict[str, Path]:
     if not name or len(name) > 80 or not all(c.isascii() and (c.isalnum() or c in '_-') for c in name):
         raise ValueError('Dataset name must use only ASCII letters, digits, _ or -')
     root = Path(root)
+    data = (root / 'datasets') if output_dir is None else (root / Path(output_dir).expanduser())
     return {
-        'tasks': root / 'datasets/generated' / (name + '.jsonl'),
-        'tasks_csv': root / 'datasets/generated' / (name + '.csv'),
-        'generation_report': root / 'datasets/generated' / (name + '_generation_report.json'),
-        'single_calls': root / 'datasets/generated' / (name + '_single_call.jsonl'),
-        'multistep': root / 'datasets/generated' / (name + '_multistep.jsonl'),
-        'references': root / 'datasets/validated' / (name + '_references.jsonl'),
-        'references_csv': root / 'datasets/validated' / (name + '_references.csv'),
-        'references_report': root / 'datasets/validated' / (name + '_references_report.json'),
-        'runs': root / 'datasets/agent' / (name + '_ABC_runs.jsonl'),
-        'run_report': root / 'datasets/agent' / (name + '_ABC_report.json'),
-        'plots': root / 'datasets/reports' / name,
+        'tasks': data / 'generated' / (name + '.jsonl'),
+        'tasks_csv': data / 'generated' / (name + '.csv'),
+        'generation_report': data / 'generated' / (name + '_generation_report.json'),
+        'single_calls': data / 'generated' / (name + '_single_call.jsonl'),
+        'multistep': data / 'generated' / (name + '_multistep.jsonl'),
+        'references': data / 'validated' / (name + '_references.jsonl'),
+        'references_csv': data / 'validated' / (name + '_references.csv'),
+        'references_report': data / 'validated' / (name + '_references_report.json'),
+        'runs': data / 'agent' / (name + '_ABC_runs.jsonl'),
+        'run_report': data / 'agent' / (name + '_ABC_report.json'),
+        'plots': data / 'reports' / name,
     }
 
 
@@ -47,13 +49,15 @@ def _save_json(path: Path, obj: dict[str,Any], *, replace: bool = False) -> None
     path.write_text(json.dumps(obj, indent=2, ensure_ascii=False, allow_nan=False)+'\n', encoding='utf-8')
 
 
-async def create_queries(*, name: str = 'synthetic_100', root: str | Path = '.',
+async def create_queries(*, name: str | None = None, root: str | Path = '.',
+                         output_dir: str | Path | None = None,
                          count: int = 100, seed: int = 20261018, model: str = 'gpt-5.2',
                          mix: str = 'balanced100', modules: str = 'simbad,mast,heasarc,gaia,vizier',
                          batch_size: int = 5, url: str | None = None, timeout: float = 180,
                          require_ads: bool = False, replace: bool = False,
                          progress=None, research_fn=None, llm_fn=None, openai_client_factory=None) -> dict[str,Any]:
-    paths = dataset_paths(root, name)
+    name = name if name is not None else f'synthetic_{count}'
+    paths = dataset_paths(root, name, output_dir=output_dir)
     if any(paths[k].exists() for k in ('tasks','tasks_csv','generation_report','single_calls','multistep')) and not replace:
         raise FileExistsError('Named dataset exists; choose another --name to preserve experiments')
     recipe = parse_task_mix(mix, count=count)
@@ -85,12 +89,13 @@ async def create_queries(*, name: str = 'synthetic_100', root: str | Path = '.',
 
 
 async def collect_references(*, name: str = 'synthetic_100', root: str | Path = '.',
+                             output_dir: str | Path | None = None,
                              url: str | None = None, limit: int | None = None, resume: bool = False,
                              replace: bool = False, timeout: float = 90.,
                              archive_timeouts: str = 'mast=60,simbad=30,heasarc=60,gaia=60,vizier=45',
                              archive_attempts: str = 'mast=1,simbad=1,heasarc=1,gaia=1,vizier=1',
                              reference_deadline: float = 70., progress=None) -> dict[str,Any]:
-    p=dataset_paths(root,name)
+    p=dataset_paths(root,name,output_dir=output_dir)
     if not p['single_calls'].exists():
         raise FileNotFoundError(f'Single-call subset missing: {p["single_calls"]}')
     if resume and replace:
@@ -119,13 +124,13 @@ def _bar(plt, data: Counter, path: Path, title: str, *, xlabel: str = 'Questions
 
 
 def reference_report(*, name: str = 'synthetic_100', root: str | Path = '.',
-                      plots: bool = True, replace: bool = False) -> dict[str,Any]:
+                      output_dir: str | Path | None = None, plots: bool = True, replace: bool = False) -> dict[str,Any]:
     """Offline archive completeness/shape/time plots, including uncollected mixed tasks.
 
     Strongly binds each reference to the *single-call subset* hash, not the
     full mixed-task dataset hash. Refuses extraneous task IDs or stale evidence.
     """
-    p=dataset_paths(root,name)
+    p=dataset_paths(root,name,output_dir=output_dir)
     tasks, full_sha=load_jsonl(p['tasks'],max_bytes=128*1024*1024)
     single, single_sha=load_jsonl(p['single_calls'],max_bytes=128*1024*1024)
     if len({t['id'] for t in tasks}) != len(tasks):
