@@ -1,4 +1,4 @@
-# Current workflow — AstroAKD-Bench 0.6.7.8
+# Current workflow — AstroAKD-Bench 0.6.7.9
 
 This is the **current command guide**. Versioned documentation under `docs/benchmark/`
 may illustrate earlier behavior. Execute all commands from the **repository root**.
@@ -196,3 +196,8 @@ For the completed 150-run journal, use the same `score-scorable` command with
 `--paired-summary-csv`, `--mismatch-audit-csv` and `--paired-plots-dir`.
 See [paired analysis and reproducible commands](paired_analysis_0_6_7_8.md).
 These exports are offline, additive, and preserve the frozen dataset.
+
+
+### Live reference collection at generation time (0.6.7.9)
+
+Use `generate --with-reference-answers` for new single-call MCP candidates to execute the real archive query immediately after question writing. The companion validation JSONL stores full returned tables and provenance; its CSV includes observed expected-column values marked unreviewed. For existing generated questions, use `validate` directly. Keep reference collection separate from scientific gold review. See [the 100-query workflow](new_100_query_workflow.md).

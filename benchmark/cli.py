@@ -27,7 +27,7 @@ DEFAULT_DATASET = Path("datasets/generated/synthetic_queries.jsonl")
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="astroakd-bench",
-        description="AstroAKD-Bench 0.6.7.5 astronomical agent benchmarking.",
+        description="AstroAKD-Bench 0.6.7.9 astronomical agent benchmarking.",
     )
     parser.add_argument("--version", action="version", version=__version__)
     common = argparse.ArgumentParser(add_help=False)
@@ -65,7 +65,7 @@ def build_parser() -> argparse.ArgumentParser:
     smoke.add_argument("--object", default="M31")
 
     gen = commands.add_parser("generate", parents=[common],
-                              help="Generate schema-checked candidates; NO archive queries")
+                              help="Generate candidates; optionally collect live reference answers with --with-reference-answers")
     gen.add_argument('--backend', choices=('openai','hybrid','template'), default='openai',
                      help='Generation engine (default: openai; template is API-free legacy mode)')
     gen.add_argument('--model', default='gpt-5.2', help='OpenAI model for openai/hybrid modes')
@@ -94,6 +94,22 @@ def build_parser() -> argparse.ArgumentParser:
                      default="archive-target", help="Deduplication policy; default archive-target")
     gen.add_argument("--question-style", choices=("answer-oriented", "discovery"),
                      default="answer-oriented", help="Use answer-oriented archive field prompts by default")
+    gen.add_argument("--with-reference-answers", action="store_true",
+                     help="After generating candidates, execute live MCP reference calls and save actual responses; never model-written gold")
+    gen.add_argument("--reference-output", type=Path,
+                     help="Reference JSONL path; default is a sibling in datasets/validated")
+    gen.add_argument("--reference-report", type=Path,
+                     help="Live validation JSON summary destination")
+    gen.add_argument("--reference-csv", type=Path,
+                     help="Reference evidence and observed answer values CSV")
+    gen.add_argument("--reference-pretty", type=Path,
+                     help="Optional full reference records as an indented JSON array")
+    gen.add_argument("--reference-limit", type=int,
+                     help="Validate only first N tasks (pilot); resume remaining with 'validate --resume'")
+    gen.add_argument("--reference-attempts", type=int, default=2,
+                     help="Maximum live archive attempts per task (default: 2)")
+    gen.add_argument("--reference-delay", type=float, default=2.0,
+                     help="Delay between live archive requests (default: 2 seconds)")
     gen.add_argument("--replace", action="store_true", help="Overwrite existing dataset and exports")
     gen.add_argument("--report", type=Path, help="Save JSON generation summary separately")
     literature = commands.add_parser('literature-search', parents=[common],
@@ -384,6 +400,21 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
             mcp_mode=args.mcp_mode, fixtures=args.fixtures,
         )
     if args.command == "generate":
+        # Reference collection can take hours and contact external archives; it is
+        # always an explicit opt-in and never silently charges an API or MCP budget.
+        if args.with_reference_answers:
+            if not args.mcp:
+                raise GenerationError('--with-reference-answers requires --mcp')
+            if args.task_mix is not None:
+                raise GenerationError('--with-reference-answers requires ordinary single-call MCP tasks; mixed literature tasks need separate evidence collection')
+            from .reference_generation import reference_paths, check_reference_paths
+            reference_paths_selected = reference_paths(args.output, args.reference_output,
+                args.reference_report, args.reference_csv, args.reference_pretty)
+            check_reference_paths(args.output, args.report, args.pretty_output,
+                args.csv_output, reference_paths_selected, replace=args.replace)
+        elif any(x is not None for x in (args.reference_output, args.reference_report,
+                args.reference_csv, args.reference_pretty, args.reference_limit)):
+            raise GenerationError('Reference destinations and --reference-limit require --with-reference-answers')
         from .exports import check_destinations, save_views
         from .mixed_generation import parse_task_mix
         mix = parse_task_mix(args.task_mix, count=args.count)
@@ -450,6 +481,29 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
             summary["pretty_output"] = str(args.pretty_output)
         if args.csv_output is not None:
             summary["csv_output"] = str(args.csv_output)
+        if args.with_reference_answers:
+            refs, ref_report, ref_csv, ref_pretty = reference_paths_selected
+            def reference_progress(message: str) -> None:
+                if not args.quiet_progress:
+                    print(f'[AstroAKD-Bench reference] {message}', file=sys.stderr, flush=True)
+            validation = await validate(args.output, refs, ref_report,
+                url=args.mcp_url, timeout=args.timeout, attempts=args.reference_attempts,
+                delay=args.reference_delay, limit=args.reference_limit,
+                csv_output=ref_csv, pretty_output=ref_pretty,
+                replace=args.replace, json_format=args.json_format,
+                progress=reference_progress)
+            summary['reference_collection'] = {
+                'status': validation['status'], 'quality_gate': validation['quality_gate'],
+                'reference_output': (validation.get('output') or ''),
+                'reference_journal': validation['journal'],
+                'reference_report': str(ref_report), 'reference_csv': str(ref_csv),
+                'processed': validation['processed'], 'remaining': validation['remaining'],
+                'accepted_reference_count': validation['accepted_reference_count'],
+                'dispositions': validation['dispositions'],
+                'answer_key_status': 'reference_anchored_unreviewed',
+            }
+            summary['status'] = ('PARTIAL' if validation['status'] == 'PARTIAL' else
+                                 'REVIEW' if validation['quality_gate'] != 'PASS' else 'PASS')
         return summary
 
     async with AstroqueryMCPClient(args.mcp_url, timeout=args.timeout) as client:

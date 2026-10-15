@@ -5,9 +5,15 @@ here. This history is separate from the external `astroquery-mcp` project's
 releases: AstroAKD-Bench versions track benchmark capabilities, not versions
 of Astroquery or the MCP server.
 
-The current implemented benchmark version is **0.6.7.8**.
+The current implemented benchmark version is **0.6.7.9**.
 Dates are in UTC. Release statuses distinguish **offline implementation
 qualification** from **real laptop / live-service qualification**.
+
+## [0.6.7.9] — INTEGRATED_LIVE_REFERENCE_ANSWER_COLLECTION (offline-qualified; 2026-10-15)
+
+- Add explicit `generate --with-reference-answers` to perform live Astroquery MCP reference validation after candidate generation, saving full response evidence, fsynced progress journal, reference summary and CSV. Bounded retry/pilot/resume remain delegated to the existing validator. No LLM-written gold answers.
+- Add observed matching field values and per-task reference-answer review status to existing validation CSV exports. Missing/empty responses are never silently assigned values.
+- Preserve existing generation-only behavior without the flag, separate new outputs from the frozen 50-task/150-run experiment, update Python API/README/100-query Sphinx guide, add offline integration tests.
 
 ## [0.6.7.8] — PAIRED_THREE_ARM_ERROR_AND_EFFICIENCY_ANALYSIS (offline-qualified; 2026-10-15)
 

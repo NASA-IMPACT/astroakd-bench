@@ -25,7 +25,8 @@ REFERENCE_COLUMNS = (
     "task_id", "module", "question", "target", "intent", "expected_columns", "disposition", "reason",
     "returned_rows", "reported_total_rows", "table_count", "truncated",
     "response_bytes", "response_sha256", "attempt_count", "error_message",
-    "reference_call_json",
+    "reference_call_json", "reference_answer_status", "reference_answer_values_json",
+    "matched_fields", "matching_values_count", "returned_table_columns", "observed_first_row_json",
 )
 
 
@@ -84,10 +85,51 @@ def candidate_csv_record(record: dict[str, Any]) -> dict[str, Any]:
                 web_search_sources=";".join(record.get("research_sources", [])))
 
 
+def observed_reference_values(record: dict[str, Any], task: dict[str, Any]) -> dict[str, Any]:
+    """Extract field observations only when requested columns actually occur.
+
+    A structural MCP result is NOT a scientifically reviewed expected answer.
+    No model-written values or best-effort field substitutions are allowed.
+    """
+    disposition = record.get("disposition", "")
+    if disposition != "accepted_nonempty":
+        return {"status": "NO_NONEMPTY_REFERENCE", "values": [], "fields": [], "count": 0}
+    expected = task.get("answer_spec", {}).get("expected_columns", [])
+    if not isinstance(expected, list):
+        expected = []
+    wanted = {c.strip().casefold() for c in expected if isinstance(c, str) and c.strip()}
+    response = record.get("response") or {}
+    from .validator import _tables
+    tables, _ = _tables(response.get("result"))
+    values, fields, count = [], set(), 0
+    for ti, table in enumerate(tables):
+        for ri, row in enumerate(table.get("data", [])):
+            if not isinstance(row, dict):
+                continue
+            for field, value in row.items():
+                if isinstance(field, str) and field.strip().casefold() in wanted:
+                    count += 1
+                    fields.add(field)
+                    if len(values) < 100:
+                        values.append({"table_index": ti, "row_index": ri,
+                                       "field": field, "value": value})
+    return {"status": ("OBSERVED_FIELD_VALUES_UNREVIEWED" if count else
+                        "NO_EXPECTED_FIELD_MATCH_REVIEW_REQUIRED"),
+            "values": values, "fields": sorted(fields), "count": count}
+
+
 def reference_csv_record(record: dict[str, Any], task: dict[str, Any]) -> dict[str, Any]:
     evidence = record.get("evaluation", {}).get("checks", {})
     attempts = record.get("attempts", [])
     last = attempts[-1] if attempts else {}
+    observed = observed_reference_values(record, task)
+    response = record.get("response") or {}
+    from .validator import _tables
+    tables, _ = _tables(response.get("result"))
+    first = next((r for t in tables for r in t.get("data", []) if isinstance(r, dict)), {})
+    preview = {k: first[k] for k in list(first)[:12]}
+    known_columns = sorted(set(k for t in tables for r in t.get("data", [])[:1]
+                               if isinstance(r, dict) for k in r))
     return dict(task_id=record.get("task_id"), module=record.get("module"),
                 question=task.get("question"), target=task.get("target"),
                 intent=task.get("intent", ""),
@@ -102,7 +144,13 @@ def reference_csv_record(record: dict[str, Any], task: dict[str, Any]) -> dict[s
                 response_sha256=last.get("response_sha256", ""),
                 attempt_count=len(attempts),
                 error_message=record.get("error", {}).get("message", ""),
-                reference_call_json=json_compact(record.get("reference_call", {})))
+                reference_call_json=json_compact(record.get("reference_call", {})),
+                reference_answer_status=observed["status"],
+                reference_answer_values_json=json_compact(observed["values"]),
+                matched_fields=";".join(observed["fields"]),
+                matching_values_count=observed["count"],
+                returned_table_columns=";".join(known_columns[:120]),
+                observed_first_row_json=json_compact(preview))
 
 
 def _neutralize_csv_formula(value: Any) -> Any:

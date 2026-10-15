@@ -62,3 +62,8 @@ See [quick-start](quickstart.md),
 [detailed CSV/plot scoring](three_arm_detailed_reporting_0_6_7_1.md),
 [original scientific gold review process](gold_reference_and_three_arm_0_6_6.md),
 and [release history](../../CHANGELOG.md).
+
+
+### Live reference collection at generation time (0.6.7.9)
+
+Use `generate --with-reference-answers` for new single-call MCP candidates to execute the real archive query immediately after question writing. The companion validation JSONL stores full returned tables and provenance; its CSV includes observed expected-column values marked unreviewed. For existing generated questions, use `validate` directly. Keep reference collection separate from scientific gold review. See [the 100-query workflow](new_100_query_workflow.md).

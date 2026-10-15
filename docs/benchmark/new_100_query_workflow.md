@@ -1,6 +1,6 @@
 # New 100-query experiment: local MCP, generation, validation and scoring
 
-This workflow applies to **AstroAKD-Bench 0.6.7.8**. Apart from the first
+This workflow applies to **AstroAKD-Bench 0.6.7.9**. Apart from the first
 terminal, run commands from the AstroAKD-Bench repository root. All filenames
 are **new** and must not replace the frozen 50-question experiment artifacts.
 
@@ -31,6 +31,43 @@ uv run python -m benchmark doctor --fast --json-format pretty
 
 A remote HTTPS server can instead be selected with `ASTROAKD_MCP_URL` and
 `ASTROAKD_MCP_TOKEN`, or CLI options. Generic `MCP_URL` and `MCP_TOKEN` are ignored.
+
+## New in 0.6.7.9: question generation with reference answers
+
+When generating a **new** dataset, add `--with-reference-answers` to the
+`generate` command. The benchmark first saves all generated candidates, then
+**calls the live MCP server once per task** (with bounded retries), journals
+outcomes, and saves actual archive responses plus a human-readable reference
+CSV containing matching field values. This is slower than generation alone.
+Never treat an LLM-produced value as scientific reference truth.
+
+For example, generate a distinct new batch with different filenames:
+
+```bash
+uv run --with openai python -m benchmark generate \
+  --backend openai --instructions --mcp \
+  --model gpt-5.2 --count 100 --batch-size 5 --seed 20261016 \
+  --modules simbad,mast,heasarc,gaia,vizier \
+  --uniqueness archive-target --question-style answer-oriented \
+  --with-reference-answers --reference-limit 5 \
+  --output datasets/generated/synthetic_100_with_refs.jsonl \
+  --report datasets/generated/synthetic_100_with_refs_report.json \
+  --json-format pretty
+```
+
+That performs a five-query **reference pilot**; it does not generate only five
+questions. Continue the unfinished references with the `validate --resume`
+command described below, specifying `synthetic_100_with_refs.jsonl` and
+`synthetic_100_with_refs_references.jsonl` as the inputs/outputs.
+
+If the old 100 questions already exist, start at section 3, the standalone
+`validate` command; **do not regenerate them or use `--replace`**.
+
+Answer values in the reference CSV are observations from returned archive
+columns, not independently approved gold keys. Missing expected columns are
+flagged; failed or empty archive queries retain their disposition. Reference
+snapshots can contain multiple rows, and must be curated into unambiguous
+question-specific answers before scoring.
 
 ## 2. Generate 100 new synthetic candidates
 

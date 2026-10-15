@@ -10,7 +10,7 @@ agents and exports reproducible answer comparisons, scores and performance plots
 **AstroAKD** is the *agent being evaluated*; **AstroAKD-Bench** is the *benchmark*;
 **astroquery-mcp** is a *separate MCP service*. They are not interchangeable.
 
-**Current version: `0.6.7.8` — paired 50-question A/B/C analysis, error audit, comprehensive CSV exports, and new figures.**
+**Current version: `0.6.7.9` — paired 50-question A/B/C analysis, error audit, comprehensive CSV exports, and new figures.**
 [Documentation index](docs/index.md) · [Current quick-start](docs/benchmark/quickstart.md)
 · [Change history](CHANGELOG.md) · [Instruction layout](instructions/README.md)
 
@@ -104,40 +104,63 @@ any shell commands or scripts using those paths. Version 0.6.7.5 additionally
 renamed the generator prompt to `AstroAKD-Bench_Instruction.md`. The `docs/` directory now
 contains only documentation and preserved technical background.
 
-## Generate a new 100-query synthetic dataset
+## Generate synthetic questions **with real reference answers**
 
-Use **new file paths** for experiments; never replace the 50-query frozen
-inputs or the complete 150-run GPT-5.2 journal. With the local MCP server
-running and `OPENAI_API_KEY` configured, create 100 **unvalidated candidates**:
+AstroAKD-Bench 0.6.7.9 provides an integrated, explicit
+`generate --with-reference-answers` workflow. The question-writing model
+**never supplies reference answers**. Instead the benchmark executes each
+candidate's allowed read-only Astroquery MCP call, keeps actual serialized
+archive tables and provenance, and exports field observations in CSV.
+These are **unreviewed reference snapshots**, not independently verified
+scientific ground truth. Collection can take considerably longer than question
+writing and may encounter empty or unavailable archive responses.
+
+Start the [local MCP server](#start-an-independent-local-astroquery-mcp-server)
+first, and configure `OPENAI_API_KEY`. Use fresh filenames:
 
 ```bash
 uv run --with openai python -m benchmark generate \
   --backend openai --instructions --mcp \
-  --model gpt-5.2 --count 100 --batch-size 5 --seed 20261015 \
+  --model gpt-5.2 --count 100 --batch-size 5 --seed 20261016 \
   --modules simbad,mast,heasarc,gaia,vizier \
   --uniqueness archive-target --question-style answer-oriented \
-  --output datasets/generated/synthetic_100_gpt52.jsonl \
-  --csv-output datasets/generated/synthetic_100_gpt52.csv \
-  --pretty-output datasets/generated/synthetic_100_gpt52_pretty.json \
-  --report datasets/generated/synthetic_100_gpt52_report.json \
+  --with-reference-answers \
+  --output datasets/generated/synthetic_100_with_refs.jsonl \
+  --csv-output datasets/generated/synthetic_100_with_refs.csv \
+  --report datasets/generated/synthetic_100_with_refs_report.json \
   --json-format pretty
-
-wc -l datasets/generated/synthetic_100_gpt52.jsonl
 ```
 
-Expected: **100 lines** (20 per selected archive). The generator discovers
-MCP function schemas but **does not query archive data or construct verified
-reference answers**. Use `archive-target` uniqueness: the curated 22 seed
-targets cannot satisfy 100 globally unique objects. `--task-mix gold50` is
-fixed at 50 tasks and incompatible with `--count 100`.
+Reference outputs are automatically written under `datasets/validated/`:
+`synthetic_100_with_refs_references.jsonl` (complete only when all 100 have
+been attempted), `synthetic_100_with_refs_references.jsonl.progress.jsonl`
+(fsynced per-task journal), `synthetic_100_with_refs_references.csv` (questions,
+status, matching field observations), and the corresponding references report.
+Use `--reference-limit 5` to collect a five-task pilot, then finish with a
+**separate** `validate --resume` command using the same inputs and limits.
+Do not rerun `generate` for resumption.
 
-For a **scorable** 100-query experiment, validate each new task against live
-archives (`validate`), derive unreviewed snapshot keys (`build-scorable
---count 100`) **only if all 100 source references are accepted and nonempty**,
-then run 100 questions on A/B/C (**300 runs**) and produce fresh combined CSVs
-and plots with `score-scorable`. The complete sequence, with safe `--limit 5`
-and `--resume` examples, is in the
-[100-query experiment guide](docs/benchmark/new_100_query_workflow.md).
+**For your already-generated 100 questions**, do **not** call `generate`
+again. Collect their actual archive responses directly:
+
+```bash
+uv run python -m benchmark validate \
+  --input datasets/generated/synthetic_100_gpt52.jsonl \
+  --output datasets/validated/synthetic_100_gpt52_references.jsonl \
+  --csv-output datasets/validated/synthetic_100_gpt52_references.csv \
+  --report datasets/validated/synthetic_100_gpt52_references_report.json \
+  --attempts 2 --delay 2 --timeout 180 \
+  --json-format pretty
+```
+
+The CSV contains `reference_answer_values_json` and
+`reference_answer_status`. Values are extracted only when an expected column
+is genuinely present; no model-written answer is substituted for missing
+archive evidence. Empty, truncated and rejected responses remain visible for
+review. A strict 100-question scorable oracle additionally requires sufficient
+nonempty unambiguous evidence; do not interpret a `generate`/`validate` `PASS`
+as 100 scientifically verified answers. See the
+[100-query workflow](docs/benchmark/new_100_query_workflow.md).
 
 ## Current 50-question GPT-5.2 experiment
 

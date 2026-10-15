@@ -1,4 +1,4 @@
-"""Supported Python API for AstroAKD-Bench workflows (v0.6.6.1).
+"""Supported Python API for AstroAKD-Bench workflows (v0.6.7.9).
 
 AstroAKD-Bench is an independent project. The NASA IMPACT Astroquery MCP
 server is a separate service accessed through its HTTP MCP endpoint.
@@ -86,8 +86,19 @@ class AstroAKDBench:
                                literature_output: str | Path | None = None,
                                openai_client_factory: Callable | None = None,
                                progress: Callable[[str], None] | None = None,
+                               with_reference_answers: bool = False,
+                               reference_output: str | Path | None = None,
+                               reference_report: str | Path | None = None,
+                               reference_csv: str | Path | None = None,
+                               reference_pretty: str | Path | None = None,
+                               reference_limit: int | None = None,
+                               reference_attempts: int = 2,
+                               reference_delay: float = 2.0,
                                ) -> dict[str, Any]:
-        """Discover read-only signatures and save reproducible candidate JSONL."""
+        """Save candidates; optionally execute real, resumable MCP references.
+
+        Observed values are unreviewed archive evidence, never model-written gold.
+        """
         destination = self.path(output) if output is not None else self.tasks_path
         report_path = self.path(report) if report is not None else None
         if report_path is not None and report_path.resolve() == destination.resolve():
@@ -95,6 +106,20 @@ class AstroAKDBench:
         from .exports import check_destinations, save_views
         csv_path = self.path(csv_output) if csv_output is not None else None
         pretty_path = self.path(pretty_output) if pretty_output is not None else None
+        if with_reference_answers:
+            if not use_mcp or task_mix is not None:
+                raise ValueError('Reference collection requires ordinary MCP single-call tasks')
+            from .reference_generation import reference_paths, check_reference_paths
+            ref_destinations = reference_paths(destination,
+                self.path(reference_output) if reference_output is not None else None,
+                self.path(reference_report) if reference_report is not None else None,
+                self.path(reference_csv) if reference_csv is not None else None,
+                self.path(reference_pretty) if reference_pretty is not None else None)
+            check_reference_paths(destination, report_path, pretty_path, csv_path,
+                                  ref_destinations, replace=replace)
+        elif any(value is not None for value in (reference_output,reference_report,
+                                                  reference_csv,reference_pretty,reference_limit)):
+            raise ValueError('Reference destinations/limit require with_reference_answers=True')
         from .mixed_generation import parse_task_mix
         mix = parse_task_mix(task_mix, count=count)
         ordinary_path = self.path(single_call_output) if single_call_output is not None else None
@@ -160,6 +185,24 @@ class AstroAKDBench:
             summary['csv_output'] = str(csv_path)
         if pretty_path is not None:
             summary['pretty_output'] = str(pretty_path)
+        if with_reference_answers:
+            refs, rreport, rcsv, rpretty = ref_destinations
+            result = await validate(destination, refs, rreport, url=self.mcp_url,
+                timeout=self.timeout, attempts=reference_attempts, delay=reference_delay,
+                limit=reference_limit, csv_output=rcsv, pretty_output=rpretty,
+                replace=replace, session_factory=session_factory, progress=progress)
+            summary['reference_collection'] = {
+                'status': result['status'], 'quality_gate': result['quality_gate'],
+                'reference_output': result.get('output', ''),
+                'reference_journal': result['journal'],
+                'reference_report': str(rreport), 'reference_csv': str(rcsv),
+                'processed': result['processed'], 'remaining': result['remaining'],
+                'accepted_reference_count': result['accepted_reference_count'],
+                'dispositions': result['dispositions'],
+                'answer_key_status': 'reference_anchored_unreviewed',
+            }
+            summary['status'] = ('PARTIAL' if result['status']=='PARTIAL' else
+                'REVIEW' if result['quality_gate']!='PASS' else 'PASS')
         if report_path is not None:
             atomic_json(report_path, summary, replace=replace)
         return summary
