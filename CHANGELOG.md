@@ -5,9 +5,18 @@ here. This history is separate from the external `astroquery-mcp` project's
 releases: AstroAKD-Bench versions track benchmark capabilities, not versions
 of Astroquery or the MCP server.
 
-The current implemented benchmark version is **0.6.7.9**.
+The current implemented benchmark version is **0.6.7.10**.
 Dates are in UTC. Release statuses distinguish **offline implementation
 qualification** from **real laptop / live-service qualification**.
+
+## [0.6.7.10] — ARCHIVE_REFERENCE_POLICY_AND_SCIENTIFIC_REVIEW (offline qualified; live host pending; 2026-10-15)
+
+- Optional `--archive-timeouts` and `--archive-attempts` route per-task archive budgets without changing legacy global defaults; `--reference-deadline` bounds combined task attempts and backoff. Store effective policy and attempt events in the reference journal, support policy adjustment on resume while continuing to protect dataset/endpoint/schema identity. No selective requery of journaled failures is claimed.
+- Produce an automatic one-row-per-question consolidated review CSV when a reference CSV is requested. The original generated-candidate CSV remains unchanged. Maintain task, field, row and provenance evidence; all observed answers are **unreviewed**.
+- Add network-free `reference-review-draft`: produce an editable, `gold-finalize`-compatible JSONL and consolidated CSV, with cardinality/shape and truncation, null, multi-row and preview-cap flags. Never promote observations to gold automatically.
+- Extend human gold finalization and offline scoring for explicitly reviewed single ICRS RA/Dec pairs in degrees, retaining two independently cited source hosts and reviewer attribution. Ambiguous multi-row coordinate/vector results remain unscorable until task redesign or structured-row scoring. Existing gold semantics remain intact.
+- Apply changes to CLI, documentation and offline tests; preserved baseline instructions, frozen 50-task oracle and prior 150-run journal are not modified. Live per-archive qualification remains pending.
+- Final release qualification: 252 tests passed, 1 optional live test skipped, 41 subtests passed. Fixed an end-to-end CLI output-routing bug before release: `reference-review-draft` now preserves its editable JSONL rather than overwriting it with summary JSON. See `QUALIFICATION_0_6_7_10.md`.
 
 ## [0.6.7.9] — INTEGRATED_LIVE_REFERENCE_ANSWER_COLLECTION (offline-qualified; 2026-10-15)
 

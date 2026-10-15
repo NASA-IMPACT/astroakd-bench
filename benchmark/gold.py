@@ -109,12 +109,19 @@ def gold_finalize(tasks_path: Path, reviewed: Path, output: Path, report: Path, 
             if row.get('question_review') != 'approved':
                 raise ValidationError(f'Question is not approved: {tid}')
             gold = row.get('gold')
-            if not isinstance(gold,dict) or gold.get('kind') not in ('set','numeric','text'):
-                raise ValidationError(f'Gold kind must be set, numeric or text: {tid}')
+            if not isinstance(gold,dict) or gold.get('kind') not in ('set','numeric','text','coordinate_pair'):
+                raise ValidationError(f'Gold kind must be set, numeric, text or coordinate_pair: {tid}')
+            shape = row.get('answer_shape')
+            if shape == 'coordinate_pair' and gold['kind'] != 'coordinate_pair':
+                raise ValidationError(f'Coordinate pair needs explicit coordinate_pair gold: {tid}')
+            if shape in ('coordinate_pair_list', 'vector', 'vector_list'):
+                raise ValidationError(f'Unscorable structured multi-field result for {tid}: revise question or add structured-row scoring')
+            if shape == 'record_list' and gold['kind'] != 'set':
+                raise ValidationError(f'Multi-row reference requires explicitly reviewed set gold: {tid}')
             vals = gold.get('values')
             if not isinstance(vals,list) or not vals or any(not isinstance(v,(str,int,float)) or isinstance(v,bool) for v in vals):
                 raise ValidationError(f'Gold values must be a nonempty scalar array: {tid}')
-            if gold['kind'] == 'set' and row.get('reference_evidence',{}).get('truncated') is True:
+            if row.get('reference_evidence',{}).get('truncated') is True:
                 if gold.get('complete_scope_review') is not True or not isinstance(row.get('review_notes'),str) or len(row['review_notes'].strip()) < 15:
                     raise ValidationError(f'Truncated reference for {tid}: reviewer must independently confirm the COMPLETE requested set and document evidence')
             if gold['kind'] == 'numeric':
@@ -127,6 +134,17 @@ def gold_finalize(tasks_path: Path, reviewed: Path, output: Path, report: Path, 
                 import math
                 if not math.isfinite(number) or not math.isfinite(tolerance) or tolerance < 0:
                     raise ValidationError(f'Invalid numeric tolerance: {tid}')
+            if gold['kind'] == 'coordinate_pair':
+                import math
+                if len(vals) != 2 or gold.get('frame') != 'icrs' or gold.get('unit') != 'deg':
+                    raise ValidationError(f'Coordinate pair needs [RA,Dec] in ICRS degrees: {tid}')
+                try:
+                    ra, dec = (float(v) for v in vals)
+                    tol = float(gold.get('absolute_tolerance',0))
+                except (ValueError, TypeError) as exc:
+                    raise ValidationError(f'Coordinate pair numeric values invalid: {tid}') from exc
+                if not all(map(math.isfinite,(ra,dec,tol))) or not 0 <= ra < 360 or not -90 <= dec <= 90 or tol < 0:
+                    raise ValidationError(f'Coordinate pair out of bounds: {tid}')
             sources = row.get('sources')
             if not isinstance(sources,list) or len(sources)<2:
                 raise ValidationError(f'Two independently reviewed source records required: {tid}')

@@ -30,6 +30,37 @@ SUCCESS_DISPOSITIONS = frozenset({"accepted_nonempty", "accepted_empty"})
 RETRYABLE_ERRORS = (MCPTransportError, MCPConnectionError, TimeoutError)
 
 
+def parse_archive_overrides(spec: str | None, *, kind: str) -> dict[str, float | int]:
+    """Validate comma-separated archive=setting overrides; no silent unknown archives."""
+    if not spec:
+        return {}
+    from .generator import SAFE_METHODS
+    output: dict[str, float | int] = {}
+    for piece in spec.split(','):
+        pair = piece.split('=', 1)
+        if len(pair) != 2 or pair[0].strip() not in SAFE_METHODS:
+            raise ValidationError(f'Invalid {kind} archive assignment: {piece!r}')
+        module, literal = pair[0].strip(), pair[1].strip()
+        if module in output or not literal:
+            raise ValidationError(f'Duplicate or empty {kind} archive assignment: {piece!r}')
+        try:
+            if kind == 'attempts':
+                if not literal.isdigit():
+                    raise ValueError(literal)
+                n = int(literal)
+                if not 1 <= n <= 5:
+                    raise ValueError(literal)
+            else:
+                n = float(literal)
+                if not math.isfinite(n) or not 0 < n <= 3600:
+                    raise ValueError(literal)
+        except ValueError as exc:
+            raise ValidationError(f'Invalid {kind} for {module}: {literal!r}') from exc
+        output[module] = n
+    return output
+
+
+
 class ValidationError(ValueError):
     """Invalid dataset, unsafe call, or inconsistent validation state."""
 
@@ -330,14 +361,27 @@ async def execute_task(task: dict[str, Any], *, url: str, timeout: float,
                        attempts: int, delay: float, max_rows: int,
                        max_response_bytes: int,
                        session_factory: Callable[[str], Any] | None = None,
-                       sleep: Callable[[float], Any] = asyncio.sleep) -> dict[str, Any]:
+                       sleep: Callable[[float], Any] = asyncio.sleep,
+                       total_deadline: float | None = None) -> dict[str, Any]:
     call = task["reference_call"]
     params = {**call["arguments"], "max_rows": max_rows}
     traces: list[dict[str, Any]] = []
+    task_end = (time.monotonic() + total_deadline) if total_deadline is not None else None
     for attempt in range(1, attempts + 1):
         if attempt > 1:
-            await sleep(min(delay * (2 ** (attempt - 2)), 30.0))
+            backoff = min(delay * (2 ** (attempt - 2)), 30.0)
+            if task_end is not None:
+                backoff = min(backoff, max(0.0, task_end - time.monotonic()))
+            if backoff:
+                await sleep(backoff)
         start = time.monotonic()
+        available = task_end - start if task_end is not None else timeout
+        if available <= 0:
+            error = {'type': 'TimeoutError', 'message': f'Reference task deadline of {total_deadline:g}s exhausted'}
+            return {'disposition': 'transport_error', 'evaluation': {
+                    'disposition': 'transport_error', 'reason': error['message']},
+                    'error': error, 'attempts': traces}
+        attempt_timeout = min(timeout, available)
         event: dict[str, Any] = {"attempt": attempt, "started_utc": now_utc(),
                                 "tool": call["tool"], "arguments": params}
         try:
@@ -345,8 +389,8 @@ async def execute_task(task: dict[str, Any], *, url: str, timeout: float,
             # a subsequent query and reference calls cannot share session state.
             # Bound the complete attempt including HTTP session teardown. A
             # stalled upstream archive must not block the entire benchmark.
-            async with asyncio.timeout(timeout):
-                async with AstroqueryMCPClient(url, timeout=timeout,
+            async with asyncio.timeout(attempt_timeout):
+                async with AstroqueryMCPClient(url, timeout=attempt_timeout,
                                                session_factory=session_factory) as client:
                     response = await client.call(call["tool"], params)
             blob = json_bytes(response)
@@ -367,7 +411,7 @@ async def execute_task(task: dict[str, Any], *, url: str, timeout: float,
                 ValueError, TypeError, OverflowError, TimeoutError) as exc:
             disposition, retryable, error = classify_failure(exc)
             if isinstance(exc, TimeoutError):
-                error["message"] = f"MCP attempt timed out after {timeout:g}s"
+                error["message"] = f"MCP attempt timed out after {attempt_timeout:g}s"
             event.update({"elapsed_seconds": round(time.monotonic() - start, 5),
                           "outcome": disposition, "error": error})
             traces.append(event)
@@ -401,11 +445,19 @@ async def validate(dataset: Path, output: Path, report_path: Path, *,
                    limit: int | None = None, resume: bool = False,
                    replace: bool = False, strict_sha256: str | None = None, json_format: str = 'compact',
                    pretty_output: Path | None = None, csv_output: Path | None = None,
+                   consolidated_csv: Path | None = None,
                    progress: Callable[[str], None] | None = None,
+                   archive_timeouts: str | None = None,
+                   archive_attempts: str | None = None,
+                   reference_deadline: float | None = None,
                    session_factory: Callable[[str], Any] | None = None,
                    sleep: Callable[[float], Any] = asyncio.sleep,
                    ) -> dict[str, Any]:
     url = resolve_mcp_url(url)
+    per_archive_timeouts = parse_archive_overrides(archive_timeouts, kind='timeouts')
+    per_archive_attempts = parse_archive_overrides(archive_attempts, kind='attempts')
+    if reference_deadline is not None and (not math.isfinite(reference_deadline) or reference_deadline <= 0):
+        raise ValidationError('--reference-deadline must be finite and positive')
     if not 1 <= attempts <= 5 or not 0 <= delay <= 60 or not 1 <= max_rows <= 1000:
         raise ValidationError("Require --attempts 1..5, --delay 0..60, --max-rows 1..1000")
     if not 1024 <= max_response_bytes <= 128 * 1024 * 1024 or timeout <= 0:
@@ -417,10 +469,16 @@ async def validate(dataset: Path, output: Path, report_path: Path, *,
     if dataset.resolve() in {output.resolve(), report_path.resolve()} or output.resolve() == report_path.resolve():
         raise ValidationError("Input, output, and report must have distinct paths")
     from .exports import check_destinations, save_views
+    if consolidated_csv is None and csv_output is not None:
+        consolidated_csv = csv_output.with_name(csv_output.stem + '_review.csv')
+    if consolidated_csv is not None and consolidated_csv.suffix.lower() != '.csv':
+        raise ValidationError('--consolidated-csv must end in .csv')
     journal = output.with_name(output.name + ".progress.jsonl")
     manifest = output.with_name(output.name + ".manifest.json")
     check_destinations(dataset, output, report_path, pretty_output, csv_output,
-                       replace=(replace or resume), extras=(journal, manifest))
+                       replace=(replace or resume), extras=tuple(x for x in (journal, manifest, consolidated_csv) if x is not None))
+    if consolidated_csv is not None and consolidated_csv.exists() and not (replace or resume):
+        raise ValidationError(f'Consolidated review CSV already exists: {consolidated_csv}')
     def notify(message: str) -> None:
         if progress is not None:
             progress(message)
@@ -502,18 +560,25 @@ async def validate(dataset: Path, output: Path, report_path: Path, *,
                                "created_utc": now_utc(), "context": context})
     if remaining:
         for index, task in enumerate(remaining):
+            task_timeout = per_archive_timeouts.get(task['module'], timeout)
+            task_attempts = per_archive_attempts.get(task['module'], attempts)
             notify(f"START {len(completed)+1}/{len(records)} {task['module']} {task['id']} "
-                   f"(up to {attempts} attempt(s), {timeout:g}s timeout per MCP operation)")
+                   f"(up to {task_attempts} attempt(s), {task_timeout:g}s timeout per MCP operation"
+                   + (f", {reference_deadline:g}s total task deadline" if reference_deadline else "") + ")")
             started_task = time.monotonic()
             if index and delay:
                 await sleep(delay)
             async with waiting(f"{task['module']} {task['id']}"):
-                outcome = await execute_task(task, url=url, timeout=timeout, attempts=attempts,
+                outcome = await execute_task(task, url=url, timeout=task_timeout, attempts=task_attempts,
                                              delay=delay, max_rows=max_rows,
                                              max_response_bytes=max_response_bytes,
+                                             total_deadline=reference_deadline,
                                              session_factory=session_factory, sleep=sleep)
             entry = {"task_id": task["id"], "module": task["module"],
                      "input_dataset_sha256": dataset_hash, "reference_call": task["reference_call"],
+                     "effective_timeout_seconds": task_timeout,
+                     "effective_attempt_limit": task_attempts,
+                     "reference_deadline_seconds": reference_deadline,
                      "evaluated_at_utc": now_utc(), **outcome}
             append_journal(journal, entry)
             completed[task["id"]] = entry
@@ -538,6 +603,9 @@ async def validate(dataset: Path, output: Path, report_path: Path, *,
                          "REVIEW" if any(item["disposition"] not in SUCCESS_DISPOSITIONS for item in ordered) else "PASS"),
         "status": "COMPLETE" if all_done else "PARTIAL",
         "journal": str(journal), "manifest": str(manifest),
+        "archive_policy": {"timeouts": per_archive_timeouts, "attempts": per_archive_attempts,
+                           "reference_deadline": reference_deadline,
+                           "note": "Policy may change on resume; per-task effective settings are journaled."},
         "notes": ["Accepted means valid serialized table evidence, not independently verified astrophysical truth.",
                   "Only MAST query_region currently honors max_rows at the MCP server level.",
                   "Every attempted task is journaled, including errors and empty results."],
@@ -565,6 +633,11 @@ async def validate(dataset: Path, output: Path, report_path: Path, *,
             result["pretty_output"] = str(pretty_output)
         if csv_output is not None:
             result["csv_output"] = str(csv_output)
+    if consolidated_csv is not None:
+        from .reference_review import write_consolidated_csv
+        write_consolidated_csv([t for t in records if t['id'] in completed], ordered,
+                               consolidated_csv, replace=(replace or resume))
+        result['consolidated_csv'] = str(consolidated_csv)
     if all_done:
         result["reference_answers_sha256"] = atomic_jsonl(output, ordered)
         result["output"] = str(output)

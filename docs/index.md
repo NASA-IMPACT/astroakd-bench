@@ -8,10 +8,11 @@ not under `docs/`.
 Start with the repository `README.md` for an overview, or the
 [current quick-start](benchmark/quickstart.md) for tested commands.
 
-## Current guides (0.6.7.8)
+## Current guides (0.6.7.10)
 
 | Topic | Guide |
 | --- | --- |
+| 0.6.7.10 archive budgets, consolidated answers and gold review | [Scientific review — 0.6.7.10](benchmark/archive_policy_scientific_review_0_6_7_10.md) |
 | Installation, configuration, three-arm run and scoring | [Current quick-start](benchmark/quickstart.md) |
 | Clone and run local MCP; generate/validate/evaluate 100 new questions | [New 100-query workflow](benchmark/new_100_query_workflow.md) |
 | Scope of experiment and what scores mean | [Experimental methods and interpretation](benchmark/experimental_methods.md) |
@@ -57,6 +58,7 @@ the repository `CHANGELOG.md`.
 
 benchmark/quickstart
 benchmark/new_100_query_workflow
+benchmark/archive_policy_scientific_review_0_6_7_10
 benchmark/experimental_methods
 benchmark/mcp_endpoint_auth_0_6_7_3
 benchmark/reference_anchored_scorable_0_6_7

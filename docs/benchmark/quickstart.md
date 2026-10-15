@@ -1,4 +1,4 @@
-# Current workflow — AstroAKD-Bench 0.6.7.9
+# Current workflow — AstroAKD-Bench 0.6.7.10
 
 This is the **current command guide**. Versioned documentation under `docs/benchmark/`
 may illustrate earlier behavior. Execute all commands from the **repository root**.
@@ -201,3 +201,12 @@ These exports are offline, additive, and preserve the frozen dataset.
 ### Live reference collection at generation time (0.6.7.9)
 
 Use `generate --with-reference-answers` for new single-call MCP candidates to execute the real archive query immediately after question writing. The companion validation JSONL stores full returned tables and provenance; its CSV includes observed expected-column values marked unreviewed. For existing generated questions, use `validate` directly. Keep reference collection separate from scientific gold review. See [the 100-query workflow](new_100_query_workflow.md).
+
+### Archive-specific reference policy and offline review (0.6.7.10)
+
+`validate` and `generate --with-reference-answers` accept `--archive-timeouts`,
+`--archive-attempts` and `--reference-deadline`. A consolidated one-row-per-question
+review CSV accompanies any reference CSV. The entirely offline
+`reference-review-draft` command constructs a human-editable gold review JSONL
+with row-cardinality and truncation warnings; no observed values are approved
+by default. See [scientific-review guide](archive_policy_scientific_review_0_6_7_10.md).

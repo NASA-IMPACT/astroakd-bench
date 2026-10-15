@@ -10,7 +10,7 @@ agents and exports reproducible answer comparisons, scores and performance plots
 **AstroAKD** is the *agent being evaluated*; **AstroAKD-Bench** is the *benchmark*;
 **astroquery-mcp** is a *separate MCP service*. They are not interchangeable.
 
-**Current version: `0.6.7.9` — paired 50-question A/B/C analysis, error audit, comprehensive CSV exports, and new figures.**
+**Current version: `0.6.7.10` — archive-specific reference budgets, consolidated answer-review CSVs, and offline scientific review / gold finalization.**
 [Documentation index](docs/index.md) · [Current quick-start](docs/benchmark/quickstart.md)
 · [Change history](CHANGELOG.md) · [Instruction layout](instructions/README.md)
 
@@ -106,7 +106,7 @@ contains only documentation and preserved technical background.
 
 ## Generate synthetic questions **with real reference answers**
 
-AstroAKD-Bench 0.6.7.9 provides an integrated, explicit
+AstroAKD-Bench 0.6.7.10 retains the integrated, explicit
 `generate --with-reference-answers` workflow. The question-writing model
 **never supplies reference answers**. Instead the benchmark executes each
 candidate's allowed read-only Astroquery MCP call, keeps actual serialized
@@ -161,6 +161,36 @@ review. A strict 100-question scorable oracle additionally requires sufficient
 nonempty unambiguous evidence; do not interpret a `generate`/`validate` `PASS`
 as 100 scientifically verified answers. See the
 [100-query workflow](docs/benchmark/new_100_query_workflow.md).
+
+## Scientific review of the completed 100-question reference collection (0.6.7.10)
+
+The generated question CSV **does not** contain reference values. The validated
+reference CSV has `reference_answer_values_json` and
+`reference_answer_status`, and now has an automatically generated companion
+`*_references_review.csv`: **one row per question** with its text, archive,
+target, observed answer preview, cardinality, ambiguity and review flags.
+
+For the existing 100 finished references, run this **offline**; no new OpenAI
+or MCP calls are needed:
+
+```bash
+uv run python -m benchmark reference-review-draft \
+  --tasks datasets/generated/synthetic_100_with_refs.jsonl \
+  --references datasets/validated/synthetic_100_with_refs_references.jsonl \
+  --output datasets/gold/synthetic_100_review_draft.jsonl \
+  --csv-output datasets/gold/synthetic_100_science_review.csv \
+  --report datasets/gold/synthetic_100_review_report.json \
+  --json-format pretty
+```
+
+The editable JSONL is compatible with `gold-finalize`, **after independent
+human review**, author attribution and two independent source citations.
+Multi-row responses and truncated archive subsets are not automatically
+scorable. Archive-specific `--archive-timeouts mast=60,...`,
+`--archive-attempts mast=1,...`, and `--reference-deadline 70` can be supplied
+to *new* `validate`/reference-enabled `generate` runs without changing the
+prior default policy. Refer to the
+[0.6.7.10 scientific-review guide](docs/benchmark/archive_policy_scientific_review_0_6_7_10.md).
 
 ## Current 50-question GPT-5.2 experiment
 
@@ -316,6 +346,8 @@ This installs the optional documentation dependencies through `uv` and writes
 Sphinx is already installed, use `make -C docs/sphinx html SPHINXBUILD=sphinx-build`.
 The build Makefile lives at `docs/sphinx/Makefile`; the Sphinx configuration lives in `docs/conf.py`; see the
 [documentation build guide](docs/benchmark/documentation_build.md).
+
+[0.6.7.10 offline qualification](QUALIFICATION_0_6_7_10.md) and [0.6.7.10 conversation handoff](CONVERSATION_HANDOFF_THROUGH_0_6_7_10.md) document the new review safeguards and remaining live-host checks.
 
 ## Synthetic questions, evidence and scientific qualification
 

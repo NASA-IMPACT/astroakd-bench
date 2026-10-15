@@ -27,7 +27,7 @@ DEFAULT_DATASET = Path("datasets/generated/synthetic_queries.jsonl")
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="astroakd-bench",
-        description="AstroAKD-Bench 0.6.7.9 astronomical agent benchmarking.",
+        description="AstroAKD-Bench 0.6.7.10 astronomical agent benchmarking.",
     )
     parser.add_argument("--version", action="version", version=__version__)
     common = argparse.ArgumentParser(add_help=False)
@@ -102,6 +102,8 @@ def build_parser() -> argparse.ArgumentParser:
                      help="Live validation JSON summary destination")
     gen.add_argument("--reference-csv", type=Path,
                      help="Reference evidence and observed answer values CSV")
+    gen.add_argument('--reference-consolidated-csv', type=Path,
+                     help='Single-row-per-question review CSV; default alongside the reference CSV')
     gen.add_argument("--reference-pretty", type=Path,
                      help="Optional full reference records as an indented JSON array")
     gen.add_argument("--reference-limit", type=int,
@@ -110,6 +112,10 @@ def build_parser() -> argparse.ArgumentParser:
                      help="Maximum live archive attempts per task (default: 2)")
     gen.add_argument("--reference-delay", type=float, default=2.0,
                      help="Delay between live archive requests (default: 2 seconds)")
+    for command in (gen,):
+        command.add_argument('--archive-timeouts', help='Per-archive seconds, e.g. mast=60,simbad=30 (otherwise --timeout)')
+        command.add_argument('--archive-attempts', help='Per-archive attempts, e.g. mast=1,gaia=2 (otherwise --reference-attempts)')
+        command.add_argument('--reference-deadline', type=float, help='Hard total wall-clock seconds per reference question')
     gen.add_argument("--replace", action="store_true", help="Overwrite existing dataset and exports")
     gen.add_argument("--report", type=Path, help="Save JSON generation summary separately")
     literature = commands.add_parser('literature-search', parents=[common],
@@ -132,6 +138,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="Summary report path")
     validation.add_argument("--csv-output", type=Path,
         help="Optional CSV export of completed reference dispositions")
+    validation.add_argument('--consolidated-csv', type=Path,
+        help='One-row-per-question consolidated review CSV; default alongside --csv-output')
     validation.add_argument("--pretty-output", type=Path,
         help="Optional indented JSON array (.json) of completed reference records")
     validation.add_argument("--quiet-progress", action="store_true",
@@ -140,6 +148,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="Maximum attempts per reference query (default: 2)")
     validation.add_argument("--delay", type=float, default=2.0,
         help="Seconds between queries, exponential between retries (default: 2)")
+    validation.add_argument('--archive-timeouts', help='Per-archive seconds, e.g. mast=60,simbad=30')
+    validation.add_argument('--archive-attempts', help='Per-archive maximum attempts, e.g. mast=1,gaia=2')
+    validation.add_argument('--reference-deadline', type=float, help='Hard total seconds per reference question')
     validation.add_argument("--max-rows", type=int, default=20,
         help="Limit rows returned by MAST query_region (default: 20)")
     validation.add_argument("--max-response-bytes", type=int, default=8 * 1024 * 1024)
@@ -212,6 +223,15 @@ def build_parser() -> argparse.ArgumentParser:
     gold.add_argument('--output', required=True, type=Path)
     gold.add_argument('--report', required=True, type=Path)
     gold.add_argument('--replace', action='store_true')
+    review = commands.add_parser('reference-review-draft', parents=[common],
+        help='OFFLINE: build one-row-per-question CSV and editable human science-review worksheet from live MCP reference evidence')
+    review.add_argument('--tasks', required=True, type=Path)
+    review.add_argument('--references', required=True, type=Path)
+    review.add_argument('--output', required=True, type=Path,
+        help='Editable review JSONL, suitable for gold-finalize AFTER human verification')
+    review.add_argument('--csv-output', type=Path, help='Consolidated review CSV')
+    review.add_argument('--report', required=True, type=Path)
+    review.add_argument('--replace', action='store_true')
     freeze = commands.add_parser('gold-finalize', parents=[common],
         help='Freeze reviewed gold answers with source evidence; fail incomplete by default')
     freeze.add_argument('--tasks', required=True, type=Path)
@@ -321,6 +341,11 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
         from .gold import gold_draft
         return gold_draft(args.tasks,args.output,args.report,references=args.references,
                           reference_tasks=args.reference_tasks,replace=args.replace)
+    if args.command == 'reference-review-draft':
+        from .reference_review import reference_review_draft
+        return reference_review_draft(args.tasks, args.references, args.output,
+                                      args.report, csv_output=args.csv_output,
+                                      replace=args.replace)
     if args.command == 'gold-finalize':
         from .gold import gold_finalize
         return gold_finalize(args.tasks,args.reviewed,args.output,args.report,
@@ -374,7 +399,7 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
         manifest = args.output.with_name(args.output.name + ".manifest.json")
         check_destinations(args.input, args.output, args.report, args.pretty_output,
                            args.csv_output, replace=(args.replace or args.resume),
-                           extras=(journal, manifest))
+                           extras=(journal, manifest, args.consolidated_csv) if args.consolidated_csv else (journal, manifest))
         def progress(message: str) -> None:
             if not args.quiet_progress:
                 print(f"[AstroAKD-Bench validate] {message}", file=sys.stderr, flush=True)
@@ -386,7 +411,9 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
             strict_sha256=(EXPECTED_ACCEPTED_020_SHA256
                            if args.strict_accepted_020 else None), json_format=args.json_format,
             pretty_output=args.pretty_output, csv_output=args.csv_output,
-            progress=progress,
+            consolidated_csv=args.consolidated_csv,
+            archive_timeouts=args.archive_timeouts, archive_attempts=args.archive_attempts,
+            reference_deadline=args.reference_deadline, progress=progress,
         )
     if args.command == "run":
         return await run_agents(
@@ -403,6 +430,13 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
         # Reference collection can take hours and contact external archives; it is
         # always an explicit opt-in and never silently charges an API or MCP budget.
         if args.with_reference_answers:
+            from .validator import parse_archive_overrides
+            import math
+            parse_archive_overrides(args.archive_timeouts, kind='timeouts')
+            parse_archive_overrides(args.archive_attempts, kind='attempts')
+            if args.reference_deadline is not None and (
+                    not math.isfinite(args.reference_deadline) or args.reference_deadline <= 0):
+                raise ValidationError('--reference-deadline must be finite and positive')
             if not args.mcp:
                 raise GenerationError('--with-reference-answers requires --mcp')
             if args.task_mix is not None:
@@ -411,9 +445,11 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
             reference_paths_selected = reference_paths(args.output, args.reference_output,
                 args.reference_report, args.reference_csv, args.reference_pretty)
             check_reference_paths(args.output, args.report, args.pretty_output,
-                args.csv_output, reference_paths_selected, replace=args.replace)
+                args.csv_output, reference_paths_selected, replace=args.replace,
+                consolidated_csv=args.reference_consolidated_csv)
         elif any(x is not None for x in (args.reference_output, args.reference_report,
-                args.reference_csv, args.reference_pretty, args.reference_limit)):
+                args.reference_csv, args.reference_pretty, args.reference_limit,
+                args.reference_consolidated_csv)):
             raise GenerationError('Reference destinations and --reference-limit require --with-reference-answers')
         from .exports import check_destinations, save_views
         from .mixed_generation import parse_task_mix
@@ -490,13 +526,17 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
                 url=args.mcp_url, timeout=args.timeout, attempts=args.reference_attempts,
                 delay=args.reference_delay, limit=args.reference_limit,
                 csv_output=ref_csv, pretty_output=ref_pretty,
+                consolidated_csv=args.reference_consolidated_csv,
                 replace=args.replace, json_format=args.json_format,
+                archive_timeouts=args.archive_timeouts, archive_attempts=args.archive_attempts,
+                reference_deadline=args.reference_deadline,
                 progress=reference_progress)
             summary['reference_collection'] = {
                 'status': validation['status'], 'quality_gate': validation['quality_gate'],
                 'reference_output': (validation.get('output') or ''),
                 'reference_journal': validation['journal'],
                 'reference_report': str(ref_report), 'reference_csv': str(ref_csv),
+                'reference_consolidated_csv': validation.get('consolidated_csv'),
                 'processed': validation['processed'], 'remaining': validation['remaining'],
                 'accepted_reference_count': validation['accepted_reference_count'],
                 'dispositions': validation['dispositions'],
@@ -535,7 +575,7 @@ def main(argv: list[str] | None = None) -> int:
                    "message": sanitize_mcp_error(exc, args.mcp_token)}}
     output = json_text(payload, args.json_format)
     print(output)
-    report_destination = (None if args.command in {"validate", "run", "evaluate", "build-fixtures", "gold-draft", "gold-finalize", "run-three-arm", "score-three-arm", "export-answer-csv", "build-scorable", "score-scorable"} else
+    report_destination = (None if args.command in {"validate", "run", "evaluate", "build-fixtures", "gold-draft", "reference-review-draft", "gold-finalize", "run-three-arm", "score-three-arm", "export-answer-csv", "build-scorable", "score-scorable"} else
                           args.report if args.command in {"generate", "audit-diversity"} else args.output)
     if report_destination is not None:
         try:

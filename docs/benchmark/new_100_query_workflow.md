@@ -1,6 +1,6 @@
 # New 100-query experiment: local MCP, generation, validation and scoring
 
-This workflow applies to **AstroAKD-Bench 0.6.7.9**. Apart from the first
+This workflow applies to **AstroAKD-Bench 0.6.7.10**. Apart from the first
 terminal, run commands from the AstroAKD-Bench repository root. All filenames
 are **new** and must not replace the frozen 50-question experiment artifacts.
 
@@ -217,3 +217,18 @@ Keep the original 50-question dataset/oracle and 150-run journal intact.
 Match percentages between different task sets do not by themselves prove
 model improvement. The 100-question workflow has been locally checked, but
 **a live end-to-end 100-query experiment has not been executed here**.
+
+## 0.6.7.10: archive budgets and offline gold review
+
+The earlier 0.6.7.9 examples remain valid. To limit slow MAST requests, add
+`--archive-timeouts mast=60 --archive-attempts mast=1 --reference-deadline 70`
+to a new `validate` command or to `generate --with-reference-answers`.
+`validate --resume` can change these policy values but retains completed
+failed or successful tasks. When `--csv-output` is requested, the paired
+`*_review.csv` holds question, archive, target, observed values, review flags
+and answer-shape together.
+
+For the **already collected 100 live references**, run `reference-review-draft`
+without any live calls. See
+[0.6.7.10 scientific review](archive_policy_scientific_review_0_6_7_10.md)
+for commands, scientific review requirements and gold finalization.

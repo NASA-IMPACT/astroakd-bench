@@ -193,6 +193,21 @@ def _score_one(gold:dict,answer:dict):
     vals=answer.get('answer_values')
     if not isinstance(vals,list): return 'REVIEW_UNSTRUCTURED',None
     ref=gold['values']; kind=gold['kind']
+    if kind=='coordinate_pair':
+        if len(vals)!=2 or _normalize(answer.get('unit'))!='deg':
+            return 'INCORRECT',0.0
+        try:
+            import math
+            ra,dec = map(float, vals)
+            expected_ra,expected_dec = map(float, ref)
+            tolerance = float(gold.get('absolute_tolerance',0))
+            if not (all(map(math.isfinite,(ra,dec))) and 0 <= ra < 360 and -90 <= dec <= 90):
+                return 'INCORRECT',0.0
+            ra_delta=abs((ra-expected_ra+180)%360-180)
+            good=(ra_delta<=tolerance and abs(dec-expected_dec)<=tolerance)
+        except (ValueError,TypeError,OverflowError):
+            return 'INCORRECT',0.0
+        return ('CORRECT',1.0) if good else ('INCORRECT',0.0)
     if kind=='numeric':
         if len(vals)!=1 or _normalize(answer.get('unit'))!=_normalize(gold['unit']):
             return 'INCORRECT',0.0
