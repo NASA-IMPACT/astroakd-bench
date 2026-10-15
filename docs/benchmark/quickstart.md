@@ -7,7 +7,9 @@ may illustrate earlier behavior. Execute all commands from the **repository root
 
 Python 3.11+ and `uv` are supported. The Astroquery MCP server is a **separate
 service** (e.g. the NASA IMPACT `astroquery-mcp` project); AstroAKD-Bench does
-not start or own it.
+not start or own it. For tested command syntax to clone and start a local
+`astroquery-mcp` server and generate a new 100-query study, see the
+[100-query workflow](new_100_query_workflow.md).
 
 ```bash
 uv sync

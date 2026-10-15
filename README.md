@@ -22,11 +22,34 @@ AstroAKD-Bench repository root:
 ```bash
 uv sync
 uv run python -m benchmark --version
+```
+
+### Run the external Astroquery MCP server locally
+
+The benchmark is a client of NASA IMPACT's
+[`astroquery-mcp`](https://github.com/NASA-IMPACT/astroquery-mcp), not the
+server itself. In **terminal 1**, clone that separate repository and launch it:
+
+```bash
+git clone https://github.com/NASA-IMPACT/astroquery-mcp.git
+cd astroquery-mcp
+uv sync
+uv run fastmcp run server.py --transport http --host 127.0.0.1 --port 8000
+```
+
+Leave this terminal running. The local endpoint is
+`http://127.0.0.1:8000/mcp`. Bind to loopback rather than exposing the
+server's dynamic archive executor to the public Internet. In **terminal 2**,
+from your AstroAKD-Bench repository root, check connectivity:
+
+```bash
+export ASTROAKD_MCP_URL='http://127.0.0.1:8000/mcp'
+unset ASTROAKD_MCP_TOKEN
 uv run python -m benchmark doctor --fast --json-format pretty
 ```
 
-`doctor` connects to an **already running** compatible Astroquery MCP server;
-this repository does not launch one. Set an endpoint for your environment:
+`doctor` connects to an **already running** compatible MCP service. To use a
+remote authenticated endpoint instead, configure:
 
 ```bash
 # Default localhost (no authentication)
@@ -81,6 +104,41 @@ any shell commands or scripts using those paths. Version 0.6.7.5 additionally
 renamed the generator prompt to `AstroAKD-Bench_Instruction.md`. The `docs/` directory now
 contains only documentation and preserved technical background.
 
+## Generate a new 100-query synthetic dataset
+
+Use **new file paths** for experiments; never replace the 50-query frozen
+inputs or the complete 150-run GPT-5.2 journal. With the local MCP server
+running and `OPENAI_API_KEY` configured, create 100 **unvalidated candidates**:
+
+```bash
+uv run --with openai python -m benchmark generate \
+  --backend openai --instructions --mcp \
+  --model gpt-5.2 --count 100 --batch-size 5 --seed 20261015 \
+  --modules simbad,mast,heasarc,gaia,vizier \
+  --uniqueness archive-target --question-style answer-oriented \
+  --output datasets/generated/synthetic_100_gpt52.jsonl \
+  --csv-output datasets/generated/synthetic_100_gpt52.csv \
+  --pretty-output datasets/generated/synthetic_100_gpt52_pretty.json \
+  --report datasets/generated/synthetic_100_gpt52_report.json \
+  --json-format pretty
+
+wc -l datasets/generated/synthetic_100_gpt52.jsonl
+```
+
+Expected: **100 lines** (20 per selected archive). The generator discovers
+MCP function schemas but **does not query archive data or construct verified
+reference answers**. Use `archive-target` uniqueness: the curated 22 seed
+targets cannot satisfy 100 globally unique objects. `--task-mix gold50` is
+fixed at 50 tasks and incompatible with `--count 100`.
+
+For a **scorable** 100-query experiment, validate each new task against live
+archives (`validate`), derive unreviewed snapshot keys (`build-scorable
+--count 100`) **only if all 100 source references are accepted and nonempty**,
+then run 100 questions on A/B/C (**300 runs**) and produce fresh combined CSVs
+and plots with `score-scorable`. The complete sequence, with safe `--limit 5`
+and `--resume` examples, is in the
+[100-query experiment guide](docs/benchmark/new_100_query_workflow.md).
+
 ## Current 50-question GPT-5.2 experiment
 
 The scorable test set contains **50 narrowly answerable questions**, derived
@@ -104,8 +162,10 @@ The initial five-question pilot yielded **snapshot matches** of A **5/5**, B
 **5/5**, C **1/5**; these are **not** independently verified science accuracy,
 and were only 5/50 questions. Its mean runtimes were **21.46, 7.58 and 16.95
 seconds** and recorded token totals **276,739, 308,724 and 101,552**,
-respectively. The ongoing full 150-run experiment is not claimed complete
-until the final live host report confirms it.
+respectively. The full 150-run GPT-5.2 experiment subsequently completed on the host:
+A **48/50**, B **49/50**, and C **12/50** source-snapshot matches (run-journal
+SHA-256 `58824a2b71e7063b550c3fa16592f70307f11f6ace7293bf7fe81a47c334daaf`).
+These are **not** independently reviewed scientific accuracy values.
 
 ### Run all 50 questions (new experiment; no `--resume`)
 

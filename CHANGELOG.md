@@ -11,6 +11,8 @@ qualification** from **real laptop / live-service qualification**.
 
 ## [0.6.7.8] — PAIRED_THREE_ARM_ERROR_AND_EFFICIENCY_ANALYSIS (offline-qualified; 2026-10-15)
 
+- Documentation-only follow-up (same software version): add first-time local NASA IMPACT `astroquery-mcp` clone and FastMCP HTTP launch instructions, then a new 100-query candidate generation / resumable validation / conditional scorable oracle / 300-arm-run / offline-score walkthrough. The strict all-`accepted_nonempty` reference gate, frozen-data preservation and no-live-100-run qualification are explicit. README, current quick-start and Sphinx navigation updated; no runtime, oracle or experiment data changes.
+
 - Add optional five CSV reports to `score-scorable`: overall A/B/C results including MCP and web statistics; MCP A/B summary; per-question A/B/C paired answers and runtime/token/tool deltas; pairwise match contingency and efficiency summary; and observable-category mismatch audit requiring independent science review. Existing reports remain compatible.
 - Calculate exact two-sided McNemar discordance p-values, paired means and medians, quartiles, and deterministic 2000-resample percentile bootstrap intervals on paired **mean differences**. Missing arm runs remain unavailable rather than being coerced to zero or an incorrect answer.
 - Add four paired PNG/SVG figures, separate from the five original figures. Preserve recorded model responses, source-derived oracle, instruction contents and input hashes.

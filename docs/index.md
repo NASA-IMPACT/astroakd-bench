@@ -13,6 +13,7 @@ Start with the repository `README.md` for an overview, or the
 | Topic | Guide |
 | --- | --- |
 | Installation, configuration, three-arm run and scoring | [Current quick-start](benchmark/quickstart.md) |
+| Clone and run local MCP; generate/validate/evaluate 100 new questions | [New 100-query workflow](benchmark/new_100_query_workflow.md) |
 | Scope of experiment and what scores mean | [Experimental methods and interpretation](benchmark/experimental_methods.md) |
 | MCP endpoint precedence, bearer authentication, connectivity | [MCP configuration — 0.6.7.3](benchmark/mcp_endpoint_auth_0_6_7_3.md) |
 | Generate 50 single-value reference-anchored tasks | [Scorable dataset — 0.6.7](benchmark/reference_anchored_scorable_0_6_7.md) |
@@ -55,6 +56,7 @@ the repository `CHANGELOG.md`.
 :caption: Current guides
 
 benchmark/quickstart
+benchmark/new_100_query_workflow
 benchmark/experimental_methods
 benchmark/mcp_endpoint_auth_0_6_7_3
 benchmark/reference_anchored_scorable_0_6_7
