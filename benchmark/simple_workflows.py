@@ -1,4 +1,4 @@
-"""0.6.7.11.2 convenience API: named datasets with optional single-call references.
+"""0.6.7.11.3 convenience API: named datasets with optional single-call references.
 
 No model-generated answer is a gold reference. Multi-step candidates are
 excluded from the independent single-call reference validator.

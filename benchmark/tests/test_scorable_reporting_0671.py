@@ -9,8 +9,8 @@ from benchmark.validator import atomic_jsonl, load_jsonl, ValidationError
 from benchmark.cli import build_parser
 
 ROOT=Path(__file__).resolve().parents[2]
-TASKS=ROOT/'datasets/generated/scorable_50.jsonl'
-ORACLE=ROOT/'datasets/gold/scorable_50_reference_oracle.jsonl'
+TASKS=ROOT/'benchmark/tests/fixtures/legacy/generated/scorable_50.jsonl'
+ORACLE=ROOT/'benchmark/tests/fixtures/legacy/gold/scorable_50_reference_oracle.jsonl'
 
 class Reporting0671(unittest.TestCase):
     def setUp(self):

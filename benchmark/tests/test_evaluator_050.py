@@ -12,9 +12,9 @@ from benchmark.validator import atomic_json, atomic_jsonl, EXPECTED_ACCEPTED_020
 from benchmark.cli import build_parser
 
 ROOT=Path(__file__).resolve().parents[2]
-TASKS=ROOT/'datasets/generated/synthetic_queries.jsonl'
-REFS=ROOT/'datasets/validated/reference_answers.jsonl'
-RUNS=ROOT/'datasets/agent/openai_041_runs.jsonl.progress.jsonl'
+TASKS=ROOT/'benchmark/tests/fixtures/legacy/generated/synthetic_queries.jsonl'
+REFS=ROOT/'benchmark/tests/fixtures/legacy/validated/reference_answers.jsonl'
+RUNS=ROOT/'benchmark/tests/fixtures/legacy/agent/openai_041_runs.jsonl.progress.jsonl'
 
 class Evaluation050Tests(unittest.TestCase):
     def test_accepted_dataset_fingerprints_survive_root_move(self):
@@ -62,7 +62,7 @@ class Evaluation050Tests(unittest.TestCase):
         for cmd in ('generate','validate','run','evaluate'):
             args=parser.parse_args([cmd,'--json-format','pretty'])
             self.assertEqual(args.json_format,'pretty')
-        self.assertEqual(parser.parse_args(['generate']).output,TASKS.relative_to(ROOT))
+        self.assertEqual(parser.parse_args(['generate']).output,Path('datasets/generated/synthetic_queries.jsonl'))
         self.assertEqual(parser.parse_args(['validate']).output,Path('datasets/validated/reference_answers.jsonl'))
         self.assertEqual(parser.parse_args(['run']).output,Path('datasets/agent/agent_runs.jsonl'))
         self.assertEqual(parser.parse_args(['evaluate']).output,Path('datasets/evaluation/task_scores.jsonl'))

@@ -108,7 +108,7 @@ class Diversity063Tests(unittest.TestCase):
 
     def test_old_frozen_hash_unchanged(self):
         base=Path(__file__).resolve().parent.parent.parent
-        frozen=base/'datasets/generated/synthetic_queries.jsonl'
+        frozen=base/'benchmark/tests/fixtures/legacy/generated/synthetic_queries.jsonl'
         _, sha=load_jsonl(frozen)
         self.assertEqual(sha, 'e6de68eedf2b38ea08dd684cac678edc80ee23abe51b7189f0adfb5e369c1fe9')
 

@@ -10,9 +10,9 @@ from benchmark.validator import atomic_jsonl, load_jsonl, ValidationError
 from benchmark.scorable_diagnostics import plot_paths
 
 ROOT=Path(__file__).resolve().parents[2]
-TASKS=ROOT/'datasets/generated/scorable_50.jsonl'
-ORACLE=ROOT/'datasets/gold/scorable_50_reference_oracle.jsonl'
-PILOT=ROOT/'datasets/agent/scorable_50_gpt52_runs.jsonl.progress.jsonl'
+TASKS=ROOT/'benchmark/tests/fixtures/legacy/generated/scorable_50.jsonl'
+ORACLE=ROOT/'benchmark/tests/fixtures/legacy/gold/scorable_50_reference_oracle.jsonl'
+PILOT=ROOT/'benchmark/tests/fixtures/legacy/agent/scorable_50_gpt52_runs.jsonl.progress.jsonl'
 
 
 def rows(path):

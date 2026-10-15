@@ -2,7 +2,7 @@
 
 **Reproducible synthetic astronomy questions and three-arm agent evaluation.**
 
-**Current version: 0.6.7.11.2** — easy named-dataset workflows; ADS/literature and multi-archive questions; native offline archive-reference and A/B/C reports with PNG/SVG plots.
+**Current version: 0.6.7.11.3** — easy named-dataset workflows; optional single-call reference collection; offline plots; historical datasets archived outside the clean working tree.
 
 AstroAKD-Bench is the **benchmark**. AstroAKD is the **evaluated agent**. The independent [NASA IMPACT Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp) is the **archive backend**. Benchmark questions, archive observations, independently reviewed scientific answers, and agent predictions remain separate objects.
 
@@ -30,90 +30,55 @@ export OPENAI_API_KEY='YOUR_API_KEY'  # set securely; do not commit credentials
 
 The default server is `http://127.0.0.1:8000/mcp`; `ASTROAKD_MCP_URL` and `ASTROAKD_MCP_TOKEN` select a remote server if needed. MCP ADS literature search may require credentials *in the server configuration*. Do not put an ADS token in benchmark output or in a question.
 
-## Five short commands for `synthetic_100`
+## Five short commands for `astroakd_100`
 
-### 1. Create synthetic questions, optionally collecting reference evidence
+### 1. Create 100 mixed synthetic questions with available reference evidence
 
-```bash
-uv run --with openai python -m benchmark create-queries \
-  --name synthetic_100 --model gpt-5.2 --seed 20261018
-```
-
-You can select **any count from 1 through 100** using `--count`; the mixed proportions are adjusted automatically without writing a manual `--mix`. Set `--output-dir` to put **all artifacts** into a chosen folder. If you omit `--name`, it becomes `synthetic_N` (for example `synthetic_40`), while the default remains `synthetic_100`.
-
-```bash
-# Question generation only (no reference queries)
-uv run --with openai python -m benchmark create-queries \
-  --count 40 --seed 20261018 \
-  --output-dir /scratch/astroakd/study1 --require-ads
-```
-
-**Generate questions and collect real reference observations in one command**
-(`--with-reference-answers` is supported by `create-queries` in 0.6.7.11.2):
+**Recommended command:** generate 100 questions, require ADS for literature question authoring, and collect available single-call archive evidence automatically. **`--seed` is optional** (default: `20261018`). The named dataset and all new files are saved under the user-facing `datasets/` folder:
 
 ```bash
 uv run --with openai python -m benchmark create-queries \
-  --name astroakd_test40 \
+  --name astroakd_100 \
   --count 100 \
-  --output-dir /scratch/astroakd/study1 \
-  --seed 20261018 \
+  --output-dir datasets \
   --require-ads \
   --with-reference-answers
 ```
 
-Here `--name` and `--count` are **independent**: the command creates 100
-questions named `astroakd_test40`. To create 40, set `--count 40`. With the
-100-question balanced mix, the command collects references for **80 eligible
-single-call archive/coordinate questions** after generation. The 8 ADS literature
-and 12 multi-archive questions are retained and reported as **multi-step evidence
-pending**, not falsely assigned reference answers. ADS research during question
-authoring is *not* an independently verified answer. All observed reference values
-remain unreviewed; **zero are automatically declared gold**.
+`--name` chooses the filename prefix, `--count` sets the number of questions, and `--output-dir` sets the **root** directory (not a full `.jsonl` filename). `--output-dir datasets` is explicit but optional: it is the default. No manual `mkdir` is necessary. The command writes `datasets/generated/astroakd_100.jsonl` and `.csv`, an 80-question single-call subset, a 20-question multi-step subset, and `datasets/validated/astroakd_100_references.jsonl` for collected eligible references.
 
-For a faster initial reference check add `--reference-limit 5`. The generator
-saves its output before archive queries; after the pilot (or an interrupted
-collection), finish without regenerating or paying for another model run:
+**What `--with-reference-answers` means:** of the default balanced 100 questions, **60 archive-driven plus 20 coordinate-driven** questions are eligible for automatic single-call MCP collection. **8 literature/ADS and 12 multi-archive questions require multi-step evidence** and stay pending. ADS literature discovery used in writing questions is not a verified answer. All collected values are **unreviewed evidence**, not approved gold. Live model and MCP calls require configured OpenAI and Astroquery MCP access, including working ADS credentials when `--require-ads` is set.
+
+**Safe five-reference pilot:** add `--reference-limit 5` to the command above. Finish reference collection afterwards without regenerating questions:
 
 ```bash
 uv run python -m benchmark collect-references \
-  --name astroakd_test40 --output-dir /scratch/astroakd/study1 --resume
+  --name astroakd_100 --output-dir datasets --resume
 ```
 
-This two-step alternative is also available when you omit
-`--with-reference-answers` entirely. Never rerun `create-queries` merely to
-resume reference collection. Use a new name for a genuinely new dataset;
-`--replace` intentionally replaces existing generation output.
+**Questions only:** omit `--with-reference-answers`; `collect-references` can then be called separately. To generate 40 questions under a custom study root, use `--name my_study --count 40 --output-dir /scratch/astroakd/study1`. The balanced family counts scale automatically for 1–100 questions. Supply `--seed 42` or another integer when you need to control local random choices; fixed seeds do **not** guarantee identical remote GPT output. For an exact A/B/C comparison reuse the saved JSONL, rather than regenerating it. Existing datasets are protected; `--replace` is destructive and should not be used on a frozen experiment.
 
-This saves `/scratch/astroakd/study1/generated/synthetic_40.jsonl`, its CSV and split subsets, and its generation report. Follow-up commands use the **same `--output-dir` and `--name`**:
+The current default mix is 60 archive-driven, 20 coordinate-driven, 8 ADS literature-driven and 12 multi-archive questions. With `--require-ads`, literature authoring must use MCP ADS, not an unlabeled web fallback. The model generates questions rather than independently verified scientific answers.
+
+## Dataset layout and frozen experiment archives (0.6.7.11.3)
+
+The source release ships an intentionally clean `datasets/` working directory containing only [its README](datasets/README.md). The five commands above create needed `generated/`, `validated/`, `agent/`, and `reports/` subdirectories automatically. The old **118-file data snapshot** is not deleted: it is distributed **separately** as `astroakd_bench_historical_datasets_0_6_7_11_2.tar.gz`, plus a smaller frozen 50-question experiment archive. Each historical file has an independently verified SHA-256 in [the archival manifest](archives/historical_datasets_manifest_0_6_7_11_3.json). Nine unchanged inputs needed for offline regressions live in `benchmark/tests/fixtures/legacy/`.
+
+For restoring historical data, use a separate directory or checkout, never overwrite your active working `datasets/`:
 
 ```bash
-uv run python -m benchmark collect-references --name synthetic_40 \
-  --output-dir /scratch/astroakd/study1 --limit 5
-uv run --with matplotlib python -m benchmark reference-report \
-  --name synthetic_40 --output-dir /scratch/astroakd/study1
+mkdir -p /tmp/astroakd-history
+tar -xzf astroakd_bench_historical_datasets_0_6_7_11_2.tar.gz \
+  -C /tmp/astroakd-history
 ```
 
-Other output subdirectories are `validated/`, `agent/`, and `reports/` beneath the chosen directory. Without `--output-dir`, the historical paths under `datasets/` are unchanged. The current curated target catalog limits the automatic mixed generator to **100 questions maximum**; larger counts require more unique science targets.
-
-The default **balanced100** mix is:
-
-| Question family | Count | Evidence plan |
-| --- | ---: | --- |
-| Archive-driven | 60 | Single MCP archive call |
-| Coordinate-driven | 20 | Single MCP archive call with a defined ICRS region |
-| Literature-driven | 8 | Publication discovery via authenticated MCP ADS when available, plus archive follow-up |
-| Multi-archive | 12 | At least two different Astroquery archive calls on the same target |
-| **Total** | **100** | **80 single-call + 20 multi-step** |
-
-For ADS-backed literature **without any web fallback**, add `--require-ads`. This fails rather than mislabeling web evidence as ADS. Without it, literature research can explicitly fall back to OpenAI web search when ADS is unavailable; the provenance records the provider. The model writes **questions, never gold answers**. The 20 multi-step tasks are not validated by pretending their two or more calls are a single MCP call.
-
-The generator saves `datasets/generated/synthetic_100.jsonl` and `synthetic_100.csv`, alongside `synthetic_100_single_call.jsonl`, `synthetic_100_multistep.jsonl`, and `synthetic_100_generation_report.json`. Choose a new `--name` for an independent dataset; `--replace` intentionally replaces outputs and should **not** be used for a frozen experiment. A seed does not guarantee byte-identical OpenAI API output.
+See [dataset cleanup and reproducibility](docs/benchmark/dataset_layout_historical_archive_0_6_7_11_3.md) for archive checksums, canonical frozen task/oracle SHA-256, legacy fixture paths, and reproduction of historical reports.
 
 ### 2. Collect references separately (when not using `--with-reference-answers`)
 
 ```bash
-uv run python -m benchmark collect-references --name synthetic_100 --limit 5
-uv run python -m benchmark collect-references --name synthetic_100 --resume
+uv run python -m benchmark collect-references --name astroakd_100 --limit 5
+uv run python -m benchmark collect-references --name astroakd_100 --resume
 ```
 
 Skip this step if `--with-reference-answers` already collected all 80 single-call references. The collector uses conservative archive-specific timeouts/retry limits. It writes immutable-evidence JSONL and a per-task progress journal under `datasets/validated/`. The **20 literature/multi-archive questions require a separate multi-step evidence/review workflow** and deliberately remain pending in reference reports. Do not pass the full mixed JSONL to the single-call validator.
@@ -121,16 +86,16 @@ Skip this step if `--with-reference-answers` already collected all 80 single-cal
 ### 3. Create native reference reports and plots (offline)
 
 ```bash
-uv run --with matplotlib python -m benchmark reference-report --name synthetic_100
+uv run --with matplotlib python -m benchmark reference-report --name astroakd_100
 ```
 
-Look in `datasets/reports/synthetic_100/references/`. It contains summary JSON, per-question and per-archive CSV, and PNG/SVG plots for archive balance, answer shapes, dispositions, missing/null/truncated values, and reference response times. **No OpenAI or MCP calls** occur. Add `--replace` to regenerate reports, never reference evidence. It also works before collection and labels missing evidence accurately.
+Look in `datasets/reports/astroakd_100/references/`. It contains summary JSON, per-question and per-archive CSV, and PNG/SVG plots for archive balance, answer shapes, dispositions, missing/null/truncated values, and reference response times. **No OpenAI or MCP calls** occur. Add `--replace` to regenerate reports, never reference evidence. It also works before collection and labels missing evidence accurately.
 
 ### 4. Run a resumable A/B/C experiment
 
 ```bash
-uv run --with openai python -m benchmark run-benchmark --name synthetic_100 --limit 5
-uv run --with openai python -m benchmark run-benchmark --name synthetic_100 --resume
+uv run --with openai python -m benchmark run-benchmark --name astroakd_100 --limit 5
+uv run --with openai python -m benchmark run-benchmark --name astroakd_100 --resume
 ```
 
 Same GPT-5.2 model and prompts across arms: A = MCP only, B = MCP with the AstroAKD specialist instruction, C = Web only. A full run has **300 question–arm executions**. Resume requires the same model, MCP endpoint, instruction hash, and resource settings. Archive references/gold answers are **never given to agents**.
@@ -138,10 +103,10 @@ Same GPT-5.2 model and prompts across arms: A = MCP only, B = MCP with the Astro
 ### 5. Create A/B/C reports and plots (offline)
 
 ```bash
-uv run --with matplotlib python -m benchmark agent-report --name synthetic_100
+uv run --with matplotlib python -m benchmark agent-report --name astroakd_100
 ```
 
-Look in `datasets/reports/synthetic_100/agents/`: a three-arm answer CSV, per-task/arm trace metrics, per-arm operating summaries, MCP frequencies, and PNG/SVG completion, runtime, token, tool-use and web-search plots. Supports partial journals. Completion **is not scientific accuracy**.
+Look in `datasets/reports/astroakd_100/agents/`: a three-arm answer CSV, per-task/arm trace metrics, per-arm operating summaries, MCP frequencies, and PNG/SVG completion, runtime, token, tool-use and web-search plots. Supports partial journals. Completion **is not scientific accuracy**.
 
 ## Review and scientific validity
 

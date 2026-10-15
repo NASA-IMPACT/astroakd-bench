@@ -8,8 +8,8 @@ from benchmark.scorable import build_scorable, score_scorable, _normalize_equiva
 from benchmark.validator import load_jsonl, atomic_jsonl, ValidationError
 
 ROOT=Path(__file__).resolve().parents[2]
-BASE=ROOT/'datasets/generated/gold_mixed_065_single_call_42.jsonl'
-REFS=ROOT/'datasets/validated/gold_mixed_065_ref_42.jsonl'
+BASE=ROOT/'benchmark/tests/fixtures/legacy/generated/gold_mixed_065_single_call_42.jsonl'
+REFS=ROOT/'benchmark/tests/fixtures/legacy/validated/gold_mixed_065_ref_42.jsonl'
 
 class Scorable067(unittest.TestCase):
     def setUp(self):

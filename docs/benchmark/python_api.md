@@ -1,4 +1,4 @@
-> **0.6.7.11.2:** For the simplest supported workflow with ADS literature and multi-archive questions, use [the named `synthetic_100` guide](easy_mixed_100_workflow_0_6_7_11.md). This page also documents older or advanced flows.
+> **0.6.7.11.3:** For the simplest supported workflow with ADS literature and multi-archive questions, use [the named `synthetic_100` guide](easy_mixed_100_workflow_0_6_7_11.md). This page also documents older or advanced flows.
 
 Python facade: `AstroAKDBench.create_synthetic_queries()`, `collect_named_references()`, `create_reference_report()` and `create_agent_report()`. Use `create_synthetic_queries(name="astroakd_test40", count=100, output_dir="/scratch/astroakd/study1", with_reference_answers=True, reference_limit=5)` to author mixed tasks and immediately collect a five-question pilot of eligible single-call references. The 20 multi-step questions in a 100-question balanced mix still require separate evidence and scientific review. Full arguments and examples are in the linked guide.
 
@@ -320,3 +320,7 @@ bench.create_reference_report(name='synthetic_40', output_dir='/scratch/astroakd
 ```
 
 `output_dir` chooses the base folder containing `generated/`, `validated/`, `agent/`, and `reports/`. All named Python convenience methods accept it. Existing datasets are never overwritten without explicit `replace=True`.
+
+### Working dataset root versus historical regression archives (0.6.7.11.3)
+
+The new named API defaults to a clean `datasets/` working directory. Historical 0.6.7.11.2 experiments have been archived separately, with nine exact fixture files now in `benchmark/tests/fixtures/legacy/`; follow [the dataset cleanup guide](dataset_layout_historical_archive_0_6_7_11_3.md). The optional `seed` defaults to `20261018` in `create_synthetic_queries` and need not be specified.

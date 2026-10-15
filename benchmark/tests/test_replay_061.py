@@ -15,9 +15,9 @@ from benchmark.replay import (FixtureStore, ReplayClient, ReplayError,
 from benchmark.tests.test_generator import FixtureSession
 
 ROOT=Path(__file__).resolve().parents[2]
-FIXTURE=ROOT/'datasets/replay/reference_fixtures.json'
-TASKS=ROOT/'datasets/generated/synthetic_queries.jsonl'
-REFERENCES=ROOT/'datasets/validated/reference_answers.jsonl'
+FIXTURE=ROOT/'benchmark/tests/fixtures/legacy/replay/reference_fixtures.json'
+TASKS=ROOT/'benchmark/tests/fixtures/legacy/generated/synthetic_queries.jsonl'
+REFERENCES=ROOT/'benchmark/tests/fixtures/legacy/validated/reference_answers.jsonl'
 
 
 class SemanticReplay061Tests(unittest.TestCase):
@@ -158,7 +158,7 @@ class SemanticReplay061Tests(unittest.TestCase):
             self.assertEqual(result['processed'],1)
         with TemporaryDirectory() as d:
             b=AstroAKDBench(d)
-            original=ROOT/'datasets/agent/openai_041_runs.jsonl.progress.jsonl'
+            original=ROOT/'benchmark/tests/fixtures/legacy/agent/openai_041_runs.jsonl.progress.jsonl'
             summary=b.evaluate_agent(runs=original,tasks=TASKS,references=REFERENCES,
                 output='scores.jsonl',report='report.json',csv='scores.csv',
                 pretty_output='scores_pretty.json',strict_accepted_020=True)

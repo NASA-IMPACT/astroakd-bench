@@ -1,12 +1,30 @@
-# AstroAKD-Bench 0.6.7.11.2: mixed questions and optional inline references
+# AstroAKD-Bench 0.6.7.11.3: mixed questions and optional inline references
 
 This is the current supported quick-start. Earlier `*_with_refs` guides describe **single-call** experiments, not the new mixed one. Every command below runs from the repository root. `OPENAI_API_KEY` and the external Astroquery MCP service must be configured for live model/archive commands; reports only read saved files.
 
-## 1. Create `synthetic_100` or choose a different count and destination
+## 1. Create a named 100-question dataset with reference evidence
+
+Recommended command (no `--seed` required; default seed is `20261018`):
 
 ```bash
-uv run --with openai python -m benchmark create-queries --name synthetic_100 --seed 20261018
+uv run --with openai python -m benchmark create-queries \
+  --name astroakd_100 \
+  --count 100 \
+  --output-dir datasets \
+  --require-ads \
+  --with-reference-answers
 ```
+
+It saves `datasets/generated/astroakd_100.jsonl` plus the CSV and split subsets, and collects unreviewed live MCP evidence for up to **80 eligible single-call questions**. The **20 literature and multi-archive questions** are recorded separately as requiring multi-step reference collection. Using ADS for question discovery does not verify the answer. `--output-dir datasets` is equivalent to omitting it; all five simplified commands automatically create their own output directories when producing files. An explicit `--seed` controls local random choices only; the default is `20261018` and remote model output is not byte-stable.
+
+For a five-reference pilot, add `--reference-limit 5`. Finish without regenerating questions:
+
+```bash
+uv run python -m benchmark collect-references --name astroakd_100 \
+  --output-dir datasets --resume
+```
+
+Use `reference-report`, `run-benchmark`, and `agent-report` with the **same** `--name astroakd_100 --output-dir datasets`.
 
 **Count and custom output directory:**
 
@@ -58,7 +76,7 @@ progress journal remain available for the same resume command. Do not rerun
 Without the flag, generation remains questions-only and the separate
 `collect-references` workflow below is unchanged.
 
-The automatic name is `synthetic_40`, and outputs are under `/scratch/astroakd/experiment_A/generated/` (main file `synthetic_40.jsonl`, CSV, subset JSONLs and generation report). The folder also contains `validated/`, `agent/`, and `reports/` after subsequent steps. Keep `--output-dir /scratch/astroakd/experiment_A --name synthetic_40` on all later short commands. If you prefer another name, specify `--name my_study` on generation and all later commands. Relative output directories are relative to the selected project root (the command's working directory in CLI mode).
+When `--name` is omitted, the automatic name is `synthetic_40`, and outputs are under `/scratch/astroakd/experiment_A/generated/` (main file `synthetic_40.jsonl`, CSV, subset JSONLs and generation report). The folder also contains `validated/`, `agent/`, and `reports/` after subsequent steps. Keep `--output-dir /scratch/astroakd/experiment_A --name synthetic_40` on all later short commands. If you prefer another name, specify `--name my_study` on generation and all later commands. Relative output directories are relative to the selected project root (the command's working directory in CLI mode).
 
 The default `balanced100` mix scales automatically when `--count` is from **1 to 100**; a small pilot does not force a multi-archive pair when there are too few repeated targets. For more than 100, extend the curated target pool before running generation; it is not supported by this shortcut. The advanced `--mix` accepts exact manually specified family counts, which must sum to `--count`.
 
@@ -170,3 +188,7 @@ This Python facade delegates to the **same implementation** as the CLI and does 
 The single-call reference collector cannot establish a literature citation/observation association or interpret multi-archive cross-matches. Their answer keys require retained multi-step provenance and human review. The existing `reference-review-draft` and `gold-finalize` commands remain available for compatible ordinary-task datasets, not as an automatic approval of these 100 candidates. `score-scorable` is specific to an older constructed single-field oracle and must not be applied directly to the mixed tasks.
 
 The original accepted 50-task/150-run GPT-5.2 experiment, source datasets, science freeze, and instructions are unchanged. The new name is `synthetic_100` by default; older datasets are not overwritten.
+
+## Historical datasets are stored separately
+
+Starting with 0.6.7.11.3 the source distribution no longer includes archived experiment results in its user-facing `datasets/` folder. Download the **separate** versioned historical archive and follow the [dataset-layout and reproducibility guide](dataset_layout_historical_archive_0_6_7_11_3.md). Nine byte-exact regression inputs are included under `benchmark/tests/fixtures/legacy/`.

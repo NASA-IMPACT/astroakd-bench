@@ -9,9 +9,9 @@ from benchmark.paired_analysis import _spread, _exact_mcnemar, paired_plot_paths
 from benchmark.validator import atomic_jsonl, load_jsonl, ValidationError
 
 ROOT=Path(__file__).resolve().parents[2]
-TASKS=ROOT/'datasets/generated/scorable_50.jsonl'
-ORACLE=ROOT/'datasets/gold/scorable_50_reference_oracle.jsonl'
-PILOT=ROOT/'datasets/agent/scorable_50_gpt52_runs.jsonl.progress.jsonl'
+TASKS=ROOT/'benchmark/tests/fixtures/legacy/generated/scorable_50.jsonl'
+ORACLE=ROOT/'benchmark/tests/fixtures/legacy/gold/scorable_50_reference_oracle.jsonl'
+PILOT=ROOT/'benchmark/tests/fixtures/legacy/agent/scorable_50_gpt52_runs.jsonl.progress.jsonl'
 
 
 def read_csv(path):

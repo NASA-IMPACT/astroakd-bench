@@ -13,9 +13,9 @@ from benchmark.cli import build_parser
 from benchmark.evaluator import EvaluationError, evaluate
 
 ROOT = Path(__file__).resolve().parents[2]
-TASKS = ROOT / 'datasets/generated/synthetic_queries.jsonl'
-REFERENCES = ROOT / 'datasets/validated/reference_answers.jsonl'
-RUNS = ROOT / 'datasets/agent/openai_041_runs.jsonl.progress.jsonl'
+TASKS = ROOT / 'benchmark/tests/fixtures/legacy/generated/synthetic_queries.jsonl'
+REFERENCES = ROOT / 'benchmark/tests/fixtures/legacy/validated/reference_answers.jsonl'
+RUNS = ROOT / 'benchmark/tests/fixtures/legacy/agent/openai_041_runs.jsonl.progress.jsonl'
 
 
 class PrettyExport051Tests(unittest.TestCase):

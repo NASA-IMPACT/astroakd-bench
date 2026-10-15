@@ -9,6 +9,15 @@ The current implemented benchmark version is **0.6.7.11.2**.
 Dates are in UTC. Release statuses distinguish **offline implementation
 qualification** from **real laptop / live-service qualification**.
 
+## 0.6.7.11.3 — DATASET_LAYOUT_AND_HISTORICAL_ARTIFACT_CLEANUP (offline qualification pending)
+
+- Moved the complete 118-file historical dataset snapshot to independent, versioned TAR.GZ archives; verified every archived byte with a per-file SHA-256 manifest.
+- Preserved frozen 50-question candidate and oracle SHA-256 values without editing them; copied nine required regression inputs byte-for-byte to `benchmark/tests/fixtures/legacy/` and updated those tests to use the new paths.
+- Retained `datasets/` as the clean user workspace; generated files are excluded from Git and all five easy commands create their own output directories as needed.
+- README and Sphinx quick-start now lead with the requested `astroakd_100 --count 100 --output-dir datasets --require-ads --with-reference-answers` example, omitting optional `--seed` (default `20261018`).
+- Science constraints unchanged: only 80 single-call questions are eligible for automatic reference collection; 20 literature/multi-archive questions require multi-step evidence, and none are automatically verified gold.
+
+
 ## [0.6.7.11.2] — NAMED_MIXED_GENERATION_WITH_SINGLE_CALL_REFERENCES (offline qualified; 2026-10-15)
 
 - Expose `create-queries --with-reference-answers` and `--reference-limit N` with the named dataset, count, output directory and ADS options. It creates the question files first and then invokes the existing bounded, resumable validator on the eligible archive/coordinate single-call subset; interrupted collection resumes with `collect-references --resume` without repeated OpenAI generation.

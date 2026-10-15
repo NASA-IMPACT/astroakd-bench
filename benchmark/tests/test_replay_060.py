@@ -18,8 +18,8 @@ from benchmark.validator import load_jsonl
 from benchmark.tests.test_client import FakeSession
 
 ROOT=Path(__file__).resolve().parents[2]
-TASKS=ROOT/'datasets/generated/synthetic_queries.jsonl'
-REFERENCES=ROOT/'datasets/validated/reference_answers.jsonl'
+TASKS=ROOT/'benchmark/tests/fixtures/legacy/generated/synthetic_queries.jsonl'
+REFERENCES=ROOT/'benchmark/tests/fixtures/legacy/validated/reference_answers.jsonl'
 
 class SingleSimbadAgent:
     async def run(self, question, gateway, max_turns):

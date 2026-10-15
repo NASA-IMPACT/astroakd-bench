@@ -1,18 +1,19 @@
 # AstroAKD-Bench documentation
 
 Documentation explains **how to use, interpret and reproduce AstroAKD-Bench**.
-Historical machine-readable audit evidence lives under `datasets/evaluation/`, not in `docs/`.
+Historical machine-readable audit evidence is shipped in a separate versioned dataset archive, not inside the source release or `docs/`. The active `datasets/` directory is a generated-output workspace.
 Executable instructions are under the repository `instructions/` directory,
 not under `docs/`.
 
 Start with the repository `README.md` for an overview, or the
 [current quick-start](benchmark/quickstart.md) for tested commands.
 
-## Current guides (0.6.7.11.2)
+## Current guides (0.6.7.11.3)
 
 | Topic | Guide |
 | --- | --- |
-| 0.6.7.11.2 mixed generation, optional single-call references and offline plots | [Easy mixed 100 — 0.6.7.11.2](benchmark/easy_mixed_100_workflow_0_6_7_11.md) |
+| 0.6.7.11.3 mixed generation, optional single-call references and offline plots | [Easy mixed 100 — 0.6.7.11.3](benchmark/easy_mixed_100_workflow_0_6_7_11.md) |
+| Dataset archive layout, SHA-256, reproducibility | [Historical dataset archive — 0.6.7.11.3](benchmark/dataset_layout_historical_archive_0_6_7_11_3.md) |
 | 0.6.7.10 archive budgets, consolidated answers and gold review | [Scientific review — 0.6.7.10](benchmark/archive_policy_scientific_review_0_6_7_10.md) |
 | Installation, configuration, three-arm run and scoring | [Current quick-start](benchmark/quickstart.md) |
 | Clone and run local MCP; generate/validate/evaluate 100 new questions | [New 100-query workflow](benchmark/new_100_query_workflow.md) |
@@ -48,7 +49,7 @@ the repository `CHANGELOG.md`.
 
 - `instructions/astroakd/AstroAKD_Instruction.md` is the **evaluated AstroAKD agent's** specialist prompt, used only by arm B.
 - `instructions/astroakd_bench/AstroAKD-Bench_Instruction.md` guides **synthetic question generation**. It is never supplied to the evaluated agent.
-- The 50-task reference answer oracle under `datasets/gold/` is **hidden from the agent** and only read by offline scoring.
+- The 50-task reference answer oracle in `benchmark/tests/fixtures/legacy/gold/` (and the external historical archive) is **hidden from the agent** and only read by offline scoring.
 - Both instruction contents are preserved byte-for-byte from 0.6.7.3 so frozen benchmark hashes remain valid.
 
 ## Browse the HTML documentation
@@ -58,6 +59,7 @@ the repository `CHANGELOG.md`.
 :caption: Current guides
 
 benchmark/easy_mixed_100_workflow_0_6_7_11
+benchmark/dataset_layout_historical_archive_0_6_7_11_3
 benchmark/quickstart
 benchmark/new_100_query_workflow
 benchmark/archive_policy_scientific_review_0_6_7_10
