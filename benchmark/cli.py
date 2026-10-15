@@ -312,7 +312,7 @@ def build_parser() -> argparse.ArgumentParser:
     scorable_score.add_argument('--replace', action='store_true')
     # Short, predictable named-dataset workflows (v0.6.7.11).
     easy = commands.add_parser('create-queries', parents=[common],
-        help='Create a fresh synthetic_100 mix (archive, coordinate, ADS literature, multi-archive)')
+        help='Create mixed questions, optionally collecting live single-call references')
     easy.add_argument('--name', help='Dataset name (default: synthetic_COUNT)')
     easy.add_argument('--output-dir', type=Path, help='Artifact directory; generated/, validated/, agent/, reports/ live underneath')
     easy.add_argument('--count', type=int, default=100)
@@ -322,6 +322,10 @@ def build_parser() -> argparse.ArgumentParser:
     easy.add_argument('--modules', default='simbad,mast,heasarc,gaia,vizier')
     easy.add_argument('--batch-size', type=int, default=5)
     easy.add_argument('--require-ads', action='store_true',help='Refuse literature web fallback if MCP ADS not authenticated')
+    easy.add_argument('--with-reference-answers', action='store_true',
+        help='After generation, collect archive observations for single-call tasks; literature/multi-archive tasks remain unreviewed and require separate evidence')
+    easy.add_argument('--reference-limit', type=int,
+        help='Bound the initial single-call reference pilot; continue with collect-references --resume')
     easy.add_argument('--replace', action='store_true')
 
     collect = commands.add_parser('collect-references', parents=[common],
@@ -376,6 +380,7 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
         return await create_queries(name=args.name,output_dir=args.output_dir,count=args.count,seed=args.seed,
             model=args.model,mix=args.mix,modules=args.modules,batch_size=args.batch_size,
             url=args.mcp_url,timeout=args.timeout,require_ads=args.require_ads,
+            with_reference_answers=args.with_reference_answers,reference_limit=args.reference_limit,
             replace=args.replace, progress=lambda msg: print(f'[AstroAKD-Bench create] {msg}',file=sys.stderr,flush=True))
     if args.command == 'collect-references':
         from .simple_workflows import collect_references

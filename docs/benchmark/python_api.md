@@ -1,6 +1,6 @@
-> **0.6.7.11:** For the simplest supported workflow with ADS literature and multi-archive questions, use [the named `synthetic_100` guide](easy_mixed_100_workflow_0_6_7_11.md). This page also documents older or advanced flows.
+> **0.6.7.11.2:** For the simplest supported workflow with ADS literature and multi-archive questions, use [the named `synthetic_100` guide](easy_mixed_100_workflow_0_6_7_11.md). This page also documents older or advanced flows.
 
-Python facade: `AstroAKDBench.create_synthetic_queries()`, `collect_named_references()`, `create_reference_report()` and `create_agent_report()`. Full arguments and examples are in the new guide.
+Python facade: `AstroAKDBench.create_synthetic_queries()`, `collect_named_references()`, `create_reference_report()` and `create_agent_report()`. Use `create_synthetic_queries(name="astroakd_test40", count=100, output_dir="/scratch/astroakd/study1", with_reference_answers=True, reference_limit=5)` to author mixed tasks and immediately collect a five-question pilot of eligible single-call references. The 20 multi-step questions in a 100-question balanced mix still require separate evidence and scientific review. Full arguments and examples are in the linked guide.
 
 > **Version 0.6.3:** `AstroAKDBench.generate_queries` accepts `uniqueness` and `question_style`; `AstroAKDBench.audit_diversity` audits saved tasks and responses entirely offline. See [query_diversity_0_6_3.md](query_diversity_0_6_3.md).
 

@@ -1,4 +1,4 @@
-"""Supported Python API for AstroAKD-Bench workflows (v0.6.7.11).
+"""Supported Python API for AstroAKD-Bench workflows (v0.6.7.11.2).
 
 AstroAKD-Bench is an independent project. The NASA IMPACT Astroquery MCP
 server is a separate service accessed through its HTTP MCP endpoint.
@@ -66,11 +66,13 @@ class AstroAKDBench:
                                        output_dir=None,
                                        seed=20261018, mix='balanced100',
                                        model='gpt-5.2', require_ads=False,
+                                       with_reference_answers=False, reference_limit=None,
                                        replace=False, **kwargs):
         from .simple_workflows import create_queries
         return await create_queries(name=name, root=self.root, output_dir=output_dir, count=count,seed=seed,
-            mix=mix,model=model,require_ads=require_ads,replace=replace,
-            url=self.mcp_url,timeout=self.timeout,**kwargs)
+            mix=mix,model=model,require_ads=require_ads,
+            with_reference_answers=with_reference_answers, reference_limit=reference_limit,
+            replace=replace,url=self.mcp_url,timeout=self.timeout,**kwargs)
 
     async def collect_named_references(self, *, name='synthetic_100', output_dir=None,
                                        resume=False,limit=None,**kwargs):

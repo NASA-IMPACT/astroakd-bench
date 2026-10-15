@@ -8,11 +8,11 @@ not under `docs/`.
 Start with the repository `README.md` for an overview, or the
 [current quick-start](benchmark/quickstart.md) for tested commands.
 
-## Current guides (0.6.7.11.1)
+## Current guides (0.6.7.11.2)
 
 | Topic | Guide |
 | --- | --- |
-| 0.6.7.11 named mixed 100-question workflow and offline plots | [Easy mixed 100 — 0.6.7.11](benchmark/easy_mixed_100_workflow_0_6_7_11.md) |
+| 0.6.7.11.2 mixed generation, optional single-call references and offline plots | [Easy mixed 100 — 0.6.7.11.2](benchmark/easy_mixed_100_workflow_0_6_7_11.md) |
 | 0.6.7.10 archive budgets, consolidated answers and gold review | [Scientific review — 0.6.7.10](benchmark/archive_policy_scientific_review_0_6_7_10.md) |
 | Installation, configuration, three-arm run and scoring | [Current quick-start](benchmark/quickstart.md) |
 | Clone and run local MCP; generate/validate/evaluate 100 new questions | [New 100-query workflow](benchmark/new_100_query_workflow.md) |

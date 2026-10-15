@@ -2,7 +2,7 @@
 
 **Reproducible synthetic astronomy questions and three-arm agent evaluation.**
 
-**Current version: 0.6.7.11.1** — easy named-dataset workflows; ADS/literature and multi-archive questions; native offline archive-reference and A/B/C reports with PNG/SVG plots.
+**Current version: 0.6.7.11.2** — easy named-dataset workflows; ADS/literature and multi-archive questions; native offline archive-reference and A/B/C reports with PNG/SVG plots.
 
 AstroAKD-Bench is the **benchmark**. AstroAKD is the **evaluated agent**. The independent [NASA IMPACT Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp) is the **archive backend**. Benchmark questions, archive observations, independently reviewed scientific answers, and agent predictions remain separate objects.
 
@@ -32,7 +32,7 @@ The default server is `http://127.0.0.1:8000/mcp`; `ASTROAKD_MCP_URL` and `ASTRO
 
 ## Five short commands for `synthetic_100`
 
-### 1. Create synthetic questions (choose count and destination)
+### 1. Create synthetic questions, optionally collecting reference evidence
 
 ```bash
 uv run --with openai python -m benchmark create-queries \
@@ -42,10 +42,47 @@ uv run --with openai python -m benchmark create-queries \
 You can select **any count from 1 through 100** using `--count`; the mixed proportions are adjusted automatically without writing a manual `--mix`. Set `--output-dir` to put **all artifacts** into a chosen folder. If you omit `--name`, it becomes `synthetic_N` (for example `synthetic_40`), while the default remains `synthetic_100`.
 
 ```bash
+# Question generation only (no reference queries)
 uv run --with openai python -m benchmark create-queries \
   --count 40 --seed 20261018 \
   --output-dir /scratch/astroakd/study1 --require-ads
 ```
+
+**Generate questions and collect real reference observations in one command**
+(`--with-reference-answers` is supported by `create-queries` in 0.6.7.11.2):
+
+```bash
+uv run --with openai python -m benchmark create-queries \
+  --name astroakd_test40 \
+  --count 100 \
+  --output-dir /scratch/astroakd/study1 \
+  --seed 20261018 \
+  --require-ads \
+  --with-reference-answers
+```
+
+Here `--name` and `--count` are **independent**: the command creates 100
+questions named `astroakd_test40`. To create 40, set `--count 40`. With the
+100-question balanced mix, the command collects references for **80 eligible
+single-call archive/coordinate questions** after generation. The 8 ADS literature
+and 12 multi-archive questions are retained and reported as **multi-step evidence
+pending**, not falsely assigned reference answers. ADS research during question
+authoring is *not* an independently verified answer. All observed reference values
+remain unreviewed; **zero are automatically declared gold**.
+
+For a faster initial reference check add `--reference-limit 5`. The generator
+saves its output before archive queries; after the pilot (or an interrupted
+collection), finish without regenerating or paying for another model run:
+
+```bash
+uv run python -m benchmark collect-references \
+  --name astroakd_test40 --output-dir /scratch/astroakd/study1 --resume
+```
+
+This two-step alternative is also available when you omit
+`--with-reference-answers` entirely. Never rerun `create-queries` merely to
+resume reference collection. Use a new name for a genuinely new dataset;
+`--replace` intentionally replaces existing generation output.
 
 This saves `/scratch/astroakd/study1/generated/synthetic_40.jsonl`, its CSV and split subsets, and its generation report. Follow-up commands use the **same `--output-dir` and `--name`**:
 
@@ -72,14 +109,14 @@ For ADS-backed literature **without any web fallback**, add `--require-ads`. Thi
 
 The generator saves `datasets/generated/synthetic_100.jsonl` and `synthetic_100.csv`, alongside `synthetic_100_single_call.jsonl`, `synthetic_100_multistep.jsonl`, and `synthetic_100_generation_report.json`. Choose a new `--name` for an independent dataset; `--replace` intentionally replaces outputs and should **not** be used for a frozen experiment. A seed does not guarantee byte-identical OpenAI API output.
 
-### 2. Collect real reference evidence for the 80 single-call questions
+### 2. Collect references separately (when not using `--with-reference-answers`)
 
 ```bash
 uv run python -m benchmark collect-references --name synthetic_100 --limit 5
 uv run python -m benchmark collect-references --name synthetic_100 --resume
 ```
 
-The collector uses conservative archive-specific timeouts/retry limits. It writes immutable-evidence JSONL and a per-task progress journal under `datasets/validated/`. The **20 literature/multi-archive questions require a separate multi-step evidence/review workflow** and deliberately remain pending in reference reports. Do not pass the full mixed JSONL to the single-call validator.
+Skip this step if `--with-reference-answers` already collected all 80 single-call references. The collector uses conservative archive-specific timeouts/retry limits. It writes immutable-evidence JSONL and a per-task progress journal under `datasets/validated/`. The **20 literature/multi-archive questions require a separate multi-step evidence/review workflow** and deliberately remain pending in reference reports. Do not pass the full mixed JSONL to the single-call validator.
 
 ### 3. Create native reference reports and plots (offline)
 

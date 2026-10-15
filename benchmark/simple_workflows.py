@@ -1,4 +1,4 @@
-"""0.6.7.11 convenience API: named datasets, not a separate science engine.
+"""0.6.7.11.2 convenience API: named datasets with optional single-call references.
 
 No model-generated answer is a gold reference. Multi-step candidates are
 excluded from the independent single-call reference validator.
@@ -55,9 +55,19 @@ async def create_queries(*, name: str | None = None, root: str | Path = '.',
                          mix: str = 'balanced100', modules: str = 'simbad,mast,heasarc,gaia,vizier',
                          batch_size: int = 5, url: str | None = None, timeout: float = 180,
                          require_ads: bool = False, replace: bool = False,
+                         with_reference_answers: bool = False, reference_limit: int | None = None,
                          progress=None, research_fn=None, llm_fn=None, openai_client_factory=None) -> dict[str,Any]:
+    if reference_limit is not None and not with_reference_answers:
+        raise ValueError('--reference-limit requires --with-reference-answers')
+    if reference_limit is not None and reference_limit <= 0:
+        raise ValueError('--reference-limit must be a positive integer')
     name = name if name is not None else f'synthetic_{count}'
     paths = dataset_paths(root, name, output_dir=output_dir)
+    if with_reference_answers and not replace:
+        reference_files = (paths['references'], paths['references_csv'], paths['references_report'],
+            paths['references'].with_name(paths['references'].name + '.progress.jsonl'))
+        if any(path.exists() for path in reference_files):
+            raise FileExistsError('Reference output exists; choose a new --name or explicitly use --replace')
     if any(paths[k].exists() for k in ('tasks','tasks_csv','generation_report','single_calls','multistep')) and not replace:
         raise FileExistsError('Named dataset exists; choose another --name to preserve experiments')
     recipe = parse_task_mix(mix, count=count)
@@ -84,7 +94,39 @@ async def create_queries(*, name: str | None = None, root: str | Path = '.',
         'single_call_references_pending': len(regular),
         'multistep_reference_collection': 'NOT_PERFORMED_REQUIRES_SEPARATE_EVIDENCE',
         'verified_gold_answers': 0})
+    # Publish candidate generation independently, before potentially long live I/O.
+    # This also makes an interrupted reference run resumable without another GPT call.
+    report['reference_collection'] = {
+        'status': 'PENDING' if with_reference_answers else 'NOT_REQUESTED',
+        'single_call_total': len(regular),
+        'multistep_pending': len(multi),
+        'gold_verified': 0,
+    }
     _save_json(paths['generation_report'], report, replace=replace)
+    if with_reference_answers:
+        if progress:
+            progress(f'Collecting single-call evidence for {len(regular)} tasks; '
+                     f'{len(multi)} literature/multi-archive tasks need separate multi-step evidence')
+        reference_result = await collect_references(
+            name=name, root=root, output_dir=output_dir, url=url, limit=reference_limit,
+            replace=replace, resume=False, timeout=timeout, progress=progress)
+        report['reference_collection'] = {
+            'status': reference_result['status'],
+            'quality_gate': reference_result.get('quality_gate'),
+            'processed': reference_result['processed'],
+            'remaining': reference_result['remaining'],
+            'dispositions': reference_result.get('dispositions', {}),
+            'reference_output': str(paths['references']),
+            'reference_csv': str(paths['references_csv']),
+            'reference_report': str(paths['references_report']),
+            'single_call_total': len(regular),
+            'multistep_pending': len(multi),
+            'multistep_status': 'REQUIRES_SEPARATE_EVIDENCE_AND_REVIEW',
+            'answer_key_status': 'reference_anchored_unreviewed',
+            'gold_verified': 0,
+        }
+        report['single_call_references_pending'] = reference_result['remaining']
+        _save_json(paths['generation_report'], report, replace=True)
     return report
 
 

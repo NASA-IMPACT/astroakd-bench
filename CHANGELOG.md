@@ -5,9 +5,15 @@ here. This history is separate from the external `astroquery-mcp` project's
 releases: AstroAKD-Bench versions track benchmark capabilities, not versions
 of Astroquery or the MCP server.
 
-The current implemented benchmark version is **0.6.7.11.1**.
+The current implemented benchmark version is **0.6.7.11.2**.
 Dates are in UTC. Release statuses distinguish **offline implementation
 qualification** from **real laptop / live-service qualification**.
+
+## [0.6.7.11.2] — NAMED_MIXED_GENERATION_WITH_SINGLE_CALL_REFERENCES (offline qualified; 2026-10-15)
+
+- Expose `create-queries --with-reference-answers` and `--reference-limit N` with the named dataset, count, output directory and ADS options. It creates the question files first and then invokes the existing bounded, resumable validator on the eligible archive/coordinate single-call subset; interrupted collection resumes with `collect-references --resume` without repeated OpenAI generation.
+- The default 100-task mix has 80 single-call and 20 ADS-literature/multi-archive multi-step tasks. The latter retain an explicit pending state and are **not** assigned fabricated or incomplete reference answers. All observed archive values remain scientifically unreviewed; zero automatic gold promotions.
+- Mirror the new options in `AstroAKDBench.create_synthetic_queries`. Document exact working command, pilot/resume workflow, output paths and scientific limitations in README and Sphinx guides. Tests use mocked archive collection; live server, ADS, and OpenAI qualifications remain host-pending.
 
 ## [0.6.7.11.1] — CONFIGURABLE_SYNTHETIC_COUNT_AND_OUTPUT_ROOT (offline qualification; 2026-10-15)
 

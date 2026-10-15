@@ -1,4 +1,4 @@
-# AstroAKD-Bench 0.6.7.11.1: flexible mixed-question workflow
+# AstroAKD-Bench 0.6.7.11.2: mixed questions and optional inline references
 
 This is the current supported quick-start. Earlier `*_with_refs` guides describe **single-call** experiments, not the new mixed one. Every command below runs from the repository root. `OPENAI_API_KEY` and the external Astroquery MCP service must be configured for live model/archive commands; reports only read saved files.
 
@@ -15,6 +15,48 @@ uv run --with openai python -m benchmark create-queries \
   --count 40 --seed 20261018 \
   --output-dir /scratch/astroakd/experiment_A --require-ads
 ```
+
+**One-step question generation plus eligible single-call reference collection**
+(new in 0.6.7.11.2):
+
+```bash
+uv run --with openai python -m benchmark create-queries \
+  --name astroakd_test40 \
+  --count 100 \
+  --output-dir /scratch/astroakd/study1 \
+  --seed 20261018 \
+  --require-ads \
+  --with-reference-answers
+```
+
+This creates **100** questions named `astroakd_test40`, irrespective of the
+number embedded in the name. Change `--count` to 40 for a 40-question dataset.
+`--require-ads` requires ADS-backed *literature research* during authoring; it
+is distinct from scientific validation.
+
+The one-step command first writes the full question dataset, then runs the
+same bounded/resumable `collect-references` pipeline on the **single-call subset**:
+60 archive-driven + 20 coordinate-driven references for a balanced 100. The
+remaining 8 ADS literature and 12 multi-archive questions are preserved with
+status **multistep reference pending**. They do **not** receive complete reference
+answers through this flag. Observed archive fields are unreviewed evidence,
+not automatically verified scientific gold.
+
+For a safe pilot use `--with-reference-answers --reference-limit 5`. After the
+pilot, resume the **same generated dataset** without new model calls:
+
+```bash
+uv run python -m benchmark collect-references \
+  --name astroakd_test40 \
+  --output-dir /scratch/astroakd/study1 \
+  --resume
+```
+
+If collection is interrupted, the generated JSONL and per-task reference
+progress journal remain available for the same resume command. Do not rerun
+`create-queries` to continue; it protects against accidental overwrites.
+Without the flag, generation remains questions-only and the separate
+`collect-references` workflow below is unchanged.
 
 The automatic name is `synthetic_40`, and outputs are under `/scratch/astroakd/experiment_A/generated/` (main file `synthetic_40.jsonl`, CSV, subset JSONLs and generation report). The folder also contains `validated/`, `agent/`, and `reports/` after subsequent steps. Keep `--output-dir /scratch/astroakd/experiment_A --name synthetic_40` on all later short commands. If you prefer another name, specify `--name my_study` on generation and all later commands. Relative output directories are relative to the selected project root (the command's working directory in CLI mode).
 
@@ -59,14 +101,14 @@ uv run --with openai python -m benchmark create-queries \
 
 The original `generate --task-mix ...` advanced API is still supported; pass `--single-call-output` and `--multistep-output` for explicit split files. Use a new `--name` to make a *different* dataset. Changing a seed does not guarantee deterministic responses from a remote LLM.
 
-## 2. Collect single-call references, with safe resume
+## 2. Collect single-call references separately, with safe resume
 
 ```bash
 uv run python -m benchmark collect-references --name synthetic_100 --limit 5
 uv run python -m benchmark collect-references --name synthetic_100 --resume
 ```
 
-80 ordinary archive/coordinate questions are eligible; the additional 20 literature and multi-archive questions are **not** silently treated as missing single-call references. `collect-references` uses per-module timeouts and one attempt by default; increase per-module budgets only if archive behavior warrants it. The frozen subset hash and original MCP schema are checked on resume.
+Run this separate collection step if you did **not** use `--with-reference-answers`, or use `--resume` after a pilot. 80 ordinary archive/coordinate questions are eligible; the additional 20 literature and multi-archive questions are **not** silently treated as missing single-call references. `collect-references` uses per-module timeouts and one attempt by default; increase per-module budgets only if archive behavior warrants it. The frozen subset hash and original MCP schema are checked on resume.
 
 If a live server is down, investigate `doctor --fast` and inspect the journal before resuming; a recorded failure is not automatically retried with `--resume`. An archive `accepted_nonempty` result is not gold.
 
@@ -112,8 +154,8 @@ import asyncio
 from benchmark.api import AstroAKDBench
 
 bench = AstroAKDBench(root='.', mcp_url='http://127.0.0.1:8000/mcp')
-created = asyncio.run(bench.create_synthetic_queries(name='synthetic_100', count=100, seed=20261018))
-# Alternative: created = asyncio.run(bench.create_synthetic_queries(count=40, output_dir='/scratch/astroakd/experiment_A'))
+created = asyncio.run(bench.create_synthetic_queries(name='synthetic_100', count=100, seed=20261018, with_reference_answers=True, reference_limit=5))
+# Alternative: created = asyncio.run(bench.create_synthetic_queries(count=40, output_dir='/scratch/astroakd/experiment_A', with_reference_answers=False))
 pilot = asyncio.run(bench.collect_named_references(name='synthetic_100', limit=5))
 finished = asyncio.run(bench.collect_named_references(name='synthetic_100', resume=True))
 references = bench.create_reference_report(name='synthetic_100', plots=True)
