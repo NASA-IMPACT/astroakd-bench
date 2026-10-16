@@ -110,20 +110,46 @@ uv run --with openai python -m benchmark create-queries \
 
 Resume must use the original name, count, seed, model, mix, module list, batch size, MCP endpoint and ADS requirement. Completed batches are not sent to GPT again. The partial file is **not** a valid final evaluation dataset and must never be treated as reviewed gold. After all questions and output files pass final checks, the progress files are removed and the ordinary `astroakd_100_v2.jsonl`/CSV outputs are published. A preflight failure *before* any GPT batch makes no progress journal because no paid generation has been completed. Versions 0.6.7.11.4 and earlier did not save such checkpoints: prior unsaved GPT responses cannot be recovered from console output.
 
-### Finish reference collection / make plots
+### Finish or recover single-call reference collection / make plots
+
+If `create-queries` has already published the 100 questions but its reference
+collection did not run or was interrupted, **do not regenerate the paid GPT
+questions**. Reuse the saved
+`datasets/generated/astroakd_100_v2_single_call.jsonl` with the same archive
+policy used for generation:
 
 ```bash
-# Optional initial pilot: add --reference-limit 5 to create-queries above;
-# then resume the saved questions without another GPT generation run
 uv run python -m benchmark collect-references \
-  --name astroakd_100_v2 --output-dir datasets --resume
-
-# Archive coverage, answer shape, nulls, truncation, response-time plots
-uv run --with matplotlib python -m benchmark reference-report \
-  --name astroakd_100_v2 --output-dir datasets
+  --name astroakd_100_v2 \
+  --output-dir datasets \
+  --timeout 900 \
+  --archive-timeouts mast=900,simbad=180,heasarc=900,gaia=900,vizier=300 \
+  --archive-attempts mast=2,simbad=1,heasarc=2,gaia=2,vizier=1 \
+  --reference-deadline 2100
 ```
 
-If you originally generated questions *without* reference collection, run `collect-references` without `--resume` on the first attempt. Existing output files are protected unless you explicitly request replacement.
+For an interrupted reference collection, add `--resume` to the above command
+to reuse its saved progress journal. Use the command **without `--resume`** for
+the first collection attempt. If `create-queries --with-reference-answers`
+already collected all 80 single-call references, **do not rerun collection**.
+The existing references are under `datasets/validated/`, and the 20
+literature/multi-archive tasks still require separate multi-step evidence.
+
+Create the offline reference-quality summary and figures without calling MCP
+or GPT:
+
+```bash
+uv run --with matplotlib python -m benchmark reference-report \
+  --name astroakd_100_v2 \
+  --output-dir datasets
+```
+
+Output is in `datasets/reports/astroakd_100_v2/references/`. The report
+classifies 80/80 nonempty single-call references as **collection complete**;
+`status: REVIEW` is expected while the 20 multi-step tasks and independent
+scientific review remain outstanding. Use `reference-report --replace` **only**
+when regenerating an existing report; this option does not change the
+questions or collected references.
 
 ### Execute A/B/C and generate reports
 

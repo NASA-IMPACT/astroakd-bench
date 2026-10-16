@@ -1,19 +1,34 @@
 # Reference collection and scientific review
 
-`create-queries --with-reference-answers` collects *reference observations*, not verified gold answers. Run collection separately (or resume an interrupted collection) with:
+`create-queries --with-reference-answers` collects *reference observations*,
+not independently verified gold answers. If question generation succeeded but
+reference collection did not finish (or you intentionally generated only
+questions), reuse the saved question files. Do **not** rerun OpenAI generation:
 
 ```bash
 uv run python -m benchmark collect-references \
-  --name astroakd_100_v2 --output-dir datasets --resume
+  --name astroakd_100_v2 \
+  --output-dir datasets \
+  --timeout 900 \
+  --archive-timeouts mast=900,simbad=180,heasarc=900,gaia=900,vizier=300 \
+  --archive-attempts mast=2,simbad=1,heasarc=2,gaia=2,vizier=1 \
+  --reference-deadline 2100
 ```
 
-If you generated questions without `--with-reference-answers`, omit `--resume` on the first collection. For a pilot use `--limit 5`. Single-call results and their progress journal are under `datasets/validated/`.
+This command is available natively in 0.6.7.11.10; `--timeout` applies to
+MCP operations, while `--archive-timeouts`, `--archive-attempts`, and
+`--reference-deadline` provide the specific collection policy. For an
+interrupted collection append `--resume`; omit `--resume` on a first attempt.
+For a pilot you can use `--limit 5` and subsequently resume. The reference
+journal and output are under `datasets/validated/`. When all 80/80 references
+have already been collected, do not call the collector again.
 
 ## Completeness reports and plots
 
 ```bash
 uv run --with matplotlib python -m benchmark reference-report \
-  --name astroakd_100_v2 --output-dir datasets
+  --name astroakd_100_v2 \
+  --output-dir datasets
 ```
 
 Outputs appear in `datasets/reports/astroakd_100_v2/references/`. This is **reference evidence reporting**, not an agent A/B/C comparison. Run the command **after** `create-queries --with-reference-answers` or `collect-references`; it never runs GPT or makes MCP calls. It can also report on incomplete evidence, with pending multi-step tasks clearly labeled.
@@ -38,7 +53,10 @@ For CSV/JSON summaries without figures or matplotlib, run `uv run python -m benc
 
 ## Review before scoring
 
-Archive observations are **unreviewed evidence**. Multiple matching rows, truncation, units, coordinates and ambiguous cross-identifications need scientific review. Literature and multi-archive tasks in a mixed set require separate multi-step evidence collection and cannot be considered complete gold through the single-call collector.
+Archive observations are **unreviewed evidence**. Multiple matching rows, truncation, units, coordinates and ambiguous cross-identifications need scientific review. Literature and multi-archive tasks in a mixed set require separate multi-step evidence collection and cannot be considered complete gold through the single-call collector. A `status: REVIEW` report does not mean the
+80 single-call references failed: 80 nonempty records may be collected while
+20 literature/multi-archive questions still require separate multi-step
+evidence and the references remain unreviewed.
 
 The detailed commands `reference-review-draft` and `gold-finalize` remain available for explicitly reviewed single-call datasets. Do not promote generated questions or raw archive values to scientifically verified gold automatically.
 

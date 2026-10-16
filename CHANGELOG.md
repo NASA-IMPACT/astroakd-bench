@@ -1,3 +1,14 @@
+## 0.6.7.11.10 — documentation follow-up (no version or science change)
+
+- Document the full `collect-references` archive-timeout/retry/deadline command
+  for recovery of saved `astroakd_100_v2` questions, plus offline
+  `reference-report` in the README and current Sphinx guides.
+- Clarify first collection versus `--resume`, preservation of paid question
+  generation, and why 80/80 accepted reference responses can coexist with
+  `status: REVIEW` and 20 pending multi-step references.
+- No changes to the generator, reference validator (including the previously
+  applied recovery patch), MCP calls, agent scoring, or frozen scientific data.
+
 ## 0.6.7.11.10 — DURABLE_REFERENCE_AWARE_SELECTION
 
 - Atomically checkpoint each live reference-feasibility probe and accepted slot

@@ -55,6 +55,36 @@ uv run --with openai python -m benchmark create-queries \
 
 For the eight ADS-literature and 12 multi-archive questions (at count 100), standalone multi-step evidence is still pending separate collection; single-call reference observations are not gold.
 
+### Collect references after generation has already completed
+
+If `create-queries` published the question files but did not complete the
+reference stage, **do not pay to generate the questions again**. Run:
+
+```bash
+uv run python -m benchmark collect-references \
+  --name astroakd_100_v2 \
+  --output-dir datasets \
+  --timeout 900 \
+  --archive-timeouts mast=900,simbad=180,heasarc=900,gaia=900,vizier=300 \
+  --archive-attempts mast=2,simbad=1,heasarc=2,gaia=2,vizier=1 \
+  --reference-deadline 2100
+```
+
+On an interrupted collector, repeat with `--resume`; do not use `--replace`.
+When all 80 single-call records already exist with `accepted_nonempty`, no
+collection call is needed. Summarize them offline with:
+
+```bash
+uv run --with matplotlib python -m benchmark reference-report \
+  --name astroakd_100_v2 \
+  --output-dir datasets
+```
+
+The generated plots are in `datasets/reports/astroakd_100_v2/references/`.
+The report's `REVIEW` status refers to outstanding scientific review and
+20 multi-step questions, not an error in collecting the 80 single-call
+references.
+
 ## Reference-aware synthetic questions (0.6.7.11.10)
 
 For a *new* experiment named `astroakd_100_v2`, `create-queries --with-reference-answers` enables reference-aware preselection by default. Before any OpenAI question-authoring batch, the benchmark runs read-only MCP feasibility queries and admits only bounded, nonempty, untruncated candidate results with the requested fields and no null measurements. Gaia and MAST search radii can be narrowed as needed. This is a source-code policy, not merely a prompt request; the generator instruction file also documents it.

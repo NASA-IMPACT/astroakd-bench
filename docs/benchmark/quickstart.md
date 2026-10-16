@@ -72,6 +72,28 @@ uv run --with matplotlib python -m benchmark agent-report \
 ```
 
 The five named commands create their needed output subdirectories automatically.
+
+### Recover references without regenerating questions
+
+If the question JSONL was saved but reference collection stopped, finish the
+80 single-call MCP queries directly (no OpenAI calls):
+
+```bash
+uv run python -m benchmark collect-references \
+  --name astroakd_100_v2 \
+  --output-dir datasets \
+  --timeout 900 \
+  --archive-timeouts mast=900,simbad=180,heasarc=900,gaia=900,vizier=300 \
+  --archive-attempts mast=2,simbad=1,heasarc=2,gaia=2,vizier=1 \
+  --reference-deadline 2100
+```
+
+Append `--resume` only for an interrupted collector with a saved progress
+journal. If the 80/80 references were already collected successfully, skip
+this step and run only the offline `reference-report` command shown above.
+The 20 literature/multi-archive questions require separate multi-step
+evidence. See [reference collection and reports](references_and_review.md).
+
 `--seed` is optional, defaulting to `20261018`, and does not guarantee identical responses from GPT-5.2. Preserve the generated JSONL for reproducibility.
 
 ## What is measured?
