@@ -39,4 +39,4 @@ class MCPServerSetupDocs(unittest.TestCase):
     def test_current_version(self):
         import tomllib
         project = tomllib.loads((ROOT / 'pyproject.toml').read_text())
-        self.assertEqual(project['project']['version'], '0.6.7.11.7')
+        self.assertEqual(project['project']['version'], __import__('benchmark').__version__)

@@ -1,3 +1,10 @@
+## 0.6.7.11.8 — SELECTIVE_MCP_RETRY_AND_REFERENCE_SNAPSHOT_AGREEMENT
+
+- Add `run-benchmark --retry-errors` with `--dry-run`, automatic failed MCP-only selection, changed-budget metadata, and immutable original run preservation. Store only retries and a separately labeled derived A/B/C diagnostic journal; do not rerun successful arms.
+- Add native `agent-report --runs` for diagnostic reports separate from baseline figures.
+- Create `match_rate.png` / `.svg` only from available comparable unreviewed reference snapshots, with an explicit UNREVIEWED label, transparent restricted paired denominators, strict matching and exclusions in reference-agreement CSV/JSON. Never present provisional agreement as reviewed scientific gold.
+- Update current-only README and Sphinx workflow guides with both commands, output directories, provenance rules, and scientific limitations. Frozen experimental datasets and scientific code are unchanged.
+
 ## 0.6.7.11.7 — EXTERNAL_MCP_SETUP_DOCUMENTATION_RESTORE
 
 - **Applied source hotfix to the attached 0.6.7.11.7 distribution:** exclude archives with no timing observations from median response-time plots, avoiding `StatisticsError: no median for empty data` when mixed tasks remain uncollected. Questions and missing-evidence counts remain present in reference reports.

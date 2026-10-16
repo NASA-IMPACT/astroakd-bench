@@ -365,6 +365,9 @@ def build_parser() -> argparse.ArgumentParser:
     runeasy.add_argument('--limit',type=int)
     runeasy.add_argument('--resume',action='store_true')
     runeasy.add_argument('--replace',action='store_true')
+    runeasy.add_argument('--retry-errors',action='store_true',help='Retry only failed MCP-only runs into separate diagnostics; preserve baseline')
+    runeasy.add_argument('--retry-task-ids',help='Optional comma-separated subset of failed MCP-only task IDs')
+    runeasy.add_argument('--dry-run',action='store_true',help='Show failed MCP-only retry selection without API calls')
     runeasy.add_argument('--max-turns',type=int,default=8)
     runeasy.add_argument('--max-calls',type=int,default=12)
     runeasy.add_argument('--max-tool-bytes',type=int,default=65536)
@@ -376,6 +379,7 @@ def build_parser() -> argparse.ArgumentParser:
     agrep.add_argument('--output-dir', type=Path, help='Same artifact directory used by create-queries')
     agrep.add_argument('--no-plots',action='store_true')
     agrep.add_argument('--replace',action='store_true')
+    agrep.add_argument('--runs',type=Path,help='Alternative diagnostic A/B/C journal (never replaces baseline)')
 
     inspect = commands.add_parser('inspect', parents=[common],
         help='Render a bounded JSONL sample or a JSON report for inspection')
@@ -408,6 +412,20 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
         from .simple_workflows import dataset_paths
         from .three_arm import run_three_arm
         paths=dataset_paths(name=args.name,output_dir=args.output_dir)
+        if args.retry_errors:
+            if args.replace or args.resume or args.limit:
+                raise ValueError('--retry-errors is incompatible with --replace, --resume and --limit')
+            from .selected_retry import retry_failed_mcp
+            return await retry_failed_mcp(tasks_path=paths['tasks'],runs_path=paths['runs'],
+                output_dir=paths['runs'].parent,model=args.model,mcp_url=args.mcp_url,
+                timeout=args.timeout,task_timeout=args.task_timeout,
+                max_turns=args.max_turns,max_calls=args.max_calls,
+                max_tool_bytes=args.max_tool_bytes,
+                task_ids=args.retry_task_ids.split(',') if args.retry_task_ids else None,
+                dry_run=args.dry_run,
+                progress=lambda msg: print(f'[AstroAKD-Bench retry] {msg}',file=sys.stderr,flush=True))
+        if args.retry_task_ids or args.dry_run:
+            raise ValueError('--retry-task-ids and --dry-run require --retry-errors')
         return await run_three_arm(paths['tasks'],Path('instructions/astroakd/AstroAKD_Instruction.md'),
             paths['runs'],paths['run_report'],url=args.mcp_url,model=args.model,
             limit=args.limit,max_turns=args.max_turns,max_calls=args.max_calls,
@@ -418,7 +436,8 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
         from .simple_workflows import dataset_paths
         from .operational_report import create_operational_report
         paths=dataset_paths(name=args.name,output_dir=args.output_dir)
-        return create_operational_report(paths['tasks'],paths['runs'],paths['plots']/'agents',
+        return create_operational_report(paths['tasks'],args.runs or paths['runs'],
+            paths['plots']/('agents_diagnostic' if args.runs else 'agents'),
             replace=args.replace,plots=not args.no_plots)
     if args.command == 'build-scorable':
         from .scorable import build_scorable

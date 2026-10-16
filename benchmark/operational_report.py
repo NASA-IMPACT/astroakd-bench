@@ -58,7 +58,8 @@ def create_operational_report(tasks_path: Path, runs_path: Path, output_dir: Pat
     if not args.runs.exists():
         raise FileNotFoundError(f'No A/B/C run journal: {args.runs}')
     wanted = ['per_task_operational.csv','arm_operational_summary.csv',
-              'mcp_tool_frequency.csv','operational_report.json','abc_answers.csv']
+              'mcp_tool_frequency.csv','operational_report.json','abc_answers.csv',
+              'reference_agreement_summary.json','match_rate.png']
     if any((args.output_dir / n).exists() for n in wanted) and not replace:
         raise FileExistsError('Agent report already exists; use --replace (never overwrites runs)')
     if plots:
@@ -180,6 +181,18 @@ def create_operational_report(tasks_path: Path, runs_path: Path, output_dir: Pat
             row[prefix+'_answer_json']=json.dumps(result.get('answer',{}),ensure_ascii=False)
         answer_rows.append(row)
     write_csv(args.output_dir/'abc_answers.csv',answer_rows,list(answer_rows[0]))
+    # Scientific gold has not been approved. Optionally report STRICT agreement
+    # with explicitly UNREVIEWED single-call archive snapshots as a distinct
+    # metric. Never relabel completion or snapshot agreement as scientific accuracy.
+    review_csv=args.tasks.parent.parent/'validated'/(args.tasks.stem+'_references_review.csv')
+    if review_csv.is_file():
+        from .reference_agreement import reference_snapshot_agreement
+        report['reference_snapshot_agreement']=reference_snapshot_agreement(
+            args.tasks,args.runs,review_csv,args.output_dir,plots=plots)
+    else:
+        report['reference_snapshot_agreement']={'status':'NOT_AVAILABLE',
+            'reason':f'Reference-review CSV not found: {review_csv}',
+            'scientific_accuracy':'NOT_ASSESSED'}
     (args.output_dir/'operational_report.json').write_text(json.dumps(report,indent=2)+'\n',encoding='utf-8')
     report['output_dir']=str(args.output_dir)
     return report

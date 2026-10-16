@@ -38,7 +38,40 @@ The main A/B/C figures are saved in **`datasets/reports/astroakd_100/agents/`**:
 
 CSV output includes `arm_operational_summary.csv`, `per_task_operational.csv`, and `abc_answers.csv` (retains answers). A partial run is summarized as partial; do not compare total tokens between arms without checking their recorded run counts.
 
-**Why there is no `match_rate.png`:** the earlier 50-question figure used a frozen, single-field reference-snapshot comparison. The new 100-question mixed dataset contains multi-row archive responses and 20 literature/multi-archive questions without fully reviewed gold answers. `agent-report` intentionally does **not** compute accuracy or a match rate from unreviewed evidence. Producing a scientifically meaningful match-rate figure requires a separately reviewed oracle, documented comparison rules, and a scorable denominator. Do not rename `completed_runs.png` as match rate. For original frozen single-field experiments, the detailed `score-scorable` command can generate `match_rate.png` when provided its properly qualified oracle and agent runs.
+### Match-rate figure: provisional reference-snapshot agreement
+
+In 0.6.7.11.8 `agent-report` generates **`match_rate.png` / `.svg`** when `datasets/validated/astroakd_100_references_review.csv` exists and contains complete, automatically comparable reference evidence. This is **not independently verified scientific accuracy**. The figure explicitly says “UNREVIEWED” and reports the number of eligible questions. Its exact-match denominator includes only supported complete single values, complete single-column record lists, and coordinate pairs; truncated, null, multifield, uncollected/multi-step and structurally unsuitable references are excluded. Errors and abstentions on eligible tasks are nonmatches. See `reference_agreement_summary.json` and `reference_agreement_per_question.csv` for a complete audit trail and exclusion reasons. If no usable snapshots exist, the program reports `NOT_SCORABLE` and does not invent a match rate.
+
+The provisional snapshot match report does **not** establish verified scientific correctness.
+
+**A reference-snapshot match is not an independently reviewed gold answer.** Do not label this scientific accuracy or compare its percentage directly with the frozen earlier 50-question experiment without naming both score definitions and scorable populations. To claim verified scientific accuracy, use reviewed gold and the separate `score-three-arm` workflow.
+
+### Retry only the failed MCP-only questions, preserving the original experiment
+
+After the baseline run is finalized, `--resume` will not reopen the journal and `--replace` would overwrite the experiment. **Use `--retry-errors` instead:**
+
+```bash
+# Offline preview: no OpenAI or MCP requests
+uv run python -m benchmark run-benchmark \
+  --name astroakd_100 --output-dir datasets \
+  --retry-errors --dry-run --max-turns 16 --max-calls 20
+
+# Two additional MCP-only attempts for the observed 2 error records
+uv run --with openai python -m benchmark run-benchmark \
+  --name astroakd_100 --output-dir datasets \
+  --retry-errors --max-turns 16 --max-calls 20 \
+  --timeout 900 --task-timeout 2400
+```
+
+The original `datasets/agent/astroakd_100_ABC_runs.jsonl` remains untouched. New files are named `astroakd_100_mcp_only_turn16_retries.jsonl` and `astroakd_100_ABC_runs_turn16_diagnostic.jsonl`. Only successes replace error records in the latter *derived*, visibly changed-budget diagnostic journal. To produce separate plots including provisional match rate:
+
+```bash
+uv run --with matplotlib python -m benchmark agent-report \
+  --name astroakd_100 --output-dir datasets \
+  --runs datasets/agent/astroakd_100_ABC_runs_turn16_diagnostic.jsonl
+```
+
+Its outputs are under `datasets/reports/astroakd_100/agents_diagnostic/`. Never merge these changed-budget retries silently into the original A/B/C result. Scientific gold remains unavailable.
 
 For reference-side **archive completeness and response-time figures**, use the separate offline command documented in [Reference collection and scientific review](references_and_review.md).
 

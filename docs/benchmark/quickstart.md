@@ -85,3 +85,9 @@ Continue with [question generation](create_queries.md), [references](references_
 Frozen prompts: `instructions/astroakd/AstroAKD_Instruction.md` (arm B) and `instructions/astroakd_bench/AstroAKD-Bench_Instruction.md` (generation only).
 
 To build the HTML documentation from the repository root: `make -C docs/sphinx html`.
+
+## Match-rate figure and selective MCP-only retry
+
+For a saved `astroakd_100` dataset with single-call reference evidence, run `uv run --with matplotlib python -m benchmark agent-report --name astroakd_100 --output-dir datasets --replace`. Alongside runtime and token plots this now creates `datasets/reports/astroakd_100/agents/match_rate.png`, explicitly labeled **unreviewed reference-snapshot agreement** on a restricted denominator; read `reference_agreement_summary.json` for scorable/excluded counts. It is not verified scientific accuracy.
+
+After a complete A/B/C run, `uv run python -m benchmark run-benchmark --name astroakd_100 --output-dir datasets --retry-errors --dry-run` previews failed MCP-only tasks. Remove `--dry-run` and add `--with openai` to `uv run`, `--max-turns 16 --max-calls 20 --timeout 900 --task-timeout 2400` to execute **only those failed MCP-only tasks**. A separate diagnostic journal is created; the original 300 runs are preserved. See [A/B/C evaluation and plots](evaluation_and_plots.md).
