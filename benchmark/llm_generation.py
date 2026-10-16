@@ -26,7 +26,7 @@ from .seeds import SkyTarget
 from .diversity import analyze_candidates
 
 INSTRUCTIONS_PATH = Path(__file__).resolve().parent.parent / 'instructions' / 'astroakd_bench' / 'AstroAKD-Bench_Instruction.md'
-INSTRUCTIONS_VERSION = 'astro_benchmark_gold_0_6_4_3'
+INSTRUCTIONS_VERSION = 'reference_aware_0_6_7_11_9'
 BASE_SYSTEM = (
     'You author astronomical data-discovery benchmark questions as STRICT JSON. '
     'You must preserve the target, archive, and data fields supplied for each slot. '
@@ -180,6 +180,16 @@ def _guard_question(question: Any, task: dict[str, Any], *, use_mcp: bool) -> st
         raise GenerationError(f'OpenAI question {task["id"]} must be a question')
     if use_mcp:
         # Disallow new date constraints or numerical observing restrictions absent from input.
+        if task.get('provenance', {}).get('reference_aware') and task['module'] != 'simbad':
+            radius = task.get('constraints', {}).get('radius', {})
+            expected = float(radius['value'])
+            # A prechecked call and authored wording must refer to the *same*
+            # region; otherwise even a complete archive result is not an oracle.
+            widths = [float(match) for match in re.findall(
+                r'(?<![\d.])(\d+(?:\.\d+)?)\s*arcmin(?:ute)?s?\b', question, re.I)]
+            if not widths or any(abs(value - expected) > 1e-7 for value in widths):
+                raise GenerationError(f'OpenAI question {task["id"]} must state the prechecked '
+                                      f'radius {expected:g} arcmin exactly')
         digits = set(re.findall(r'\b(?:19|20)\d{2}\b', question))
         allowed = set(re.findall(r'\b(?:19|20)\d{2}\b', task['question']))
         if digits - allowed:
@@ -307,6 +317,10 @@ async def generate_llm(url: str | None = None, *, count: int = 50, seed: int = 4
                        openai_client_factory: Callable[[], Any] | None = None,
                        on_batch: Callable[[int, list[dict]], None] | None = None,
                        cached_batches: dict[int, list[dict]] | None = None,
+                       reference_aware: bool = False, feasibility_plan: Path | None = None,
+                       reuse_feasibility_plan: bool = False,
+                       max_reference_rows: int = 20,
+                       max_reference_bytes: int = 65536, max_feasibility_probes: int = 500,
                        ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     if backend not in ('openai', 'hybrid'):
         raise GenerationError('LLM generator requires --backend openai or hybrid')
@@ -316,7 +330,32 @@ async def generate_llm(url: str | None = None, *, count: int = 50, seed: int = 4
     if not isinstance(model, str) or not model.strip():
         raise GenerationError('--model must be nonempty')
     client = _openai_client(openai_client_factory)
-    if use_mcp:
+    if reference_aware and not use_mcp:
+        raise GenerationError('Reference-aware generation requires a live MCP server')
+    if reference_aware:
+        from .reference_aware import (select_reference_aware, save_feasibility_plan,
+                                      load_feasibility_plan, REFERENCE_AWARE_TARGETS)
+        from .mcp_config import resolve_mcp_url
+        cfg = {'count': count, 'seed': seed, 'modules': list(modules),
+               'target_names': [t.name for t in (targets or REFERENCE_AWARE_TARGETS)],
+               'max_rows': max_reference_rows, 'max_bytes': max_reference_bytes,
+               'max_probes': max_feasibility_probes, 'mcp_url': resolve_mcp_url(url)}
+        if reuse_feasibility_plan:
+            if not feasibility_plan or not Path(feasibility_plan).is_file():
+                raise GenerationError('Resume requires saved reference-aware feasibility plan')
+            tasks, summary = load_feasibility_plan(feasibility_plan, configuration=cfg)
+            if progress:
+                progress(f'Reference-aware REUSED {len(tasks)} approved candidate slots')
+        else:
+            tasks, summary = await select_reference_aware(
+                url, count=count, seed=seed, modules=modules, timeout=timeout,
+                targets=targets, max_rows=max_reference_rows, max_bytes=max_reference_bytes,
+                max_probes=max_feasibility_probes, progress=progress,
+                session_factory=session_factory)
+            if feasibility_plan:
+                save_feasibility_plan(feasibility_plan, configuration=cfg,
+                                      tasks=tasks, summary=summary)
+    elif use_mcp:
         tasks, summary = await generate(url, count=count, seed=seed, modules=modules,
                                         timeout=timeout, session_factory=session_factory,
                                         targets=targets, uniqueness=uniqueness,
@@ -471,7 +510,7 @@ async def generate_llm(url: str | None = None, *, count: int = 50, seed: int = 4
                     'openai_requests_this_invocation': model_calls,
                     'scientific_truth_verified': False,
                     'expected_answers_verified': 0,
-                    'archive_queries_executed': 0,
+                    'archive_queries_executed': summary.get('reference_aware_selection', {}).get('probes', 0),
                     'mcp_calls_executable': use_mcp,
                     'distinct_archive_target_pairs': check['distinct_archive_target_pairs'],
                     'by_intent': check['by_intent'],

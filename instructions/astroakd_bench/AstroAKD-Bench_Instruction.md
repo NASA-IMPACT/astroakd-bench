@@ -1,4 +1,4 @@
-# AstroAKD-Bench question-writing instructions — V1-derived (0.6.4)
+# AstroAKD-Bench question-writing instructions — V1-derived; reference-aware (0.6.7.11.9)
 
 **Source and scope:** Synthesized from the user-provided `Astro Benchmark V1(1).xlsx`, with three worksheets (`benchmark_results`, `with_system_prompt`, `mcp`) containing about 100 evaluation questions each. The two latter sheets share the same 100 question texts. These are *design examples*, not a verified astronomical truth set. Do **not** copy any expected_answer or use historical model responses as gold.
 
@@ -14,6 +14,22 @@ Requirements:
 5. Prefer a specific question over an open-ended dump of metadata. Include units for exposures and angular quantities; use ICRS for coordinates and UTC for times when grounded.
 6. Treat generated questions as **unverified candidates**. Leave expected answers empty until separately checked against actual archive results. Never claim a web page or an LLM response is a scientific reference answer.
 7. If no MCP server is used, employ the OpenAI Responses API `web_search` tool for research context, keep trustworthy source URLs when available, and mark MCP executability/answer verification as *not established*.
+
+## Reference-aware core-question policy (0.6.7.11.9)
+
+**Primary goal:** Produce questions for which an independent live Astroquery MCP call can return a **complete, bounded, machine-comparable answer**. Do not make questions easy by removing legitimate astronomy, but avoid tasks whose answers are thousands of catalog rows or 20-row excerpts from a larger result.
+
+- Use the supplied *prechecked MCP call*, center, radius, archive and expected answer field exactly. The precheck is made **before** question authoring. It must have a nonempty, structurally complete result, no truncation, the requested field, and size within configured limits; a model response never establishes this.
+- **Gaia:** Never ask for all parallaxes, proper motions, magnitudes or source IDs over a broad multi-arcminute cone. Prefer a prechecked compact result with a small angular radius and clearly defined field and source association. Do not claim that an unsupported rank, limit or quality filter was applied by the MCP call.
+- **MAST:** Do not present its first 20 rows as an exhaustive observation census when the service reports more records. Use only prechecked, untruncated, bounded results. Keep observation IDs paired with their properties when the question requires per-observation answers.
+- **HEASARC:** Distinguish *distinct statuses/instruments* from per-observation status or exposure lists. Preserve row multiplicity when the question asks for each observation; do not silently compress duplicate values. Do not invent a catalog filter.
+- **VizieR:** State the actual catalog. Avoid unrestricted multi-table dumps and fields not present in the prechecked result. Do not invent source-selection criteria absent from the MCP query.
+- If multiple records are returned, do not imply there is exactly one matching source or measurement. Specify whether the answer is a set of distinct values or a per-record list, consistently with the frozen task template.
+- Never ask for a response that requires complete records beyond the prechecked MCP result. Null, absent, oversized and truncated result columns must be rejected by the program before authoring, not patched with model guesses.
+- Candidate acceptance must be independent of how arms A, B, and C performed on any previous benchmark. Benchmark difficulties must be driven by answer feasibility, not tuned to make particular agents succeed.
+- These constraints apply to **core single-call** questions. ADS literature and multi-archive tracks are explicitly multistep and still require separate answer evidence; do not mislabel ADS paper metadata as a complete science reference.
+
+The boundedness policy is **enforced in source code** (`benchmark/reference_aware.py`) when `create-queries --with-reference-answers` is used. Instructions alone cannot alter an MCP search call. A prechecked response is a feasibility observation, not a gold answer; independently recollect references after publishing the dataset.
 
 ## Question families inspired by workbook
 

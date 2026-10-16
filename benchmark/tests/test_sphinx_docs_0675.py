@@ -13,13 +13,13 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class SphinxDocumentationTests(unittest.TestCase):
-    def test_prompt_rename_does_not_change_contents(self):
+    def test_current_prompt_link_and_sha(self):
         target = ROOT / "instructions/astroakd_bench/AstroAKD-Bench_Instruction.md"
         self.assertEqual(INSTRUCTIONS_PATH, target)
         self.assertTrue(target.is_file())
         self.assertFalse((target.parent / "llm_generation_instructions_v1.md").exists())
         self.assertEqual(hashlib.sha256(target.read_bytes()).hexdigest(),
-                         "d430cf4d2508f124abee4deb23da44b3aca1618707f6c052fea8ee9deda47acf")
+                         "949420a46865a253b31d41dea96d5d307e112a6dbc8c9138b71cc41b8f1fcc71")
         self.assertEqual(instruction_text(enabled=True), target.read_text(encoding="utf-8"))
 
     def test_sphinx_configuration_parseable(self):

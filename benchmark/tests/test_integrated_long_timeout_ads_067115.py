@@ -43,7 +43,7 @@ def test_one_step_forwards_reference_policy_and_api_exposes_it(tmp_path):
     with patch('benchmark.simple_workflows.generate_mixed',fixture_generator), \
          patch('benchmark.simple_workflows.collect_references',reference):
         report=asyncio.run(AstroAKDBench(root=tmp_path).create_synthetic_queries(
-            name='study10', count=10, with_reference_answers=True,
+            name='study10', count=10, with_reference_answers=True, reference_aware=False,
             archive_timeouts=POLICY,archive_attempts=ATTEMPTS,reference_deadline=2100))
     kw=reference.await_args.kwargs
     assert kw['archive_timeouts']==POLICY and kw['archive_attempts']==ATTEMPTS

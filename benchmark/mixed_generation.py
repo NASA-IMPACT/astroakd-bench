@@ -206,6 +206,10 @@ async def generate_mixed(url: str | None = None, *, count: int = 50, seed: int =
                          cached_batches: dict[int, list[dict]] | None = None,
                          on_literature: Callable[[int, dict], None] | None = None,
                          cached_literature: dict[int, dict] | None = None,
+                         reference_aware: bool = False, feasibility_plan: Path | None = None,
+                         reuse_feasibility_plan: bool = False,
+                         max_reference_rows: int = 20,
+                         max_reference_bytes: int = 65536, max_feasibility_probes: int = 500,
                          ) -> tuple[list[dict[str,Any]], dict[str,Any]]:
     if backend not in ('openai','hybrid'):
         raise GenerationError('Mixed Gold generation requires --backend openai or hybrid for literature authoring')
@@ -221,7 +225,11 @@ async def generate_mixed(url: str | None = None, *, count: int = 50, seed: int =
     # Exclude literature-object names from archive slots so literature follow-up
     # tasks don't collide with the same target and archival module.
     reserved = {p[1].casefold() for p in LITERATURE_PLANS[:mix['literature_driven']]}
-    use_targets = targets if targets is not None else TARGETS
+    if reference_aware and targets is None:
+        from .reference_aware import REFERENCE_AWARE_TARGETS
+        use_targets = REFERENCE_AWARE_TARGETS
+    else:
+        use_targets = targets if targets is not None else TARGETS
     filtered = tuple(t for t in use_targets if t.name.casefold() not in reserved)
     if not filtered:
         raise GenerationError('No archive targets remain after reserving literature targets')
@@ -232,6 +240,11 @@ async def generate_mixed(url: str | None = None, *, count: int = 50, seed: int =
         use_mcp=use_mcp, instructions_file=instructions_file, batch_size=batch_size,
         session_factory=session_factory, progress=progress, targets=filtered,
         openai_client_factory=openai_client_factory,
+        **({'reference_aware': reference_aware, 'feasibility_plan': feasibility_plan,
+            'reuse_feasibility_plan': reuse_feasibility_plan,
+            'max_reference_rows': max_reference_rows,
+            'max_reference_bytes': max_reference_bytes,
+            'max_feasibility_probes': max_feasibility_probes} if generate_fn is generate_llm else {}),
         **({'on_batch': on_batch, 'cached_batches': cached_batches} if
            generate_fn is generate_llm and (on_batch is not None or cached_batches) else {}))
     # Select coordinate slots among the modules that can express a sky position.
@@ -367,7 +380,8 @@ async def generate_mixed(url: str | None = None, *, count: int = 50, seed: int =
        'research_provider_counts':dict(auth_stats),
        'literature_research_requests':len(literature),
        'literature_question_author_fallbacks':sum(t['provenance']['literature_question_author']!='openai' for t in literature),
-       'archive_queries_executed':0,'expected_answers_verified':0,
+       'archive_queries_executed':base.get('reference_aware_selection', {}).get('probes', 0),
+       'expected_answers_verified':0,
        'scientific_truth_verified':False,'single_call_candidates':len(tasks),
        'executable_single_call_candidates':len(tasks) if use_mcp else 0,
        'multistep_literature_candidates':len(literature),

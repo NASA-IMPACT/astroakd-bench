@@ -1,6 +1,6 @@
 # AstroAKD-Bench
 
-**Current version: 0.6.7.11.8** · Benchmark for astronomy archive-search agents using an independent [Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp). Benchmark questions, archive observations, independently reviewed gold answers, and agent responses remain distinct.
+**Current version: 0.6.7.11.9** · Benchmark for astronomy archive-search agents using an independent [Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp). Benchmark questions, archive observations, independently reviewed gold answers, and agent responses remain distinct.
 
 ## Quick start: 100 new questions with references
 
@@ -45,12 +45,20 @@ A successful known-bibcode lookup does **not** establish that general literature
 
 ```bash
 uv run --with openai python -m benchmark create-queries \
-  --name astroakd_100 \
+  --name astroakd_100_v2 \
   --count 100 \
   --output-dir datasets \
   --require-ads \
-  --with-reference-answers
+  --with-reference-answers \
+  --timeout 900 \
+  --archive-timeouts mast=900,simbad=180,heasarc=900,gaia=900,vizier=300 \
+  --archive-attempts mast=2,simbad=1,heasarc=2,gaia=2,vizier=1 \
+  --reference-deadline 2100
 ```
+
+**New in 0.6.7.11.9: reference-aware question generation.** With `--with-reference-answers`, the benchmark now prechecks candidate *archive calls before GPT authoring*. It tries bounded search radii (particularly for Gaia/MAST), verifies that the returned data are nonempty, untruncated, contain all requested fields without nulls, and fit **20 complete rows / 65,536 response bytes** by default. It may probe several candidate targets/radii; `--max-reference-rows 20 --max-reference-bytes 65536 --max-feasibility-probes 500` adjusts these limits. Candidate acceptance is independent of agent A/B/C performance. **No GPT question batches are requested unless the single-call candidate quota can be filled.** Insufficient feasible queries produce a detailed rejection breakdown rather than fabricated or incomplete references; do not treat that as a completed run. Live success depends on the MCP server and archive content.
+
+The accepted question-slot plan is saved with a SHA-256 checksum at `datasets/generated/astroakd_100_v2_feasibility_plan.json` for reproducible `--resume`. Accepted probes are **not gold answers**; the collector independently retrieves the 80 eligible single-call references. The remaining 8 literature and 12 multi-archive questions still need multi-step reference collection. This milestone **does not change A/B/C scoring**. To keep the original 100-question/300-run benchmark frozen, generate with **a new name** (`astroakd_100_v2`, not `astroakd_100_v2`). Use `--no-reference-aware` only when you explicitly want the legacy, potentially large-result question policy.
 
 `--name` sets the file prefix; `--count` selects 1–100 questions; `--output-dir` is the study root. The `--seed` option is optional (default `20261018`); fixed seeds do **not** guarantee byte-identical results from remote GPT models. To reproduce an evaluation, **reuse the saved JSONL**. New outputs create their own subdirectories; there is no need for manual `mkdir`.
 
@@ -58,15 +66,15 @@ For 100 questions, the default mix contains **60 archive-driven, 20 coordinate-d
 
 ### Recover from interrupted question generation
 
-Each successful GPT batch is now written to a durable journal at `datasets/generated/astroakd_100.progress.jsonl` and a human-inspectable **partial, unvalidated** file at `datasets/generated/astroakd_100_partial.jsonl`. If a later literature request, model call or archive step fails before final question publication, these records preserve already completed work. Once ADS/service problems are corrected, **reuse the same inputs** and add `--resume`:
+Each successful GPT batch is now written to a durable journal at `datasets/generated/astroakd_100_v2.progress.jsonl` and a human-inspectable **partial, unvalidated** file at `datasets/generated/astroakd_100_v2_partial.jsonl`. If a later literature request, model call or archive step fails before final question publication, these records preserve already completed work. Once ADS/service problems are corrected, **reuse the same inputs** and add `--resume`:
 
 ```bash
 uv run --with openai python -m benchmark create-queries \
-  --name astroakd_100 --count 100 --output-dir datasets \
-  --require-ads --with-reference-answers --resume
+  --name astroakd_100_v2 --count 100 --output-dir datasets \
+  --require-ads --with-reference-answers --timeout 900 --resume
 ```
 
-Resume must use the original name, count, seed, model, mix, module list, batch size, MCP endpoint and ADS requirement. Completed batches are not sent to GPT again. The partial file is **not** a valid final evaluation dataset and must never be treated as reviewed gold. After all questions and output files pass final checks, the progress files are removed and the ordinary `astroakd_100.jsonl`/CSV outputs are published. A preflight failure *before* any GPT batch makes no progress journal because no paid generation has been completed. Versions 0.6.7.11.4 and earlier did not save such checkpoints: prior unsaved GPT responses cannot be recovered from console output.
+Resume must use the original name, count, seed, model, mix, module list, batch size, MCP endpoint and ADS requirement. Completed batches are not sent to GPT again. The partial file is **not** a valid final evaluation dataset and must never be treated as reviewed gold. After all questions and output files pass final checks, the progress files are removed and the ordinary `astroakd_100_v2.jsonl`/CSV outputs are published. A preflight failure *before* any GPT batch makes no progress journal because no paid generation has been completed. Versions 0.6.7.11.4 and earlier did not save such checkpoints: prior unsaved GPT responses cannot be recovered from console output.
 
 ### Finish reference collection / make plots
 
@@ -74,11 +82,11 @@ Resume must use the original name, count, seed, model, mix, module list, batch s
 # Optional initial pilot: add --reference-limit 5 to create-queries above;
 # then resume the saved questions without another GPT generation run
 uv run python -m benchmark collect-references \
-  --name astroakd_100 --output-dir datasets --resume
+  --name astroakd_100_v2 --output-dir datasets --resume
 
 # Archive coverage, answer shape, nulls, truncation, response-time plots
 uv run --with matplotlib python -m benchmark reference-report \
-  --name astroakd_100 --output-dir datasets
+  --name astroakd_100_v2 --output-dir datasets
 ```
 
 If you originally generated questions *without* reference collection, run `collect-references` without `--resume` on the first attempt. Existing output files are protected unless you explicitly request replacement.
@@ -88,13 +96,13 @@ If you originally generated questions *without* reference collection, run `colle
 ```bash
 # Five-question pilot followed by a resumable 100-question three-arm experiment
 uv run --with openai python -m benchmark run-benchmark \
-  --name astroakd_100 --output-dir datasets --limit 5
+  --name astroakd_100_v2 --output-dir datasets --limit 5
 uv run --with openai python -m benchmark run-benchmark \
-  --name astroakd_100 --output-dir datasets --resume
+  --name astroakd_100_v2 --output-dir datasets --resume
 
 # Offline A/B/C CSV and PNG/SVG figures
 uv run --with matplotlib python -m benchmark agent-report \
-  --name astroakd_100 --output-dir datasets
+  --name astroakd_100_v2 --output-dir datasets
 ```
 
 The three arms are **A** (MCP only), **B** (MCP with the [AstroAKD instruction](instructions/astroakd/AstroAKD_Instruction.md)), and **C** (web only). A full 100-question experiment can generate 300 runs. Runtime, completion, tool-use, and token-consumption plots are **operational measures**, not scientific correctness without reviewed gold references.
@@ -105,13 +113,13 @@ The three arms are **A** (MCP only), **B** (MCP with the [AstroAKD instruction](
 
 ```bash
 uv run --with matplotlib python -m benchmark agent-report \
-  --name astroakd_100 \
+  --name astroakd_100_v2 \
   --output-dir datasets
 ```
 
 If the plots/reports already exist, use the same command with `--replace` to regenerate the **reports only**; agent runs and archive observations are not overwritten.
 
-The figures are saved to `datasets/reports/astroakd_100/agents/`:
+The figures are saved to `datasets/reports/astroakd_100_v2/agents/`:
 
 | Output | What it compares across A / B / C |
 | --- | --- |
@@ -134,7 +142,7 @@ A completed 300-run A/B/C journal is intentionally immutable. To check which fai
 
 ```bash
 uv run python -m benchmark run-benchmark \
-  --name astroakd_100 --output-dir datasets \
+  --name astroakd_100_v2 --output-dir datasets \
   --retry-errors --dry-run --max-turns 16 --max-calls 20
 ```
 
@@ -142,20 +150,20 @@ To retry only the failed `mcp_only` tasks (in the observed dataset, `ASTROAKD-MI
 
 ```bash
 uv run --with openai python -m benchmark run-benchmark \
-  --name astroakd_100 --output-dir datasets \
+  --name astroakd_100_v2 --output-dir datasets \
   --retry-errors --max-turns 16 --max-calls 20 \
   --timeout 900 --task-timeout 2400
 ```
 
-The command creates separate `datasets/agent/astroakd_100_mcp_only_turn16_retries.jsonl` (only retried records) and `astroakd_100_ABC_runs_turn16_diagnostic.jsonl` (derived 300-run comparison). **It never modifies** `astroakd_100_ABC_runs.jsonl`; a changed turn budget is a diagnostic, not a replacement experimental arm. To plot the diagnostic separately:
+The command creates separate `datasets/agent/astroakd_100_v2_mcp_only_turn16_retries.jsonl` (only retried records) and `astroakd_100_v2_ABC_runs_turn16_diagnostic.jsonl` (derived 300-run comparison). **It never modifies** `astroakd_100_v2_ABC_runs.jsonl`; a changed turn budget is a diagnostic, not a replacement experimental arm. To plot the diagnostic separately:
 
 ```bash
 uv run --with matplotlib python -m benchmark agent-report \
-  --name astroakd_100 --output-dir datasets \
-  --runs datasets/agent/astroakd_100_ABC_runs_turn16_diagnostic.jsonl
+  --name astroakd_100_v2 --output-dir datasets \
+  --runs datasets/agent/astroakd_100_v2_ABC_runs_turn16_diagnostic.jsonl
 ```
 
-The diagnostic figures are saved under `datasets/reports/astroakd_100/agents_diagnostic/`; the baseline figures remain in `agents/`. Preserve both for comparison. No OpenAI or MCP calls occur during `agent-report`.
+The diagnostic figures are saved under `datasets/reports/astroakd_100_v2/agents_diagnostic/`; the baseline figures remain in `agents/`. Preserve both for comparison. No OpenAI or MCP calls occur during `agent-report`.
 
 ### How to create reference-completeness figures
 
@@ -163,12 +171,12 @@ These are **different** from A/B/C figures and do not run agents. After collecti
 
 ```bash
 uv run --with matplotlib python -m benchmark reference-report \
-  --name astroakd_100 \
+  --name astroakd_100_v2 \
   --output-dir datasets \
   --replace
 ```
 
-The `--replace` flag is useful if a previous plotting attempt left partial report files: it **does not** replace generated questions or reference evidence. Outputs go to `datasets/reports/astroakd_100/references/`, including `response_times.png`, `response_time_distribution.png`, `questions_by_archive.png`, `answer_shapes.png`, and completeness figures. Archives with no recorded runtimes (such as pending multi-archive questions) are excluded from median-time computation without removing them from the overall counts. If matplotlib is unavailable, pass `--no-plots` and omit `--with matplotlib` to create the CSV/JSON summaries only. See [References and scientific review](docs/benchmark/references_and_review.md).
+The `--replace` flag is useful if a previous plotting attempt left partial report files: it **does not** replace generated questions or reference evidence. Outputs go to `datasets/reports/astroakd_100_v2/references/`, including `response_times.png`, `response_time_distribution.png`, `questions_by_archive.png`, `answer_shapes.png`, and completeness figures. Archives with no recorded runtimes (such as pending multi-archive questions) are excluded from median-time computation without removing them from the overall counts. If matplotlib is unavailable, pass `--no-plots` and omit `--with matplotlib` to create the CSV/JSON summaries only. See [References and scientific review](docs/benchmark/references_and_review.md).
 
 ## Troubleshoot ADS literature generation
 
@@ -205,10 +213,10 @@ from benchmark.api import AstroAKDBench
 
 bench = AstroAKDBench('.')
 asyncio.run(bench.create_synthetic_queries(
-    name='astroakd_100', count=100, output_dir='datasets',
+    name='astroakd_100_v2', count=100, output_dir='datasets',
     require_ads=True, with_reference_answers=True,
 ))
-report = bench.create_reference_report(name='astroakd_100', output_dir='datasets')
+report = bench.create_reference_report(name='astroakd_100_v2', output_dir='datasets')
 ```
 
 ## Documentation and development
@@ -223,3 +231,22 @@ make -C docs/sphinx html
 ```
 
 Source history: [CHANGELOG](CHANGELOG.md); [installation](INSTALL.md); full help: `uv run python -m benchmark --help`. The generation instructions are in [`instructions/astroakd_bench/AstroAKD-Bench_Instruction.md`](instructions/astroakd_bench/AstroAKD-Bench_Instruction.md), distinct from the evaluated agent's specialist prompt. The advanced API commands are retained for specialized workflows and replay/regression testing.
+
+## Reference-aware v2 A/B/C study (0.6.7.11.9)
+
+After `astroakd_100_v2` generation and reference collection finish, keep its question JSONL and generation report unchanged and run a **new** A/B/C study (not `astroakd_100_v2`):
+
+```bash
+uv run --with matplotlib python -m benchmark reference-report \
+  --name astroakd_100_v2 --output-dir datasets
+uv run --with openai python -m benchmark run-benchmark \
+  --name astroakd_100_v2 --output-dir datasets \
+  --timeout 900 --task-timeout 2400 --limit 5
+uv run --with openai python -m benchmark run-benchmark \
+  --name astroakd_100_v2 --output-dir datasets \
+  --timeout 900 --task-timeout 2400 --resume
+uv run --with matplotlib python -m benchmark agent-report \
+  --name astroakd_100_v2 --output-dir datasets
+```
+
+`agent-report` creates A/B/C operational plots and a **provisional** `match_rate.png` only for automatically comparable reference snapshots. Inspect `reference_agreement_summary.json` and its exclusion counts: the generator's feasibility gate aims to improve that coverage but does **not guarantee** full 100-question reference accuracy, and it does not yet collect multi-step gold answers. If the feasibility quota fails before GPT, choose a different valid candidate mix or extend the curated target inventory; do not bypass the gate just to improve reported accuracy.

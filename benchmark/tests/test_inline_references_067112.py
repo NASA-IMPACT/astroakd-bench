@@ -48,7 +48,7 @@ class InlineReferencesTests(TestCase):
                  patch('benchmark.simple_workflows.collect_references',fake):
                 result=asyncio.run(create_queries(name='astroakd_test40',
                     count=100,output_dir=out,seed=20261018,
-                    with_reference_answers=True,reference_limit=5))
+                    with_reference_answers=True,reference_aware=False,reference_limit=5))
             paths=dataset_paths(name='astroakd_test40',output_dir=out)
             self.assertEqual(len(paths['tasks'].read_text().splitlines()),100)
             self.assertEqual(len(paths['single_calls'].read_text().splitlines()),80)

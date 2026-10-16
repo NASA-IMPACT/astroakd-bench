@@ -42,11 +42,11 @@ class ReadTheDocsBuildTests(unittest.TestCase):
         self.assertNotIn('](../CHANGELOG.md)',text)
         self.assertNotIn('](../instructions/',text)
 
-    def test_preserved_benchmark_inputs(self):
+    def test_current_generation_prompt_and_frozen_agent_input(self):
         import hashlib
         hashes={
           'instructions/astroakd/AstroAKD_Instruction.md':'c7e9b4b8ffb608f2b380418a2df2d98c98bb6a807b065fff61757c2f1253e4ab',
-          'instructions/astroakd_bench/AstroAKD-Bench_Instruction.md':'d430cf4d2508f124abee4deb23da44b3aca1618707f6c052fea8ee9deda47acf',
+          'instructions/astroakd_bench/AstroAKD-Bench_Instruction.md':'949420a46865a253b31d41dea96d5d307e112a6dbc8c9138b71cc41b8f1fcc71',
         }
         for name,expected in hashes.items():
             self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),expected)

@@ -35,6 +35,7 @@ def dataset_paths(root: str | Path = '.', name: str = 'synthetic_100',
         'multistep': data / 'generated' / (name + '_multistep.jsonl'),
         'generation_journal': data / 'generated' / (name + '.progress.jsonl'),
         'generation_partial': data / 'generated' / (name + '_partial.jsonl'),
+        'feasibility_plan': data / 'generated' / (name + '_feasibility_plan.json'),
         'references': data / 'validated' / (name + '_references.jsonl'),
         'references_csv': data / 'validated' / (name + '_references.csv'),
         'references_report': data / 'validated' / (name + '_references_report.json'),
@@ -62,7 +63,16 @@ async def create_queries(*, name: str | None = None, root: str | Path = '.',
                          archive_timeouts: str = 'mast=60,simbad=30,heasarc=60,gaia=60,vizier=45',
                          archive_attempts: str = 'mast=1,simbad=1,heasarc=1,gaia=1,vizier=1',
                          reference_deadline: float = 70.,
+                         reference_aware: bool | None = None,
+                         max_reference_rows: int = 20, max_reference_bytes: int = 65536,
+                         max_feasibility_probes: int = 500,
                          progress=None, research_fn=None, llm_fn=None, openai_client_factory=None) -> dict[str,Any]:
+    if reference_aware is None:
+        reference_aware = with_reference_answers
+    if reference_aware and not with_reference_answers:
+        raise ValueError('--reference-aware requires --with-reference-answers')
+    if not 1 <= max_reference_rows <= 100 or not 1024 <= max_reference_bytes <= 8388608 or not 1 <= max_feasibility_probes <= 5000:
+        raise ValueError('Invalid reference-aware bounds: rows=1..100, bytes=1024..8388608, probes=1..5000')
     if reference_limit is not None and not with_reference_answers:
         raise ValueError('--reference-limit requires --with-reference-answers')
     if reference_limit is not None and reference_limit <= 0:
@@ -78,12 +88,14 @@ async def create_queries(*, name: str | None = None, root: str | Path = '.',
     if resume and replace:
         raise ValueError('--resume cannot be used with --replace')
     paths = dataset_paths(root, name, output_dir=output_dir)
-    if resume and not paths['generation_journal'].is_file():
-        raise FileNotFoundError(f'No unfinished generation checkpoint: {paths["generation_journal"]}')
+    if resume and not paths['generation_journal'].is_file() and not (reference_aware and paths['feasibility_plan'].is_file()):
+        raise FileNotFoundError(f'No unfinished generation checkpoint or saved feasibility plan: {paths["generation_journal"]}')
     if not resume and not replace and (paths['generation_journal'].exists() or
                                        paths['generation_partial'].exists()):
         raise FileExistsError('Unfinished question generation exists; retry with --resume '
                               'to reuse completed GPT batches (or choose a new --name)')
+    if reference_aware and paths['feasibility_plan'].exists() and not (resume or replace):
+        raise FileExistsError('Reference-aware candidate plan already exists; use --resume or a new name')
     if with_reference_answers and not replace:
         reference_files = (paths['references'], paths['references_csv'], paths['references_report'],
             paths['references'].with_name(paths['references'].name + '.progress.jsonl'))
@@ -140,8 +152,11 @@ async def create_queries(*, name: str | None = None, root: str | Path = '.',
         'name': name, 'count': count, 'seed': seed, 'model': model,
         'mix': recipe, 'modules': parse_modules(modules), 'batch_size': batch_size,
         'require_ads': require_ads, 'mcp_url': resolve_mcp_url(url),
+        'reference_aware': reference_aware, 'max_reference_rows': max_reference_rows,
+        'max_reference_bytes': max_reference_bytes,
+        'max_feasibility_probes': max_feasibility_probes,
     })
-    if resume:
+    if resume and paths['generation_journal'].is_file():
         journal.load()
         if progress:
             progress(f'Resuming {len(journal.batches)} completed GPT batches, '
@@ -152,6 +167,10 @@ async def create_queries(*, name: str | None = None, root: str | Path = '.',
         mix=recipe, backend='openai', model=model, batch_size=batch_size,
         timeout=timeout, use_mcp=True, use_instructions=True, require_ads=require_ads,
         progress=progress, research_fn=research_fn, llm_fn=llm_fn,
+        reference_aware=reference_aware, feasibility_plan=paths['feasibility_plan'],
+        reuse_feasibility_plan=resume and reference_aware,
+        max_reference_rows=max_reference_rows,
+        max_reference_bytes=max_reference_bytes, max_feasibility_probes=max_feasibility_probes,
         openai_client_factory=openai_client_factory,
         on_batch=journal.save_batch, cached_batches=journal.batches,
         on_literature=journal.save_literature, cached_literature=journal.literature)
@@ -164,13 +183,17 @@ async def create_queries(*, name: str | None = None, root: str | Path = '.',
     report['single_call_sha256'] = write_jsonl(paths['single_calls'], regular, replace=replace)
     report['multistep_sha256'] = write_jsonl(paths['multistep'], multi, replace=replace)
     save_views(tasks, csv_path=paths['tasks_csv'], kind='candidate', replace=replace)
-    report.update({'milestone': '0.6.7.11.5 - RESUMABLE_DURABLE_GENERATION',
+    report.update({'milestone': '0.6.7.11.9 - REFERENCE_AWARE_SYNTHETIC_QUERY_GENERATION'
+        if reference_aware else '0.6.7.11.5 - RESUMABLE_DURABLE_GENERATION',
         'task_dataset': str(paths['tasks']), 'question_csv': str(paths['tasks_csv']),
         'single_call_dataset': str(paths['single_calls']),
         'multistep_dataset': str(paths['multistep']),
         'single_call_references_pending': len(regular),
         'multistep_reference_collection': 'NOT_PERFORMED_REQUIRES_SEPARATE_EVIDENCE',
         'verified_gold_answers': 0})
+    report['reference_aware'] = bool(reference_aware)
+    if reference_aware:
+        report['reference_feasibility_status'] = 'PRECHECKED_NOT_FINAL_REFERENCE_VALIDATION'
     # Publish candidate generation independently, before potentially long live I/O.
     # This also makes an interrupted reference run resumable without another GPT call.
     report['reference_collection'] = {

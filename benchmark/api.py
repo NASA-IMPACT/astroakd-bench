@@ -69,13 +69,18 @@ class AstroAKDBench:
                                        with_reference_answers=False, reference_limit=None,
                                        archive_timeouts='mast=60,simbad=30,heasarc=60,gaia=60,vizier=45',
                                        archive_attempts='mast=1,simbad=1,heasarc=1,gaia=1,vizier=1',
-                                       reference_deadline=70., replace=False, resume=False, **kwargs):
+                                       reference_deadline=70., reference_aware=None,
+                                       max_reference_rows=20, max_reference_bytes=65536,
+                                       max_feasibility_probes=500,
+                                       replace=False, resume=False, **kwargs):
         from .simple_workflows import create_queries
         return await create_queries(name=name, root=self.root, output_dir=output_dir, count=count,seed=seed,
             mix=mix,model=model,require_ads=require_ads,
             with_reference_answers=with_reference_answers, reference_limit=reference_limit,
             archive_timeouts=archive_timeouts, archive_attempts=archive_attempts,
-            reference_deadline=reference_deadline,
+            reference_deadline=reference_deadline, reference_aware=reference_aware,
+            max_reference_rows=max_reference_rows, max_reference_bytes=max_reference_bytes,
+            max_feasibility_probes=max_feasibility_probes,
             replace=replace,resume=resume,url=self.mcp_url,timeout=self.timeout,**kwargs)
 
     async def collect_named_references(self, *, name='synthetic_100', output_dir=None,

@@ -50,7 +50,7 @@ uv run python -m benchmark literature-auth --probe
 
 # Create a mixed 100-question experiment and collect eligible reference evidence
 uv run --with openai python -m benchmark create-queries \
-  --name astroakd_100 \
+  --name astroakd_100_v2 \
   --count 100 \
   --output-dir datasets \
   --require-ads \
@@ -58,17 +58,17 @@ uv run --with openai python -m benchmark create-queries \
 
 # Offline reference quality report
 uv run --with matplotlib python -m benchmark reference-report \
-  --name astroakd_100 --output-dir datasets
+  --name astroakd_100_v2 --output-dir datasets
 
 # Test five questions before running all three agents on 100 questions
 uv run --with openai python -m benchmark run-benchmark \
-  --name astroakd_100 --output-dir datasets --limit 5
+  --name astroakd_100_v2 --output-dir datasets --limit 5
 uv run --with openai python -m benchmark run-benchmark \
-  --name astroakd_100 --output-dir datasets --resume
+  --name astroakd_100_v2 --output-dir datasets --resume
 
 # Offline A/B/C plots and CSVs
 uv run --with matplotlib python -m benchmark agent-report \
-  --name astroakd_100 --output-dir datasets
+  --name astroakd_100_v2 --output-dir datasets
 ```
 
 The five named commands create their needed output subdirectories automatically.
@@ -78,7 +78,7 @@ The five named commands create their needed output subdirectories automatically.
 
 A is MCP only, B is MCP with the AstroAKD specialist instruction, and C is Web only. One hundred questions create up to 300 agent runs. **Completion, time and tool metrics are not scientific correctness.** Scientific accuracy requires independently verified gold answers.
 
-**Figure commands are separate from execution.** `run-benchmark` saves agent runs; the subsequent `agent-report` command saves `mean_runtime.png`, `total_tokens.png`, `completed_runs.png`, `mean_mcp_events.png`, and `web_search_calls.png` to `datasets/reports/astroakd_100/agents/`. To refresh plots, rerun `agent-report --name astroakd_100 --output-dir datasets --replace`. For archive observations, `reference-report --name astroakd_100 --output-dir datasets --replace` creates `response_times.png` and the other reference completeness figures under `datasets/reports/astroakd_100/references/`. Historical `match_rate.png` is **not** created by the current operational `agent-report`; a reviewed gold/scorable oracle is required for match-rate reporting.
+**Figure commands are separate from execution.** `run-benchmark` saves agent runs; the subsequent `agent-report` command saves `mean_runtime.png`, `total_tokens.png`, `completed_runs.png`, `mean_mcp_events.png`, and `web_search_calls.png` to `datasets/reports/astroakd_100_v2/agents/`. To refresh plots, rerun `agent-report --name astroakd_100_v2 --output-dir datasets --replace`. For archive observations, `reference-report --name astroakd_100_v2 --output-dir datasets --replace` creates `response_times.png` and the other reference completeness figures under `datasets/reports/astroakd_100_v2/references/`. The current `agent-report` also generates provisional reference-snapshot `match_rate.png` when there are automatically scorable complete reference records. It reports the scorable denominator and exclusions; it is not independently reviewed scientific accuracy.
 
 Continue with [question generation](create_queries.md), [references](references_and_review.md), and [evaluation](evaluation_and_plots.md).
 
@@ -88,6 +88,10 @@ To build the HTML documentation from the repository root: `make -C docs/sphinx h
 
 ## Match-rate figure and selective MCP-only retry
 
-For a saved `astroakd_100` dataset with single-call reference evidence, run `uv run --with matplotlib python -m benchmark agent-report --name astroakd_100 --output-dir datasets --replace`. Alongside runtime and token plots this now creates `datasets/reports/astroakd_100/agents/match_rate.png`, explicitly labeled **unreviewed reference-snapshot agreement** on a restricted denominator; read `reference_agreement_summary.json` for scorable/excluded counts. It is not verified scientific accuracy.
+For a saved `astroakd_100_v2` dataset with single-call reference evidence, run `uv run --with matplotlib python -m benchmark agent-report --name astroakd_100_v2 --output-dir datasets --replace`. Alongside runtime and token plots this now creates `datasets/reports/astroakd_100_v2/agents/match_rate.png`, explicitly labeled **unreviewed reference-snapshot agreement** on a restricted denominator; read `reference_agreement_summary.json` for scorable/excluded counts. It is not verified scientific accuracy.
 
-After a complete A/B/C run, `uv run python -m benchmark run-benchmark --name astroakd_100 --output-dir datasets --retry-errors --dry-run` previews failed MCP-only tasks. Remove `--dry-run` and add `--with openai` to `uv run`, `--max-turns 16 --max-calls 20 --timeout 900 --task-timeout 2400` to execute **only those failed MCP-only tasks**. A separate diagnostic journal is created; the original 300 runs are preserved. See [A/B/C evaluation and plots](evaluation_and_plots.md).
+After a complete A/B/C run, `uv run python -m benchmark run-benchmark --name astroakd_100_v2 --output-dir datasets --retry-errors --dry-run` previews failed MCP-only tasks. Remove `--dry-run` and add `--with openai` to `uv run`, `--max-turns 16 --max-calls 20 --timeout 900 --task-timeout 2400` to execute **only those failed MCP-only tasks**. A separate diagnostic journal is created; the original 300 runs are preserved. See [A/B/C evaluation and plots](evaluation_and_plots.md).
+
+## New generation policy
+
+Version 0.6.7.11.9 performs agent-independent, reference-aware MCP prechecks **before** GPT question writing when `--with-reference-answers` is selected. It tries bounded Gaia/MAST/HEASARC/VizieR queries, rejects incomplete/oversized/null results and selects alternate target/radius combinations. Accepted slots are frozen in a checksum-protected feasibility plan so `--resume` keeps the same questions and MCP calls. A precheck is not an independently validated reference answer. If no feasible 100-question candidate mix is available, the command fails *before* GPT rather than silently creating unscorable questions. For your fresh study use `--name astroakd_100_v2` throughout; see [Question creation](create_queries.md).

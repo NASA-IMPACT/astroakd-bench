@@ -327,6 +327,14 @@ def build_parser() -> argparse.ArgumentParser:
     easy.add_argument('--require-ads', action='store_true',help='Require ADS; verify actual literature ADS queries before OpenAI generation')
     easy.add_argument('--with-reference-answers', action='store_true',
         help='After generation, collect archive observations for single-call tasks; literature/multi-archive tasks remain unreviewed and require separate evidence')
+    easy.add_argument('--reference-aware', action=argparse.BooleanOptionalAction, default=None,
+        help='Precheck bounded, nonempty and untruncated live MCP answers BEFORE GPT generation (default with --with-reference-answers)')
+    easy.add_argument('--max-reference-rows', type=int, default=20,
+        help='Maximum complete reference rows for a generated core question (default: 20)')
+    easy.add_argument('--max-reference-bytes', type=int, default=65536,
+        help='Maximum serialized MCP result bytes at precheck (default: 65536)')
+    easy.add_argument('--max-feasibility-probes', type=int, default=500,
+        help='Maximum pre-generation read-only MCP feasibility calls (default: 500)')
     easy.add_argument('--reference-limit', type=int,
         help='Bound the initial single-call reference pilot; continue with collect-references --resume')
     easy.add_argument('--archive-timeouts',default='mast=60,simbad=30,heasarc=60,gaia=60,vizier=45',
@@ -397,7 +405,11 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
             url=args.mcp_url,timeout=args.timeout,require_ads=args.require_ads,
             with_reference_answers=args.with_reference_answers,reference_limit=args.reference_limit,
             archive_timeouts=args.archive_timeouts,archive_attempts=args.archive_attempts,
-            reference_deadline=args.reference_deadline, replace=args.replace, resume=args.resume, progress=lambda msg: print(f'[AstroAKD-Bench create] {msg}',file=sys.stderr,flush=True))
+            reference_deadline=args.reference_deadline,
+            reference_aware=args.reference_aware, max_reference_rows=args.max_reference_rows,
+            max_reference_bytes=args.max_reference_bytes,
+            max_feasibility_probes=args.max_feasibility_probes,
+            replace=args.replace, resume=args.resume, progress=lambda msg: print(f'[AstroAKD-Bench create] {msg}',file=sys.stderr,flush=True))
     if args.command == 'collect-references':
         from .simple_workflows import collect_references
         return await collect_references(name=args.name,output_dir=args.output_dir,url=args.mcp_url,

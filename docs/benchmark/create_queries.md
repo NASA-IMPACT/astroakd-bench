@@ -4,7 +4,7 @@ The short command is `create-queries`:
 
 ```bash
 uv run --with openai python -m benchmark create-queries \
-  --name astroakd_100 \
+  --name astroakd_100_v2 \
   --count 100 \
   --output-dir datasets \
   --require-ads \
@@ -17,9 +17,9 @@ The balanced 100-question set has 60 single-archive, 20 coordinate-driven, 8 lit
 
 `--require-ads` checks ADS authentication and probes **the actual planned literature queries**, not only a generic authentication bibcode. It tries conservative target-based query formulations with compact ADS requests and reports safe HTTP/transport failure categories. Diagnose a particular failure using `uv run python -m benchmark literature-auth --probe --query 'PG 1211+143'`. A generic ADS bibcode success alone cannot qualify general literature search. If ADS research remains unavailable, generation stops **before OpenAI question authoring**. Without `--require-ads`, literature research can use the explicitly labeled web fallback. For server configuration see [ADS and MCP](ads_and_mcp.md).
 
-`--with-reference-answers` collects unreviewed archive observations for the 80 single-call questions **after questions are generated**. Literature and multi-archive questions remain pending multi-step reference collection, not automatically solved. For a bounded pilot add `--reference-limit 5`, then finish with `collect-references --name astroakd_100 --output-dir datasets --resume` without regenerating.
+`--with-reference-answers` collects unreviewed archive observations for the 80 single-call questions **after questions are generated**. Literature and multi-archive questions remain pending multi-step reference collection, not automatically solved. For a bounded pilot add `--reference-limit 5`, then finish with `collect-references --name astroakd_100_v2 --output-dir datasets --resume` without regenerating.
 
-You may omit `--with-reference-answers` to generate questions only. Outputs are created under `datasets/generated/`: `astroakd_100.jsonl`, `.csv`, `_single_call.jsonl`, `_multistep.jsonl`, and `_generation_report.json`. Reference observations, if requested, are under `datasets/validated/`.
+You may omit `--with-reference-answers` to generate questions only. Outputs are created under `datasets/generated/`: `astroakd_100_v2.jsonl`, `.csv`, `_single_call.jsonl`, `_multistep.jsonl`, and `_generation_report.json`. Reference observations, if requested, are under `datasets/validated/`.
 
 Do **not** use `--replace` on a frozen experiment. Use a fresh name or directory for a new independent dataset.
 
@@ -34,7 +34,7 @@ If generation is interrupted, diagnose the failure and repeat your original comm
 
 ```bash
 uv run --with openai python -m benchmark create-queries \
-  --name astroakd_100 --count 100 --output-dir datasets \
+  --name astroakd_100_v2 --count 100 --output-dir datasets \
   --require-ads --with-reference-answers --resume
 ```
 
@@ -46,7 +46,7 @@ The finished JSONL/CSV and generation report are published only after all questi
 
 ```bash
 uv run --with openai python -m benchmark create-queries \
-  --name astroakd_100 --count 100 --output-dir datasets \
+  --name astroakd_100_v2 --count 100 --output-dir datasets \
   --require-ads --with-reference-answers \
   --archive-timeouts mast=900,simbad=180,heasarc=900,gaia=900,vizier=300 \
   --archive-attempts mast=2,simbad=1,heasarc=2,gaia=2,vizier=1 \
@@ -54,3 +54,20 @@ uv run --with openai python -m benchmark create-queries \
 ```
 
 For the eight ADS-literature and 12 multi-archive questions (at count 100), standalone multi-step evidence is still pending separate collection; single-call reference observations are not gold.
+
+## Reference-aware synthetic questions (0.6.7.11.9)
+
+For a *new* experiment named `astroakd_100_v2`, `create-queries --with-reference-answers` enables reference-aware preselection by default. Before any OpenAI question-authoring batch, the benchmark runs read-only MCP feasibility queries and admits only bounded, nonempty, untruncated candidate results with the requested fields and no null measurements. Gaia and MAST search radii can be narrowed as needed. This is a source-code policy, not merely a prompt request; the generator instruction file also documents it.
+
+```bash
+uv run --with openai python -m benchmark create-queries \
+  --name astroakd_100_v2 --count 100 --output-dir datasets \
+  --require-ads --with-reference-answers --timeout 900 \
+  --archive-timeouts mast=900,simbad=180,heasarc=900,gaia=900,vizier=300 \
+  --archive-attempts mast=2,simbad=1,heasarc=2,gaia=2,vizier=1 \
+  --reference-deadline 2100
+```
+
+Default feasibility limits are `--max-reference-rows 20`, `--max-reference-bytes 65536`, and `--max-feasibility-probes 500`. The first two are *maximum complete result* thresholds, not hidden result truncation. If sufficient feasible candidates do not exist, generation fails with an archive-level rejection summary **before GPT calls**; it never changes expected answers to accommodate incomplete archive data. Broader quotas may require expanding curated candidates or adjusting the mix, and live feasibility cannot be promised offline.
+
+The checksum-protected `datasets/generated/astroakd_100_v2_feasibility_plan.json` records accepted MCP call parameters and precheck hashes and is reused by `--resume` with the same configuration. The actual reference collection is independent and occurs after task publication. Ordinary ADS-literature and multi-archive tasks remain on their distinct multi-step evidence track; neither this precheck nor `--with-reference-answers` establishes their final reference answers. To reproduce A/B/C results exactly, reuse the saved JSONL and do not modify the original `astroakd_100` study.

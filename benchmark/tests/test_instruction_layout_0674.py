@@ -20,10 +20,10 @@ class InstructionLayoutTests(unittest.TestCase):
         self.assertEqual(hashlib.sha256(ASTROAKD_PATH.read_bytes()).hexdigest(),
                          'c7e9b4b8ffb608f2b380418a2df2d98c98bb6a807b065fff61757c2f1253e4ab')
 
-    def test_bench_generation_prompt_same_bytes_as_0673(self):
+    def test_bench_generation_prompt_current_policy(self):
         self.assertEqual(GEN_PATH, INSTRUCTIONS_PATH)
         self.assertEqual(hashlib.sha256(GEN_PATH.read_bytes()).hexdigest(),
-                         'd430cf4d2508f124abee4deb23da44b3aca1618707f6c052fea8ee9deda47acf')
+                         '949420a46865a253b31d41dea96d5d307e112a6dbc8c9138b71cc41b8f1fcc71')
         self.assertEqual(instruction_text(enabled=True),GEN_PATH.read_text(encoding='utf-8'))
 
     def test_docs_do_not_contain_operational_instruction_files(self):

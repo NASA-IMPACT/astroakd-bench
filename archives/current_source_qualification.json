@@ -1,38 +1,53 @@
 {
-  "version": "0.6.7.11.6",
-  "milestone": "ADS_EXACT_QUERY_DIAGNOSTICS_AND_README_CLOSURE",
-  "source_regression": "PASS_OFFLINE_SPLIT",
-  "pytest_split_groups": [
+  "version": "0.6.7.11.9",
+  "milestone": "REFERENCE_AWARE_SYNTHETIC_QUERY_GENERATION",
+  "baseline_release": "0.6.7.11.8",
+  "qualification": "OFFLINE_ACCEPT_LIVE_HOST_PENDING",
+  "test_groups": [
     {
-      "passed": 110,
-      "subtests": 8
-    },
-    {
-      "passed": 6,
-      "plotting_tests": true
-    },
-    {
-      "passed": 112,
-      "subtests": 24
-    },
-    {
-      "passed": 81,
+      "passed": 170,
       "skipped": 1,
-      "subtests": 9
+      "parametrized_subtests": 17
+    },
+    {
+      "passed": 58,
+      "skipped": 0,
+      "parametrized_subtests": 19
+    },
+    {
+      "passed": 62,
+      "skipped": 0,
+      "parametrized_subtests": 13
+    },
+    {
+      "passed": 35,
+      "skipped": 0,
+      "parametrized_subtests": 0
     }
   ],
-  "sum_passed": 309,
-  "sum_skipped": 1,
-  "subtests": 41,
-  "ads_live": "NOT_TESTED_UPSTREAM_ADS_SEARCH_REQUIRES_REAL_HOST",
-  "sphinx_html": "NOT_REBUILT_CURRENT_DOC_SOURCE_CHECKS_PASS",
-  "source_baseline": "0.6.7.11.5",
-  "checkpoint_status": "Mocked late ADS/generation failure preserved partial batches; resume reused already paid GPT batches",
+  "passed": 325,
+  "skipped": 1,
+  "parametrized_subtests": 49,
+  "new_behaviors": [
+    "bounded MCP candidate precheck before GPT",
+    "adaptive Gaia/MAST/HEASARC/VizieR search radii",
+    "reject missing/null/truncated/oversized answers",
+    "expanded approximate astronomical target candidates",
+    "checksum-protected precheck plans and resume",
+    "radius preservation in authored question",
+    "unchanged agent/scoring implementations"
+  ],
+  "live_mcp_science_generation": "PENDING_USER_HOST",
+  "live_ads_generation": "NOT_REPEATED_OFFLINE",
+  "sphinx_html": "SOURCE_TESTS_PASS_RENDER_NOT_BUILT",
   "preservation": {
     "archived_historical_markdown_files": 105,
     "historical_documentation_archive_sha256": "fa5ccd8fa04ab850a178eb15ef2adb0d9169df1938d443bbbc5a80aab638ef69",
     "frozen_50_task_sha256": "4744ae4df40381eea635a92a13d8af6f83fd69c0e2274c839e1dbb04f382bbb8",
     "frozen_50_oracle_sha256": "58caf910963cdce4e333ae5a0a6d48501ece27bce71352b15664a10a76fc1d5e"
   },
-  "details": "Target-aware ADS query fallback for plans lacking source names; exact-query diagnostic with token-safe HTTP class; frozen inputs unchanged. Live ADS host result pending."
+  "notes": [
+    "The new 100-question dataset must be generated live with a fresh --name (astroakd_100_v2).",
+    "Precheck success does not imply verified scientific gold or complete literature/multi-archive references."
+  ]
 }

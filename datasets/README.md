@@ -2,7 +2,7 @@
 
 `datasets/` is an initially empty workspace for **your own** experiments. It does not ship previous experiments, validated science answers or the historical data archive. A freshly unpacked AstroAKD-Bench release is expected to contain only this README in this directory.
 
-A named study created with `--name astroakd_100 --output-dir datasets` writes to:
+A named study created with `--name astroakd_100_v2 --output-dir datasets` writes to:
 
 - `generated/`: synthetic question JSONL, CSV, family subsets and generation report
 - `validated/`: single-call reference observations and resumable journal (if requested)

@@ -1,3 +1,12 @@
+## 0.6.7.11.9 — REFERENCE_AWARE_SYNTHETIC_QUERY_GENERATION (candidate)
+
+- Added live, agent-independent read-only feasibility checks for named mixed-dataset candidate slots *before* GPT authoring when `--with-reference-answers` is enabled.
+- Candidate gating rejects empty, truncated, oversized, too-many-row, missing-answer-field and null-answer-field archive responses. Narrowing bounded Gaia/MAST/HEASARC/VizieR radii and alternative curated targets are supported without inventing reference values.
+- Added `--reference-aware`/`--no-reference-aware`, `--max-reference-rows`, `--max-reference-bytes`, and `--max-feasibility-probes` to the simplified CLI and Python facade.
+- Added checksum-protected saved candidate plans for `--resume`; revised the generation instruction policy for answer feasibility and ambiguity.
+- Current README and Sphinx guides now recommend a new `astroakd_100_v2` study while preserving previous frozen 100-question and 300-agent-run artifacts. The 20 multi-step questions still require separate reference evidence; no scoring algorithm was modified.
+- Offline regression qualification is recorded separately. Live feasibility with the user's independent MCP server is pending.
+
 ## 0.6.7.11.8 — SELECTIVE_MCP_RETRY_AND_REFERENCE_SNAPSHOT_AGREEMENT
 
 - Add `run-benchmark --retry-errors` with `--dry-run`, automatic failed MCP-only selection, changed-budget metadata, and immutable original run preservation. Store only retries and a separately labeled derived A/B/C diagnostic journal; do not rerun successful arms.
