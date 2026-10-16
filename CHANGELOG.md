@@ -1,3 +1,9 @@
+## 0.6.7.11.7 — EXTERNAL_MCP_SETUP_DOCUMENTATION_RESTORE
+
+- Restore the complete external MCP installation workflow (`git clone`, `cd`, `uv sync`, and `uv run fastmcp run`) prominently in README, INSTALL and the current Sphinx getting-started and ADS pages.
+- Clarify the two terminal/process environments, the local MCP endpoint, server-side ADS tokens versus the benchmark `OPENAI_API_KEY`, and read-only ADS verification.
+- Documentation-only behavior change: question generation, archive reference collection, science data, agent evaluation and all frozen inputs are unchanged.
+
 ## 0.6.7.11.6 — ADS_EXACT_QUERY_DIAGNOSTICS_AND_README_CLOSURE
 
 - Added `literature-auth --probe --query "PG 1211+143"` to test the actual failing query.

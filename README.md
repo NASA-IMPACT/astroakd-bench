@@ -1,12 +1,37 @@
 # AstroAKD-Bench
 
-**Current version: 0.6.7.11.6** · Benchmark for astronomy archive-search agents using an independent [Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp). Benchmark questions, archive observations, independently reviewed gold answers, and agent responses remain distinct.
+**Current version: 0.6.7.11.7** · Benchmark for astronomy archive-search agents using an independent [Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp). Benchmark questions, archive observations, independently reviewed gold answers, and agent responses remain distinct.
 
 ## Quick start: 100 new questions with references
 
-Requirements: Python 3.11+, `uv`, an `OPENAI_API_KEY`, and the external Astroquery MCP server listening at `http://127.0.0.1:8000/mcp`. To require ADS literature research, configure an ADS token **on the MCP server** before starting it.
+Requirements: Python 3.11+, [uv](https://docs.astral.sh/uv/), an `OPENAI_API_KEY`, and an independent Astroquery MCP server. **Install and start the MCP server first, in its own terminal.** It is a separate repository, not part of AstroAKD-Bench.
 
-**Verify both ADS access and the actual literature-search route before spending OpenAI credits:**
+### Terminal 1 — install and start Astroquery MCP
+
+From a suitable parent directory, clone the [NASA IMPACT Astroquery MCP repository](https://github.com/NASA-IMPACT/astroquery-mcp) and start the HTTP server:
+
+```bash
+git clone https://github.com/NASA-IMPACT/astroquery-mcp.git
+cd astroquery-mcp
+uv sync
+uv run fastmcp run server.py --transport http --host 127.0.0.1 --port 8000
+```
+
+Keep this terminal running. The endpoint should be `http://127.0.0.1:8000/mcp`. For `--require-ads`, set `API_DEV_KEY` (or the server's supported `ADS_API_KEY` fallback) **in this server terminal before the last command**. Never commit the token or paste it into benchmark questions or logs. If you set the token after launching the server, restart the server.
+
+### Terminal 2 — install and verify AstroAKD-Bench
+
+Open a **different terminal**, switch to the AstroAKD-Bench repository root (not `astroquery-mcp`), and run:
+
+```bash
+uv sync
+uv run python -m benchmark --version
+uv run python -m benchmark doctor --fast
+```
+
+Set `OPENAI_API_KEY` securely in this benchmark terminal before question generation or A/B/C runs. The MCP server defaults to `http://127.0.0.1:8000/mcp`; use `ASTROAKD_MCP_URL` and, if required, `ASTROAKD_MCP_TOKEN` for a remote/protected MCP endpoint. The MCP bearer token is **not** the ADS API key.
+
+**Verify ADS access and an actual literature search from the benchmark terminal before spending OpenAI credits:**
 
 ```bash
 # General authentication plus read-only known-bibcode lookup
@@ -82,7 +107,7 @@ If the known-bibcode probe passes but PG 1211+143 fails, **do not increase `--ar
 uv run python -m benchmark literature-auth --probe --query 'PG 1211+143'
 ```
 
-Version 0.6.7.11.6 reports safe failure classes such as `upstream_http_400_bad_query`, `upstream_http_401_authentication`, `upstream_http_403_forbidden`, `upstream_http_429_rate_limit`, `upstream_timeout`, `mcp_transport_error`, or `mcp_ads_tool_error_unclassified`. Raw upstream exception text and credentials are **not** written into diagnostic reports. The server-side ADS error/HTTP status is necessary to resolve an unclassified failure. Check the **server logs privately** without copying token values into tickets or chats.
+The current diagnostics report safe failure classes such as `upstream_http_400_bad_query`, `upstream_http_401_authentication`, `upstream_http_403_forbidden`, `upstream_http_429_rate_limit`, `upstream_timeout`, `mcp_transport_error`, or `mcp_ads_tool_error_unclassified`. Raw upstream exception text and credentials are **not** written into diagnostic reports. The server-side ADS error/HTTP status is necessary to resolve an unclassified failure. Check the **server logs privately** without copying token values into tickets or chats.
 
 The [Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp) requires the ADS credential in the **server process** (typically `API_DEV_KEY`, with an `ADS_API_KEY` fallback). A valid configured token does not guarantee the remote ADS API will accept every search. If ADS is inaccessible and ADS-specific provenance is not required, you may omit `--require-ads`, which allows an explicitly labeled OpenAI web-search fallback; it **must not** be represented as ADS evidence. This route uses OpenAI credits and is not equivalent to strict ADS qualification.
 

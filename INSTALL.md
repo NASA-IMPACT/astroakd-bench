@@ -1,13 +1,30 @@
 # Install AstroAKD-Bench
 
-Use Python 3.11+ and `uv` from the source root:
+Requires Python 3.11+ and [uv](https://docs.astral.sh/uv/).
+
+The archive service is a **separate** repository. In a first terminal, clone, install and start the local Astroquery MCP server:
+
+```bash
+git clone https://github.com/NASA-IMPACT/astroquery-mcp.git
+cd astroquery-mcp
+uv sync
+uv run fastmcp run server.py --transport http --host 127.0.0.1 --port 8000
+```
+
+Leave that terminal running. For strict ADS research, set `API_DEV_KEY` (or the server-supported `ADS_API_KEY` fallback) in **the server process environment before launching it**; never commit or log the token. If the token is added later, restart the server.
+
+In a second terminal, change to the AstroAKD-Bench repository root, configure `OPENAI_API_KEY` securely, and install/check the benchmark:
 
 ```bash
 uv sync
+uv run python -m benchmark --version
 uv run python -m benchmark --help
+uv run python -m benchmark doctor --fast
 ```
 
-To generate questions, set `OPENAI_API_KEY` and run the Astroquery MCP server as a **separate process**. When using `--require-ads`, configure the ADS token on the MCP server and first run:
+The local MCP endpoint is `http://127.0.0.1:8000/mcp`; set `ASTROAKD_MCP_URL` if using another endpoint.
+
+When using `--require-ads`, first run:
 
 ```bash
 uv run python -m benchmark literature-auth --probe

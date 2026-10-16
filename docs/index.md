@@ -2,7 +2,7 @@
 
 **Current documentation** for generating astronomy-search benchmark questions, collecting observable archive evidence, and evaluating AstroAKD across three agent configurations.
 
-Start with [Getting started](benchmark/quickstart.md). The independent [Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp) provides the archive tools; an ADS token must be configured **on that server** if you require literature evidence.
+Start with [Getting started](benchmark/quickstart.md), including full installation of the external Astroquery MCP server. The independent [Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp) provides the archive tools; an ADS token must be configured **on that server** if you require literature evidence.
 
 ```{toctree}
 :maxdepth: 2

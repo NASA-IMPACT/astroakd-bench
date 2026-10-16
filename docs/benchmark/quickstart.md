@@ -9,13 +9,36 @@ AstroAKD-Bench evaluates astronomical archive-search agents. The benchmark **cre
 - An Astroquery MCP server serving `http://127.0.0.1:8000/mcp` (or set `ASTROAKD_MCP_URL`)
 - Working ADS credentials **on the MCP server** if using `--require-ads`
 
-Install project dependencies in the source directory using `uv sync`. Start the external MCP service from its own repository, for example:
+## Install the external Astroquery MCP server (Terminal 1)
+
+In a **separate terminal**, from the directory where you want the independent server checkout:
 
 ```bash
+git clone https://github.com/NASA-IMPACT/astroquery-mcp.git
+cd astroquery-mcp
+uv sync
 uv run fastmcp run server.py --transport http --host 127.0.0.1 --port 8000
 ```
 
-That command belongs to the **astroquery-mcp server directory**, not the benchmark directory.
+Keep the MCP server running while using the benchmark. The command starts the local endpoint at `http://127.0.0.1:8000/mcp`. For ADS-backed literature questions, set an ADS token (`API_DEV_KEY` or server-supported `ADS_API_KEY`) **in the server process environment before starting it**, then restart the server if its environment changes. Do not add the token to source files, questions or logs.
+
+## Install and check AstroAKD-Bench (Terminal 2)
+
+In a **second terminal**, switch to your AstroAKD-Bench checkout, not the `astroquery-mcp` directory:
+
+```bash
+uv sync
+uv run python -m benchmark --version
+uv run python -m benchmark doctor --fast
+```
+
+Configure `OPENAI_API_KEY` securely in the benchmark terminal before generating questions or evaluating agents. To check literature search, run:
+
+```bash
+uv run python -m benchmark literature-auth --probe --query 'PG 1211+143'
+```
+
+The benchmark defaults to `http://127.0.0.1:8000/mcp`. Use `ASTROAKD_MCP_URL` (and optionally `ASTROAKD_MCP_TOKEN` for a protected MCP endpoint) only when connecting elsewhere. The MCP client token is distinct from the server-side ADS token. For details, see [ADS and MCP connectivity](ads_and_mcp.md).
 
 ## Recommended 100-question workflow
 

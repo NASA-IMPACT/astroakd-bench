@@ -2,6 +2,21 @@
 
 ADS literature research is performed by the **external Astroquery MCP server**, not by the benchmark. The server must expose `astroquery_check_auth` and `ads_query_compact`, configure an ADS token, and reach the ADS service.
 
+## Install and start the local MCP service
+
+Run the following in a separate **server terminal**, outside the AstroAKD-Bench directory:
+
+```bash
+git clone https://github.com/NASA-IMPACT/astroquery-mcp.git
+cd astroquery-mcp
+uv sync
+uv run fastmcp run server.py --transport http --host 127.0.0.1 --port 8000
+```
+
+Keep the terminal open; AstroAKD-Bench connects to `http://127.0.0.1:8000/mcp` by default. If you will use `--require-ads`, configure the ADS API token **in this server terminal before starting the final command** (`API_DEV_KEY`, or the supported `ADS_API_KEY` fallback). Restart the server after changing credentials. The token does not belong in the benchmark's generated outputs.
+
+In a **second terminal**, change to the AstroAKD-Bench repository root and install its dependencies with `uv sync`. Configure `OPENAI_API_KEY` securely in this benchmark terminal for question generation and A/B/C runs; ADS authentication remains on the server. The diagnostic commands below run from the benchmark root. See [Getting started](quickstart.md) for the complete two-terminal setup.
+
 ## Check before generation
 
 ```bash
