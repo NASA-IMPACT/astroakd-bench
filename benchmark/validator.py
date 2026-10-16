@@ -189,9 +189,20 @@ def check_dataset(records: list[dict[str, Any]]) -> tuple[str, tuple[str, ...]]:
         if not isinstance(record.get("question"), str) or not record["question"].strip():
             raise ValidationError(f"Missing question for {ident}")
         params = args["params"]
+        # The reference-aware 0.6.7.11.10 selector has a separately bounded
+        # target/radius policy. Preserve the legacy 0.2.0 checks for other data.
+        provenance = record.get("provenance", {})
+        precheck = provenance.get("reference_aware", {}) if isinstance(provenance, dict) else {}
+        reference_aware = (isinstance(precheck, dict) and
+                           precheck.get("policy") == "0.6.7.11.10" and
+                           precheck.get("status") == "PRECHECK_ACCEPTED" and
+                           provenance.get("reference_aware_seed_catalog") == "0.6.7.11.10")
+        if reference_aware:
+            from .reference_aware import RADII, REFERENCE_AWARE_TARGETS
         if module == "simbad":
+            approved = REFERENCE_AWARE_TARGETS if reference_aware else TARGETS
             if (set(params) != {"object_name"} or
-                    params["object_name"] not in {target.name for target in TARGETS}):
+                    params["object_name"] not in {target.name for target in approved}):
                 raise ValidationError(f"Unapproved SIMBAD target/parameters in {ident}")
         else:
             coordinate_name = {"mast": "coordinates", "heasarc": "position",
@@ -211,9 +222,15 @@ def check_dataset(records: list[dict[str, Any]]) -> tuple[str, tuple[str, ...]]:
                 raise ValidationError(f"Invalid coordinate bounds in {ident}")
             if not isinstance(radius, dict) or set(radius) != {"value", "unit"} or radius["unit"] != "arcmin":
                 raise ValidationError(f"Unexpected radius in {ident}")
-            radius_values = {1, 2, 3} if module in {"gaia", "vizier"} else set(RADII_ARCMIN)
-            if (isinstance(radius["value"], bool) or not isinstance(radius["value"], int)
-                    or radius["value"] not in radius_values):
+            if reference_aware:
+                radius_values = set(RADII.get(module, ()))
+                valid_number = (isinstance(radius["value"], (int, float)) and
+                                not isinstance(radius["value"], bool) and
+                                math.isfinite(radius["value"]))
+            else:
+                radius_values = {1, 2, 3} if module in {"gaia", "vizier"} else set(RADII_ARCMIN)
+                valid_number = isinstance(radius["value"], int) and not isinstance(radius["value"], bool)
+            if not valid_number or radius["value"] not in radius_values:
                 raise ValidationError(f"Unbounded radius in {ident}")
             if module == "heasarc" and params["catalog"] not in HEASARC_CATALOGS:
                 raise ValidationError(f"Unsupported HEASARC catalog in {ident}")
