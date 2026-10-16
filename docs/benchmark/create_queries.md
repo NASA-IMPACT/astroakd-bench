@@ -55,7 +55,7 @@ uv run --with openai python -m benchmark create-queries \
 
 For the eight ADS-literature and 12 multi-archive questions (at count 100), standalone multi-step evidence is still pending separate collection; single-call reference observations are not gold.
 
-## Reference-aware synthetic questions (0.6.7.11.9)
+## Reference-aware synthetic questions (0.6.7.11.10)
 
 For a *new* experiment named `astroakd_100_v2`, `create-queries --with-reference-answers` enables reference-aware preselection by default. Before any OpenAI question-authoring batch, the benchmark runs read-only MCP feasibility queries and admits only bounded, nonempty, untruncated candidate results with the requested fields and no null measurements. Gaia and MAST search radii can be narrowed as needed. This is a source-code policy, not merely a prompt request; the generator instruction file also documents it.
 
@@ -70,4 +70,24 @@ uv run --with openai python -m benchmark create-queries \
 
 Default feasibility limits are `--max-reference-rows 20`, `--max-reference-bytes 65536`, and `--max-feasibility-probes 500`. The first two are *maximum complete result* thresholds, not hidden result truncation. If sufficient feasible candidates do not exist, generation fails with an archive-level rejection summary **before GPT calls**; it never changes expected answers to accommodate incomplete archive data. Broader quotas may require expanding curated candidates or adjusting the mix, and live feasibility cannot be promised offline.
 
-The checksum-protected `datasets/generated/astroakd_100_v2_feasibility_plan.json` records accepted MCP call parameters and precheck hashes and is reused by `--resume` with the same configuration. The actual reference collection is independent and occurs after task publication. Ordinary ADS-literature and multi-archive tasks remain on their distinct multi-step evidence track; neither this precheck nor `--with-reference-answers` establishes their final reference answers. To reproduce A/B/C results exactly, reuse the saved JSONL and do not modify the original `astroakd_100` study.
+After all slots pass, the checksum-protected `datasets/generated/astroakd_100_v2_feasibility_plan.json` records accepted MCP call parameters and precheck hashes and is reused by `--resume` with the same configuration. The actual reference collection is independent and occurs after task publication. Ordinary ADS-literature and multi-archive tasks remain on their distinct multi-step evidence track; neither this precheck nor `--with-reference-answers` establishes their final reference answers. To reproduce A/B/C results exactly, reuse the saved JSONL and do not modify the original `astroakd_100` study.
+
+## Durable archive feasibility progress and fallback (0.6.7.11.10)
+
+The precheck is now **checkpointed per MCP call** rather than written only
+after 92 accepted slots. Accepted candidates, rejected attempts, and the
+configurations are saved under
+`datasets/generated/<name>_feasibility_progress.json`. If a module (especially
+MAST) has only truncated or oversized answers, the selector can use another
+archive, preserves the actual module balance, and never accepts incomplete
+references. Smaller cone searches are prioritized; larger cones are skipped
+when the smallest cone is already truncated or oversized.
+
+After an interrupted or probe-budget-limited run, rerun the same
+`create-queries` command with `--resume` to reuse prior probe outcomes.
+You may increase `--max-feasibility-probes` when resuming without losing
+previously accepted or rejected calls. Other feasibility settings remain
+checksum-protected. **Do not use `--replace` to recover an unfinished run.**
+The final dataset and reference CSV are published only after all tasks pass.
+For version 0.6.7.11.9 failures, previous unsaved archive probes are
+not reconstructible from console logs.

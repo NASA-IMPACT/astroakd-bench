@@ -26,7 +26,7 @@ from .seeds import SkyTarget
 from .diversity import analyze_candidates
 
 INSTRUCTIONS_PATH = Path(__file__).resolve().parent.parent / 'instructions' / 'astroakd_bench' / 'AstroAKD-Bench_Instruction.md'
-INSTRUCTIONS_VERSION = 'reference_aware_0_6_7_11_9'
+INSTRUCTIONS_VERSION = 'reference_aware_0_6_7_11_10'
 BASE_SYSTEM = (
     'You author astronomical data-discovery benchmark questions as STRICT JSON. '
     'You must preserve the target, archive, and data fields supplied for each slot. '
@@ -318,7 +318,10 @@ async def generate_llm(url: str | None = None, *, count: int = 50, seed: int = 4
                        on_batch: Callable[[int, list[dict]], None] | None = None,
                        cached_batches: dict[int, list[dict]] | None = None,
                        reference_aware: bool = False, feasibility_plan: Path | None = None,
+                       feasibility_progress: Path | None = None,
                        reuse_feasibility_plan: bool = False,
+                       resume_feasibility_progress: bool = False,
+                       min_coordinate_tasks: int = 0,
                        max_reference_rows: int = 20,
                        max_reference_bytes: int = 65536, max_feasibility_probes: int = 500,
                        ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
@@ -339,7 +342,8 @@ async def generate_llm(url: str | None = None, *, count: int = 50, seed: int = 4
         cfg = {'count': count, 'seed': seed, 'modules': list(modules),
                'target_names': [t.name for t in (targets or REFERENCE_AWARE_TARGETS)],
                'max_rows': max_reference_rows, 'max_bytes': max_reference_bytes,
-               'max_probes': max_feasibility_probes, 'mcp_url': resolve_mcp_url(url)}
+               'max_probes': max_feasibility_probes, 'mcp_url': resolve_mcp_url(url),
+               'min_coordinate_tasks': min_coordinate_tasks}
         if reuse_feasibility_plan:
             if not feasibility_plan or not Path(feasibility_plan).is_file():
                 raise GenerationError('Resume requires saved reference-aware feasibility plan')
@@ -351,10 +355,15 @@ async def generate_llm(url: str | None = None, *, count: int = 50, seed: int = 4
                 url, count=count, seed=seed, modules=modules, timeout=timeout,
                 targets=targets, max_rows=max_reference_rows, max_bytes=max_reference_bytes,
                 max_probes=max_feasibility_probes, progress=progress,
-                session_factory=session_factory)
+                session_factory=session_factory, checkpoint_path=feasibility_progress,
+                resume_checkpoint=resume_feasibility_progress,
+                min_coordinate_tasks=min_coordinate_tasks)
             if feasibility_plan:
                 save_feasibility_plan(feasibility_plan, configuration=cfg,
                                       tasks=tasks, summary=summary)
+            # The full approved plan supersedes the durable probe checkpoint.
+            if feasibility_progress is not None:
+                Path(feasibility_progress).unlink(missing_ok=True)
     elif use_mcp:
         tasks, summary = await generate(url, count=count, seed=seed, modules=modules,
                                         timeout=timeout, session_factory=session_factory,

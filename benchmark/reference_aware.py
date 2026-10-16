@@ -137,82 +137,209 @@ def _resize(task: dict[str, Any], radius: float) -> dict[str, Any]:
     return item
 
 
+def _checkpoint_hash(record: dict[str, Any]) -> str:
+    return hashlib.sha256(json.dumps(record, sort_keys=True, ensure_ascii=False,
+        separators=(',', ':'), allow_nan=False).encode('utf-8')).hexdigest()
+
+
+def _save_checkpoint(path: Path, record: dict[str, Any]) -> None:
+    """Persist each completed probe atomically; never store raw archive data."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = copy.deepcopy(record)
+    payload['sha256'] = _checkpoint_hash(record)
+    with tempfile.NamedTemporaryFile('w', dir=path.parent, encoding='utf-8',
+            delete=False, prefix='.feasibility-progress-', suffix='.tmp') as file:
+        temp = Path(file.name)
+        json.dump(payload, file, ensure_ascii=False, sort_keys=True, allow_nan=False)
+        file.write('\n'); file.flush(); os.fsync(file.fileno())
+    try:
+        os.replace(temp, path)
+    finally:
+        temp.unlink(missing_ok=True)
+
+
+def _load_checkpoint(path: Path, configuration: dict[str, Any]) -> dict[str, Any]:
+    record = json.loads(Path(path).read_text(encoding='utf-8'))
+    expected = record.pop('sha256', None)
+    saved = record.get('configuration', {})
+    if expected != _checkpoint_hash(record) or not isinstance(saved, dict):
+        raise GenerationError('Reference-aware progress checkpoint checksum is invalid')
+    # Only an increased probe ceiling may be changed on resume. This cannot
+    # invalidate an already accepted archive reference or change slot order.
+    if (any(saved.get(k) != v for k, v in configuration.items() if k != 'max_probes')
+            or int(configuration['max_probes']) < int(saved.get('max_probes', 0))):
+        raise GenerationError('Reference-aware progress checkpoint settings differ; '
+            'only an increase in --max-feasibility-probes is allowed when resuming')
+    record['configuration'] = configuration
+    if not isinstance(record.get('selected'), list) or not isinstance(record.get('outcomes'), dict):
+        raise GenerationError('Malformed reference-aware progress checkpoint')
+    return record
+
+
+def _probe_key(module: str, target: str, radius: float | None) -> str:
+    return json.dumps([module, target.casefold(), radius], separators=(',', ':'))
+
+
 async def select_reference_aware(url: str | None, *, count: int, seed: int,
                                   modules: tuple[str, ...], timeout: float,
                                   targets: tuple[SkyTarget, ...] | None = None,
                                   max_rows: int = 20, max_bytes: int = 65536,
                                   max_probes: int = 500, progress: Callable | None = None,
-                                  session_factory: Callable | None = None):
-    """Choose feasible archive-target slots BEFORE any paid GPT generation.
+                                  session_factory: Callable | None = None,
+                                  checkpoint_path: Path | None = None,
+                                  resume_checkpoint: bool = False,
+                                  min_coordinate_tasks: int = 0):
+    """Choose compact complete references with durable progress and module fallback.
 
-    Fail closed when a quota cannot be met; never replace a scientific oracle
-    with an LLM-written answer or a truncated table.
+    The intended round-robin module is preferred.  When it has no feasible
+    unused archive-target pairs, another eligible module fills the slot;
+    this changes the recorded *actual* module counts, never the reference
+    completeness requirements or task IDs.  No GPT calls occur here.
     """
     modules = parse_modules(modules)
     targets = tuple(targets or REFERENCE_AWARE_TARGETS)
+    if min_coordinate_tasks < 0 or min_coordinate_tasks > count:
+        raise GenerationError('Invalid number of required coordinate questions')
+    if min_coordinate_tasks and not any(m != 'simbad' for m in modules):
+        raise GenerationError('No coordinate-capable reference-aware archive available')
     if count > len(targets) * len(modules):
         raise GenerationError('Insufficient unique archive-target pairs for reference-aware mix')
+    from .mcp_config import resolve_mcp_url
+    configuration = {
+        'policy': '0.6.7.11.10', 'count': count, 'seed': seed,
+        'modules': list(modules),
+        'targets': [[t.name, t.ra_deg, t.dec_deg] for t in targets],
+        'max_rows': max_rows, 'max_bytes': max_bytes,
+        'max_probes': max_probes, 'endpoint': resolve_mcp_url(url),
+        'min_coordinate_tasks': min_coordinate_tasks,
+    }
+    checkpoint = Path(checkpoint_path) if checkpoint_path is not None else None
+    if resume_checkpoint and checkpoint is None:
+        raise GenerationError('Reference-aware resume requires a checkpoint path')
+    if resume_checkpoint:
+        if not checkpoint.is_file():
+            raise GenerationError(f'Reference-aware progress checkpoint not found: {checkpoint}')
+        state = _load_checkpoint(checkpoint, configuration)
+        if checkpoint is not None:
+            _save_checkpoint(checkpoint, state)
+        if progress:
+            progress(f'Reference-aware RESUME {len(state["selected"])}/{count} approved slots; '
+                     f'{len(state["outcomes"])} probes cached')
+    else:
+        if checkpoint is not None and checkpoint.exists():
+            raise GenerationError('Reference-aware progress already exists; use --resume '
+                                  'or choose a new dataset name')
+        state = {'configuration': configuration, 'selected': [], 'outcomes': {}}
+        if checkpoint is not None:
+            _save_checkpoint(checkpoint, state)
+
     async with AstroqueryMCPClient(url, timeout=timeout, session_factory=session_factory) as client:
         bindings = await discover_bindings(client, modules)
         pool = generate_candidates(bindings, count=len(targets) * len(modules),
                                    seed=seed, modules=modules, targets=targets,
                                    question_style='answer-oriented')
         queues = {module: [item for item in pool if item['module'] == module] for module in modules}
-        seen: set[tuple[str, str]] = set()
-        rejected_pairs: set[tuple[str, str]] = set()
-        selected = []
-        reasons = Counter()
-        probes = 0
-        for index in range(count):
-            module = modules[index % len(modules)]
+        selected = list(state['selected'])
+        if len(selected) > count:
+            raise GenerationError('Reference-aware checkpoint has too many selected tasks')
+        seen = {(item['module'], item['target'].casefold()) for item in selected}
+        reasons = Counter(outcome['reason'] for outcome in state['outcomes'].values()
+                          if not outcome['ok'])
+        fallbacks = 0
+        for index in range(len(selected), count):
+            preferred = modules[index % len(modules)]
+            # Preserve the familiar distribution when possible; use the least-
+            # represented alternative first when the preferred archive is exhausted.
+            counts = Counter(t['module'] for t in selected)
+            alternatives = sorted((m for m in modules if m != preferred),
+                                  key=lambda m: (counts[m], modules.index(m)))
             chosen = None
-            for source in queues[module]:
-                key = (module, source['target'].casefold())
-                if key in seen or key in rejected_pairs:
+            for module in (preferred, *alternatives):
+                coordinate_so_far = sum(t['module'] != 'simbad' for t in selected)
+                remaining_after_this = count - (index + 1)
+                if module == 'simbad' and coordinate_so_far + remaining_after_this < min_coordinate_tasks:
                     continue
-                variants = RADII.get(module, (None,))
-                for radius in variants:
-                    if probes >= max_probes:
-                        raise GenerationError(f'Reference-aware probe budget exhausted after {probes} calls; '
-                                              f'accepted {len(selected)}/{count}; rejected {dict(reasons)}. '
-                                              'Adjust --max-feasibility-probes, --max-reference-rows, '
-                                              'or the task mix before generating questions.')
-                    candidate = _resize(source, radius) if radius is not None else copy.deepcopy(source)
-                    probes += 1
-                    try:
-                        response = await client.call(candidate['reference_call']['tool'],
-                                                     candidate['reference_call']['arguments'])
-                        ok, reason, detail = evaluate_feasibility(candidate, response,
-                                            max_rows=max_rows, max_bytes=max_bytes)
-                    except Exception as exc:
-                        ok, reason, detail = False, 'mcp_probe_error', {'error_type': type(exc).__name__}
-                    if ok:
-                        chosen = candidate
-                        chosen['provenance']['reference_aware_seed_catalog'] = '0.6.7.11.9'
-                        chosen['provenance']['reference_aware'] = {
-                            'policy': '0.6.7.11.9', 'status': 'PRECHECK_ACCEPTED',
-                            'max_rows': max_rows, 'max_bytes': max_bytes,
-                            **detail,
-                        }
+                for source in queues[module]:
+                    key = (module, source['target'].casefold())
+                    if key in seen:
+                        continue
+                    # In a cone search, enlarging a radius cannot repair a
+                    # truncated/oversized result at a smaller radius.
+                    radii = tuple(sorted(RADII.get(module, (None,)),
+                                          key=lambda r: -1.0 if r is None else r))
+                    for radius in radii:
+                        candidate = _resize(source, radius) if radius is not None else copy.deepcopy(source)
+                        probe_key = _probe_key(module, source['target'], radius)
+                        cached = state['outcomes'].get(probe_key)
+                        if cached is None:
+                            if len(state['outcomes']) >= max_probes:
+                                raise GenerationError(
+                                    f'Reference-aware probe budget exhausted after {len(state["outcomes"])} '
+                                    f'calls; accepted {len(selected)}/{count}; rejected {dict(reasons)}. '
+                                    f'Progress preserved at {checkpoint}. Retry with --resume '
+                                    'using the same settings or start a new named dataset '
+                                    'with a larger --max-feasibility-probes.')
+                            try:
+                                response = await client.call(candidate['reference_call']['tool'],
+                                                             candidate['reference_call']['arguments'])
+                                ok, reason, detail = evaluate_feasibility(candidate, response,
+                                                   max_rows=max_rows, max_bytes=max_bytes)
+                            except Exception as exc:
+                                ok, reason, detail = False, 'mcp_probe_error', {
+                                    'error_type': type(exc).__name__}
+                            cached = {'ok': ok, 'reason': reason, 'detail': detail}
+                            state['outcomes'][probe_key] = cached
+                            if not ok:
+                                reasons[reason] += 1
+                            if checkpoint is not None:
+                                _save_checkpoint(checkpoint, state)
+                        if cached['ok']:
+                            chosen = candidate
+                            chosen.setdefault('provenance', {})['reference_aware_seed_catalog'] = '0.6.7.11.10'
+                            chosen['provenance']['reference_aware'] = {
+                                'policy': '0.6.7.11.10', 'status': 'PRECHECK_ACCEPTED',
+                                'max_rows': max_rows, 'max_bytes': max_bytes,
+                                **cached['detail'],
+                            }
+                            break
+                        if radius is not None and cached['reason'] in (
+                                'truncated_reference', 'oversized_response', 'too_many_rows'):
+                            # No larger sky cone can have fewer matches. Do not
+                            # waste requests probing larger radii for this target.
+                            break
+                    if chosen is not None:
                         break
-                    reasons[reason] += 1
                 if chosen is not None:
+                    if module != preferred:
+                        fallbacks += 1
+                        if progress:
+                            progress(f'Reference-aware FALLBACK {index+1}/{count}: '
+                                     f'{preferred} unavailable, using {module}')
                     break
-                rejected_pairs.add(key)
             if chosen is None:
-                raise GenerationError(f'Could not fill reference-aware slot {index+1}/{count} '
-                    f'for {module}; accepted={len(selected)}, probes={probes}, rejected={dict(reasons)}. '
-                    'No GPT batches were requested. Widen the curated target inventory or '
-                    'choose a smaller reference-aware mix; do not fabricate gold answers.')
-            seen.add((module, chosen['target'].casefold()))
+                raise GenerationError(f'Could not fill reference-aware slot {index+1}/{count}; '
+                    f'accepted={len(selected)}, probes={len(state["outcomes"])}, '
+                    f'rejected={dict(reasons)}. Progress saved to {checkpoint}; '
+                    'retry with --resume after addressing archive capacity, or '
+                    'choose a smaller mix. No GPT question batches were requested.')
+            seen.add((chosen['module'], chosen['target'].casefold()))
             chosen['id'] = f'ASTROAKD-020-{index+1:05d}'
             chosen['provenance']['generation_index'] = index + 1
             selected.append(chosen)
+            state['selected'] = selected
+            if checkpoint is not None:
+                _save_checkpoint(checkpoint, state)
             if progress:
-                progress(f'Reference-aware ACCEPT {index+1}/{count} {module} {chosen["target"]} '
-                         f'({chosen["provenance"]["reference_aware"]["rows"]} rows; {probes} probes)')
+                progress(f'Reference-aware ACCEPT {index+1}/{count} '
+                         f'{chosen["module"]} {chosen["target"]} '
+                         f'({chosen["provenance"]["reference_aware"]["rows"]} rows; '
+                         f'{len(state["outcomes"])} probes)')
+    probes = len(state['outcomes'])
+    if sum(t['module'] != 'simbad' for t in selected) < min_coordinate_tasks:
+        raise GenerationError('Reference-aware selection cannot satisfy coordinate-driven mix')
     summary = {
-        'milestone': '0.6.7.11.9 - REFERENCE_AWARE_SYNTHETIC_QUERY_GENERATION',
+        'milestone': '0.6.7.11.10 - DURABLE_REFERENCE_AWARE_SELECTION',
         'benchmark_version': selected[0]['benchmark_version'],
         'seed': seed, 'count': count, 'modules': list(modules),
         'by_module': dict(sorted(Counter(t['module'] for t in selected).items())),
@@ -226,7 +353,10 @@ async def select_reference_aware(url: str | None, *, count: int, seed: int,
         'by_intent': dict(sorted(Counter(t['intent'] for t in selected).items())),
         'expected_answers_verified': 0, 'status': 'PASS',
         'reference_aware_selection': {
-            'accepted': count, 'probes': probes, 'rejections_by_reason': dict(sorted(reasons.items())),
+            'accepted': count, 'probes': probes,
+            'rejections_by_reason': dict(sorted(reasons.items())),
+            'fallback_slots': sum(t['module'] != modules[i % len(modules)]
+                                  for i, t in enumerate(selected)),
             'max_rows': max_rows, 'max_bytes': max_bytes,
             'note': 'Precheck is structural; references are independently recollected after publication.'
         },

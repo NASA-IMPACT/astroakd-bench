@@ -1,3 +1,15 @@
+## 0.6.7.11.10 — DURABLE_REFERENCE_AWARE_SELECTION
+
+- Atomically checkpoint each live reference-feasibility probe and accepted slot
+  with SHA-256 integrity, preserving all work on interruption or budget failure.
+- Add `create-queries --resume` for incomplete reference-aware probe selection;
+  allow increasing only the maximum number of probes without invalidating prior decisions.
+- Avoid repeated oversized MAST cones by searching smallest radii first and
+  stopping enlargement after truncation, then fall back to other supported
+  archive modules while reporting the actual mix. No relaxed science acceptance.
+- Fix version-specific README guidance, Sphinx docs and generator instructions.
+- Preserve original 0.6.7.11.9 data and scoring behavior; no revised scoring.
+
 ## 0.6.7.11.9 — REFERENCE_AWARE_SYNTHETIC_QUERY_GENERATION (candidate)
 
 - Added live, agent-independent read-only feasibility checks for named mixed-dataset candidate slots *before* GPT authoring when `--with-reference-answers` is enabled.

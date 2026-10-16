@@ -87,9 +87,9 @@ class ReferenceAwareTests(unittest.TestCase):
                 self.calls += 1
                 radius = args['params']['radius']['value']
                 field = 'source_id' if args['params']['coordinate']['ra'] == 10 else 'parallax'
-                if radius == .1:  # force radius adaptation to .2
+                if radius == .05:  # smallest cone is empty, try the next bounded cone
                     return {'success': True, 'module': 'gaia', 'function': 'query_object',
-                        'result': {'data': [{'source_id': 42, 'parallax': 0.2, 'pmra': 1.2, 'pmdec': 2.1, 'phot_g_mean_mag': 14}], 'row_count': 1, 'total_rows': 500, 'truncated': True}}
+                        'result': {'data': [], 'row_count': 0, 'total_rows': 0, 'truncated': False}}
                 return {'success': True, 'module': 'gaia', 'function': 'query_object',
                         'result': {'data': [{'source_id': 42, 'parallax': 0.2, 'pmra': 1.2, 'pmdec': 2.1, 'phot_g_mean_mag': 14}], 'row_count': 1, 'total_rows': 1}}
         bound = BoundMethod('gaia', 'query_object', {'coordinate': 'coordinate', 'radius': 'radius'},
@@ -102,7 +102,7 @@ class ReferenceAwareTests(unittest.TestCase):
                 modules=('gaia',), timeout=10, targets=seeds, max_probes=10))
         self.assertEqual(len(tasks), 2)
         self.assertEqual(report['reference_aware_selection']['probes'], 4)
-        self.assertTrue(all(x['constraints']['radius']['value'] == .2 for x in tasks))
+        self.assertTrue(all(x['constraints']['radius']['value'] == .1 for x in tasks))
         self.assertEqual(len({x['target'] for x in tasks}), 2)
 
     def test_curated_pool_expanded_and_unique(self):

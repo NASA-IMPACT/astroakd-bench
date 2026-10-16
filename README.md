@@ -1,6 +1,6 @@
 # AstroAKD-Bench
 
-**Current version: 0.6.7.11.9** · Benchmark for astronomy archive-search agents using an independent [Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp). Benchmark questions, archive observations, independently reviewed gold answers, and agent responses remain distinct.
+**Current version: 0.6.7.11.10** · Benchmark for astronomy archive-search agents using an independent [Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp). Benchmark questions, archive observations, independently reviewed gold answers, and agent responses remain distinct.
 
 ## Quick start: 100 new questions with references
 
@@ -56,13 +56,47 @@ uv run --with openai python -m benchmark create-queries \
   --reference-deadline 2100
 ```
 
-**New in 0.6.7.11.9: reference-aware question generation.** With `--with-reference-answers`, the benchmark now prechecks candidate *archive calls before GPT authoring*. It tries bounded search radii (particularly for Gaia/MAST), verifies that the returned data are nonempty, untruncated, contain all requested fields without nulls, and fit **20 complete rows / 65,536 response bytes** by default. It may probe several candidate targets/radii; `--max-reference-rows 20 --max-reference-bytes 65536 --max-feasibility-probes 500` adjusts these limits. Candidate acceptance is independent of agent A/B/C performance. **No GPT question batches are requested unless the single-call candidate quota can be filled.** Insufficient feasible queries produce a detailed rejection breakdown rather than fabricated or incomplete references; do not treat that as a completed run. Live success depends on the MCP server and archive content.
+**Reference-aware question generation (0.6.7.11.10).** With `--with-reference-answers`, the benchmark now prechecks candidate *archive calls before GPT authoring*. It tries bounded search radii (particularly for Gaia/MAST), verifies that the returned data are nonempty, untruncated, contain all requested fields without nulls, and fit **20 complete rows / 65,536 response bytes** by default. It may probe several candidate targets/radii; `--max-reference-rows 20 --max-reference-bytes 65536 --max-feasibility-probes 500` adjusts these limits. Candidate acceptance is independent of agent A/B/C performance. **No GPT question batches are requested unless the single-call candidate quota can be filled.** An exhausted archive is replaced by another feasible module, with the actual module balance recorded. If candidates or the probe budget run out, every completed feasibility probe and accepted slot is saved for `--resume`; a failed run is still not a completed dataset. Live success depends on the MCP server and archive content.
 
-The accepted question-slot plan is saved with a SHA-256 checksum at `datasets/generated/astroakd_100_v2_feasibility_plan.json` for reproducible `--resume`. Accepted probes are **not gold answers**; the collector independently retrieves the 80 eligible single-call references. The remaining 8 literature and 12 multi-archive questions still need multi-step reference collection. This milestone **does not change A/B/C scoring**. To keep the original 100-question/300-run benchmark frozen, generate with **a new name** (`astroakd_100_v2`, not `astroakd_100_v2`). Use `--no-reference-aware` only when you explicitly want the legacy, potentially large-result question policy.
+After all slots are accepted, the finalized question-slot plan is saved with a SHA-256 checksum at `datasets/generated/astroakd_100_v2_feasibility_plan.json` for reproducible `--resume`. Accepted probes are **not gold answers**; the collector independently retrieves the 80 eligible single-call references. The remaining 8 literature and 12 multi-archive questions still need multi-step reference collection. This milestone **does not change A/B/C scoring**. To keep the original 100-question/300-run benchmark frozen, generate with **a new name** (`astroakd_100_v2`, not `astroakd_100`). Use `--no-reference-aware` only when you explicitly want the legacy, potentially large-result question policy.
 
 `--name` sets the file prefix; `--count` selects 1–100 questions; `--output-dir` is the study root. The `--seed` option is optional (default `20261018`); fixed seeds do **not** guarantee byte-identical results from remote GPT models. To reproduce an evaluation, **reuse the saved JSONL**. New outputs create their own subdirectories; there is no need for manual `mkdir`.
 
 For 100 questions, the default mix contains **60 archive-driven, 20 coordinate-driven, 8 ADS-literature, and 12 multi-archive** questions. `--with-reference-answers` collects live, **unreviewed** archive evidence for up to 80 eligible single-call questions; the 20 multi-step questions remain pending separately. Collected observations are **not** independently verified scientific answers. For question generation only, omit `--with-reference-answers`. To allow slow archives, pass `--archive-timeouts mast=900,simbad=180,heasarc=900,gaia=900,vizier=300 --archive-attempts mast=2,simbad=1,heasarc=2,gaia=2,vizier=1 --reference-deadline 2100` to the same one-step command.
+
+### Recover reference-aware archive probes without repeating them
+
+**0.6.7.11.10 fixes a data-loss problem in 0.6.7.11.9.** Each archive
+feasibility probe (accepted or rejected) is written atomically to
+`datasets/generated/astroakd_100_v2_feasibility_progress.json` along with
+approved candidate slots and a SHA-256 checksum. The selector now tries another
+archive when a preferred module (such as MAST) runs out of complete, bounded
+results. It tries the smallest cone first and skips larger cones after
+truncation, avoiding many redundant MAST requests. The *actual* archive mix
+is reported; per-question limits and reference completeness are never relaxed.
+
+If probes exhaust their budget or the process is interrupted, keep the
+`datasets/generated/` files and add `--resume` to the **same** command:
+
+```bash
+uv run --with openai python -m benchmark create-queries \
+  --name astroakd_100_v2 --count 100 --output-dir datasets \
+  --require-ads --with-reference-answers --timeout 900 \
+  --archive-timeouts mast=900,simbad=180,heasarc=900,gaia=900,vizier=300 \
+  --archive-attempts mast=2,simbad=1,heasarc=2,gaia=2,vizier=1 \
+  --reference-deadline 2100 --resume
+```
+
+You may **increase only `--max-feasibility-probes` on resume** if the original
+probe budget was exhausted. A lowered budget or changes to targets, seed,
+question count, archive modules or response-size thresholds are rejected.
+The former 0.6.7.11.9 implementation did not save incomplete feasibility
+plans, so its already-failed archive calls cannot be recovered retroactively.
+No GPT batches were requested in the reported 275-probe MAST failure; those
+calls consumed external archive resources and time, not GPT question-writing
+requests. Once selection completes, the full feasibility plan is written and
+its temporary probe checkpoint is removed. Incomplete progress **is not a
+published or verified dataset**. ADS preflight may be repeated on resume.
 
 ### Recover from interrupted question generation
 

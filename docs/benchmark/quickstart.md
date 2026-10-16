@@ -94,4 +94,10 @@ After a complete A/B/C run, `uv run python -m benchmark run-benchmark --name ast
 
 ## New generation policy
 
-Version 0.6.7.11.9 performs agent-independent, reference-aware MCP prechecks **before** GPT question writing when `--with-reference-answers` is selected. It tries bounded Gaia/MAST/HEASARC/VizieR queries, rejects incomplete/oversized/null results and selects alternate target/radius combinations. Accepted slots are frozen in a checksum-protected feasibility plan so `--resume` keeps the same questions and MCP calls. A precheck is not an independently validated reference answer. If no feasible 100-question candidate mix is available, the command fails *before* GPT rather than silently creating unscorable questions. For your fresh study use `--name astroakd_100_v2` throughout; see [Question creation](create_queries.md).
+Version 0.6.7.11.10 performs agent-independent, reference-aware MCP prechecks **before** GPT question writing when `--with-reference-answers` is selected. It tries bounded Gaia/MAST/HEASARC/VizieR queries, rejects incomplete/oversized/null results and selects alternate target/radius combinations. Accepted slots are frozen in a checksum-protected feasibility plan so `--resume` keeps the same questions and MCP calls. A precheck is not an independently validated reference answer. If no feasible 100-question candidate mix is available, the command fails *before* GPT rather than silently creating unscorable questions. For your fresh study use `--name astroakd_100_v2` throughout; see [Question creation](create_queries.md).
+
+If reference-aware probing stops before GPT writing, check
+`datasets/generated/<name>_feasibility_progress.json` and run the same
+`create-queries` command with `--resume`. This reuses saved MCP probes and
+accepted slots. When an archive has no complete, bounded candidate, the
+selector tries another archive and records the new distribution.

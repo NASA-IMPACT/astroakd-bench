@@ -36,6 +36,7 @@ def dataset_paths(root: str | Path = '.', name: str = 'synthetic_100',
         'generation_journal': data / 'generated' / (name + '.progress.jsonl'),
         'generation_partial': data / 'generated' / (name + '_partial.jsonl'),
         'feasibility_plan': data / 'generated' / (name + '_feasibility_plan.json'),
+        'feasibility_progress': data / 'generated' / (name + '_feasibility_progress.json'),
         'references': data / 'validated' / (name + '_references.jsonl'),
         'references_csv': data / 'validated' / (name + '_references.csv'),
         'references_report': data / 'validated' / (name + '_references_report.json'),
@@ -88,14 +89,17 @@ async def create_queries(*, name: str | None = None, root: str | Path = '.',
     if resume and replace:
         raise ValueError('--resume cannot be used with --replace')
     paths = dataset_paths(root, name, output_dir=output_dir)
-    if resume and not paths['generation_journal'].is_file() and not (reference_aware and paths['feasibility_plan'].is_file()):
+    if resume and not paths['generation_journal'].is_file() and not (reference_aware and (paths['feasibility_plan'].is_file() or paths['feasibility_progress'].is_file())):
         raise FileNotFoundError(f'No unfinished generation checkpoint or saved feasibility plan: {paths["generation_journal"]}')
     if not resume and not replace and (paths['generation_journal'].exists() or
                                        paths['generation_partial'].exists()):
         raise FileExistsError('Unfinished question generation exists; retry with --resume '
                               'to reuse completed GPT batches (or choose a new --name)')
-    if reference_aware and paths['feasibility_plan'].exists() and not (resume or replace):
-        raise FileExistsError('Reference-aware candidate plan already exists; use --resume or a new name')
+    if reference_aware and (paths['feasibility_plan'].exists() or paths['feasibility_progress'].exists()) and not (resume or replace):
+        raise FileExistsError('Reference-aware candidate plan/progress already exists; use --resume or a new name')
+    if reference_aware and replace:
+        paths['feasibility_progress'].unlink(missing_ok=True)
+        paths['feasibility_plan'].unlink(missing_ok=True)
     if with_reference_answers and not replace:
         reference_files = (paths['references'], paths['references_csv'], paths['references_report'],
             paths['references'].with_name(paths['references'].name + '.progress.jsonl'))
@@ -168,7 +172,9 @@ async def create_queries(*, name: str | None = None, root: str | Path = '.',
         timeout=timeout, use_mcp=True, use_instructions=True, require_ads=require_ads,
         progress=progress, research_fn=research_fn, llm_fn=llm_fn,
         reference_aware=reference_aware, feasibility_plan=paths['feasibility_plan'],
-        reuse_feasibility_plan=resume and reference_aware,
+        feasibility_progress=paths['feasibility_progress'],
+        reuse_feasibility_plan=resume and reference_aware and paths['feasibility_plan'].is_file(),
+        resume_feasibility_progress=resume and reference_aware and not paths['feasibility_plan'].is_file(),
         max_reference_rows=max_reference_rows,
         max_reference_bytes=max_reference_bytes, max_feasibility_probes=max_feasibility_probes,
         openai_client_factory=openai_client_factory,
@@ -183,7 +189,7 @@ async def create_queries(*, name: str | None = None, root: str | Path = '.',
     report['single_call_sha256'] = write_jsonl(paths['single_calls'], regular, replace=replace)
     report['multistep_sha256'] = write_jsonl(paths['multistep'], multi, replace=replace)
     save_views(tasks, csv_path=paths['tasks_csv'], kind='candidate', replace=replace)
-    report.update({'milestone': '0.6.7.11.9 - REFERENCE_AWARE_SYNTHETIC_QUERY_GENERATION'
+    report.update({'milestone': '0.6.7.11.10 - DURABLE_REFERENCE_AWARE_SELECTION'
         if reference_aware else '0.6.7.11.5 - RESUMABLE_DURABLE_GENERATION',
         'task_dataset': str(paths['tasks']), 'question_csv': str(paths['tasks_csv']),
         'single_call_dataset': str(paths['single_calls']),
