@@ -353,7 +353,7 @@ def reference_report(*, name: str = 'synthetic_100', root: str | Path = '.',
         ax.legend();fig.tight_layout()
         fig.savefig(out/'truncation_null_by_archive.png',dpi=180)
         fig.savefig(out/'truncation_null_by_archive.svg');plt.close(fig)
-        _bar(plt,Counter({a:round(median(v),2) for a,v in times.items()}),out/'response_times',
+        _bar(plt,Counter({a:round(median(v),2) for a,v in times.items() if v}),out/'response_times',
              'Median archived response time by archive',xlabel='Seconds')
         fig,ax=plt.subplots(figsize=(9,5))
         observed=[v for values in times.values() for v in values]

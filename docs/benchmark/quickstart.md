@@ -78,6 +78,8 @@ The five named commands create their needed output subdirectories automatically.
 
 A is MCP only, B is MCP with the AstroAKD specialist instruction, and C is Web only. One hundred questions create up to 300 agent runs. **Completion, time and tool metrics are not scientific correctness.** Scientific accuracy requires independently verified gold answers.
 
+**Figure commands are separate from execution.** `run-benchmark` saves agent runs; the subsequent `agent-report` command saves `mean_runtime.png`, `total_tokens.png`, `completed_runs.png`, `mean_mcp_events.png`, and `web_search_calls.png` to `datasets/reports/astroakd_100/agents/`. To refresh plots, rerun `agent-report --name astroakd_100 --output-dir datasets --replace`. For archive observations, `reference-report --name astroakd_100 --output-dir datasets --replace` creates `response_times.png` and the other reference completeness figures under `datasets/reports/astroakd_100/references/`. Historical `match_rate.png` is **not** created by the current operational `agent-report`; a reviewed gold/scorable oracle is required for match-rate reporting.
+
 Continue with [question generation](create_queries.md), [references](references_and_review.md), and [evaluation](evaluation_and_plots.md).
 
 Frozen prompts: `instructions/astroakd/AstroAKD_Instruction.md` (arm B) and `instructions/astroakd_bench/AstroAKD-Bench_Instruction.md` (generation only).

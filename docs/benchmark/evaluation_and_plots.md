@@ -19,6 +19,27 @@ uv run --with matplotlib python -m benchmark agent-report \
   --name astroakd_100 --output-dir datasets
 ```
 
-Outputs appear in `datasets/reports/astroakd_100/agents/`: per-arm and per-task CSV summaries and PNG/SVG plots of run completion, runtime, total tokens, MCP tool calls, and web searches. This command is offline; it can also summarize partial journals. Use `--replace` when intentionally regenerating report outputs.
+`run-benchmark` **does not create plots**; it writes the A/B/C run journal under `datasets/agent/`. Run **`agent-report` afterwards** (or during an unfinished experiment for provisional figures). It reads saved runs offline without new OpenAI or MCP calls. Use `--replace` to regenerate existing report files, not the run journal:
+
+```bash
+uv run --with matplotlib python -m benchmark agent-report \
+  --name astroakd_100 --output-dir datasets --replace
+```
+
+The main A/B/C figures are saved in **`datasets/reports/astroakd_100/agents/`**:
+
+| Figure | Meaning | Comparison with the earlier GPT-5.2 plots |
+| --- | --- | --- |
+| `mean_runtime.png` / `.svg` | Mean seconds per *recorded* agent run, by arm | Comparable to historical `mean_runtime.png`, subject to dataset/run-count differences |
+| `total_tokens.png` / `.svg` | Sum of recorded token usage, by arm | Comparable to historical `total_tokens.png` only when run coverage is considered |
+| `completed_runs.png` / `.svg` | Number of completed runs | Operational completion, **not** matching/science accuracy |
+| `mean_mcp_events.png` / `.svg` | Mean MCP tool events per run | Additional operational comparison |
+| `web_search_calls.png` / `.svg` | Total web searches by arm | Additional operational comparison |
+
+CSV output includes `arm_operational_summary.csv`, `per_task_operational.csv`, and `abc_answers.csv` (retains answers). A partial run is summarized as partial; do not compare total tokens between arms without checking their recorded run counts.
+
+**Why there is no `match_rate.png`:** the earlier 50-question figure used a frozen, single-field reference-snapshot comparison. The new 100-question mixed dataset contains multi-row archive responses and 20 literature/multi-archive questions without fully reviewed gold answers. `agent-report` intentionally does **not** compute accuracy or a match rate from unreviewed evidence. Producing a scientifically meaningful match-rate figure requires a separately reviewed oracle, documented comparison rules, and a scorable denominator. Do not rename `completed_runs.png` as match rate. For original frozen single-field experiments, the detailed `score-scorable` command can generate `match_rate.png` when provided its properly qualified oracle and agent runs.
+
+For reference-side **archive completeness and response-time figures**, use the separate offline command documented in [Reference collection and scientific review](references_and_review.md).
 
 **Interpretation:** Successful agent execution or agreement with an unreviewed reference snapshot is not scientific accuracy. Report verified correctness only with a separate reviewed gold oracle and transparent denominators. Keep paper claims about the historical 50-question result separate from any new 100-question run.

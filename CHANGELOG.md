@@ -1,5 +1,8 @@
 ## 0.6.7.11.7 — EXTERNAL_MCP_SETUP_DOCUMENTATION_RESTORE
 
+- **Applied source hotfix to the attached 0.6.7.11.7 distribution:** exclude archives with no timing observations from median response-time plots, avoiding `StatisticsError: no median for empty data` when mixed tasks remain uncollected. Questions and missing-evidence counts remain present in reference reports.
+- Expand the current README and Sphinx workflow guides with the exact `reference-report` and `agent-report` plot commands, output paths, figure names, `--replace` usage, and the distinction between operational plots and historically scored `match_rate.png`.
+
 - Restore the complete external MCP installation workflow (`git clone`, `cd`, `uv sync`, and `uv run fastmcp run`) prominently in README, INSTALL and the current Sphinx getting-started and ADS pages.
 - Clarify the two terminal/process environments, the local MCP endpoint, server-side ADS tokens versus the benchmark `OPENAI_API_KEY`, and read-only ADS verification.
 - Documentation-only behavior change: question generation, archive reference collection, science data, agent evaluation and all frozen inputs are unchanged.

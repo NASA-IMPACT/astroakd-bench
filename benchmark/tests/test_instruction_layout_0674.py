@@ -32,7 +32,7 @@ class InstructionLayoutTests(unittest.TestCase):
         self.assertTrue((ROOT/'docs/index.md').is_file())
         self.assertTrue((ROOT/'instructions/README.md').is_file())
         self.assertTrue(all(
-            p.suffix == '.md' or p == ROOT/'docs/conf.py' or p == ROOT/'docs/sphinx/Makefile'
+            p.suffix == '.md' or p in (ROOT/'docs/conf.py', ROOT/'docs/sphinx/Makefile', ROOT/'docs/requirements.txt')
             for p in (ROOT/'docs').rglob('*')
             if p.is_file() and '_build' not in p.parts
             and '__pycache__' not in p.parts
