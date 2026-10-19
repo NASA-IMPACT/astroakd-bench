@@ -1,6 +1,6 @@
 # AstroAKD-Bench
 
-**Current version: 0.6.7.11.10** · Benchmark for astronomy archive-search agents using an independent [Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp). Benchmark questions, archive observations, independently reviewed gold answers, and agent responses remain distinct.
+**Current version: 0.6.7.11.11** · Benchmark for astronomy archive-search agents using an independent [Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp). Benchmark questions, archive observations, independently reviewed gold answers, and agent responses remain distinct.
 
 ## Quick start: 100 new questions with references
 
@@ -188,13 +188,13 @@ The figures are saved to `datasets/reports/astroakd_100_v2/agents/`:
 | `completed_runs.png` and `.svg` | Completed agent runs, **not** correct answers |
 | `mean_mcp_events.png` and `.svg` | Mean MCP tool events per recorded run |
 | `web_search_calls.png` and `.svg` | Number of web-search calls |
-| **`match_rate.png` and `.svg`** | **Strict unreviewed reference-snapshot agreement** on eligible questions; explicitly not scientific accuracy |
+| **`match_rate.png` and `.svg`** | **Question-aware automatic archive-reference agreement** on evaluable questions; historical strict snapshot retained as `strict_snapshot_match_rate.png` |
 | `reference_agreement_per_question.csv` | Per-task match decisions and exact exclusion reasons |
 | `reference_agreement_summary.json` | Scorable denominator, excluded counts, per-arm provisional agreement |
 | `arm_operational_summary.csv` | Counts, runtime, tokens, tool activity, and partial-run denominators |
 | `abc_answers.csv` | Agent answers retained side by side for scientific review |
 
-**Match-rate qualification:** In 0.6.7.11.8, `agent-report` also generates `match_rate.png` **when the saved `validated/<name>_references_review.csv` contains automatically comparable single-call evidence**. The plot title reads **“UNREVIEWED, not scientific accuracy”** and uses a *common scorable denominator*: complete single values, single-field record lists and coordinate pairs. Truncated, null, ambiguous/multifield, empty and missing multi-step references are excluded with reasons in CSV. Run errors and abstentions on eligible tasks count as nonmatches. This is *strict reference-snapshot agreement*, not a scientific-gold correctness rate, and must not be compared directly to the old 50-question figure without noting the different dataset and denominator. For verified accuracy, review/approve a gold oracle and use the established `score-three-arm` workflow separately.
+**Historical strict-match qualification (0.6.7.11.8):** The preserved legacy plot is `strict_snapshot_match_rate.png`; the new `match_rate.png` follows the enhanced 0.6.7.11.11 rule. Historically, `agent-report` generated `match_rate.png` **when the saved `validated/<name>_references_review.csv` contains automatically comparable single-call evidence**. The plot title reads **“UNREVIEWED, not scientific accuracy”** and uses a *common scorable denominator*: complete single values, single-field record lists and coordinate pairs. Truncated, null, ambiguous/multifield, empty and missing multi-step references are excluded with reasons in CSV. Run errors and abstentions on eligible tasks count as nonmatches. This is *strict reference-snapshot agreement*, not a scientific-gold correctness rate, and must not be compared directly to the old 50-question figure without noting the different dataset and denominator. For verified accuracy, review/approve a gold oracle and use the established `score-three-arm` workflow separately.
 
 ### Rerun only failed MCP-only tasks (do not rerun all 300)
 
@@ -279,6 +279,41 @@ asyncio.run(bench.create_synthetic_queries(
 report = bench.create_reference_report(name='astroakd_100_v2', output_dir='datasets')
 ```
 
+
+### Automated archive-reference answer scoring (0.6.7.11.11)
+
+The 100 generated questions and the 300 completed A/B/C agent runs **do not need to be regenerated or rerun**. After collecting the 80 independent single-call references, score saved answers offline:
+
+```bash
+uv run --with matplotlib python -m benchmark score-reference-answers \
+  --name astroakd_100_v2 \
+  --output-dir datasets
+```
+
+Use `--replace` to regenerate only the scoring reports. This writes `datasets/reports/astroakd_100_v2/automated/` including `match_rate.png`, `accuracy_by_archive.png`, `accuracy_by_question_type.png`, their SVG versions, `automated_scores_per_question.csv`, `accuracy_breakdown.csv`, and `automated_scoring_summary.json`. `agent-report` will also generate these plots alongside operational metrics in its `agents/` directory. These are **automated agreement with retrieved archive reference values**; no independently adjudicated scientific gold is claimed. Excluded or incomplete reference tasks are never counted as correct or incorrect.
+
+The new comparator handles measurement tolerances, coordinate pairs, full lists with repeated entries, and per-row vector fields; it reports correct/partial/incorrect/abstained/failed separately. For the frozen `astroakd_100_v2` dataset, 80/100 questions have complete single-call reference evidence. The remaining 20 are literature-driven or multi-archive tasks that require their own independent evidence. Collect *only* those additional references:
+
+```bash
+uv run python -m benchmark collect-multistep-references \
+  --name astroakd_100_v2 \
+  --output-dir datasets \
+  --timeout 900 \
+  --limit 5
+
+# Continue without repeating already-recorded multi-step tasks:
+uv run python -m benchmark collect-multistep-references \
+  --name astroakd_100_v2 \
+  --output-dir datasets \
+  --timeout 900 \
+  --resume
+```
+
+Multi-archive questions have two query plans saved with the generated tasks. Literature questions typically contain ADS candidate citations, **not complete observation-query plans or verified links between publications and observations**. Those questions are explicitly marked `needs_independent_archive_query_plan`; an optional `--literature-plans` JSONL of independently specified read-only archive steps can add observational evidence, but paper-to-observation associations still need independent verification before they can be scored. Review `datasets/validated/astroakd_100_v2_multistep_references.jsonl` and the audit report before interpreting changes in coverage. The command never touches the prior 80 reference records.
+
+After collecting new independent evidence, rerun `score-reference-answers --replace`. To evaluate the changed-budget two-run retry journal, pass `--runs datasets/agent/astroakd_100_v2_ABC_runs_turn16_diagnostic.jsonl`; its plots are kept under `automated_diagnostic/`, separate from the baseline results.
+
+
 ## Documentation and development
 
 Read the [current documentation](docs/index.md) for [getting started](docs/benchmark/quickstart.md), [synthetic question generation](docs/benchmark/create_queries.md), [ADS configuration](docs/benchmark/ads_and_mcp.md), [reference review](docs/benchmark/references_and_review.md), [A/B/C evaluation and plots](docs/benchmark/evaluation_and_plots.md), and [Python API](docs/benchmark/python_api.md). All documentation describes **the supported current release**, not previous-version commands.
@@ -309,4 +344,4 @@ uv run --with matplotlib python -m benchmark agent-report \
   --name astroakd_100_v2 --output-dir datasets
 ```
 
-`agent-report` creates A/B/C operational plots and a **provisional** `match_rate.png` only for automatically comparable reference snapshots. Inspect `reference_agreement_summary.json` and its exclusion counts: the generator's feasibility gate aims to improve that coverage but does **not guarantee** full 100-question reference accuracy, and it does not yet collect multi-step gold answers. If the feasibility quota fails before GPT, choose a different valid candidate mix or extend the curated target inventory; do not bypass the gate just to improve reported accuracy.
+`agent-report` creates A/B/C operational plots and question-aware **automatic archive-reference agreement** `match_rate.png` when independent reference snapshots are available. The separate historical snapshot plot is `strict_snapshot_match_rate.png`. Inspect `reference_agreement_summary.json` and its exclusion counts: the generator's feasibility gate aims to improve that coverage but does **not guarantee** full 100-question reference accuracy, and it does not yet collect multi-step gold answers. If the feasibility quota fails before GPT, choose a different valid candidate mix or extend the curated target inventory; do not bypass the gate just to improve reported accuracy.

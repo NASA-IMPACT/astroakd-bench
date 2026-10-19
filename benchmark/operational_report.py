@@ -189,10 +189,27 @@ def create_operational_report(tasks_path: Path, runs_path: Path, output_dir: Pat
         from .reference_agreement import reference_snapshot_agreement
         report['reference_snapshot_agreement']=reference_snapshot_agreement(
             args.tasks,args.runs,review_csv,args.output_dir,plots=plots)
+        # Keep the original strict 69-question snapshot plot under an explicit
+        # historical filename; the enhanced question-aware match_rate.png below
+        # must correspond to automated_scoring_summary.json, not this summary.
+        if plots:
+            for suffix in ('.png','.svg'):
+                old_plot=args.output_dir/('match_rate'+suffix)
+                if old_plot.is_file():
+                    old_plot.replace(args.output_dir/('strict_snapshot_match_rate'+suffix))
+            report['reference_snapshot_agreement']['figure']='strict_snapshot_match_rate.png'
     else:
         report['reference_snapshot_agreement']={'status':'NOT_AVAILABLE',
             'reason':f'Reference-review CSV not found: {review_csv}',
             'scientific_accuracy':'NOT_ASSESSED'}
+    # New, separately labelled question-aware reference score. Use existing saved
+    # reference evidence only; do not contact the server or silently change gold.
+    if review_csv.is_file():
+        from .automated_scoring import score_automated
+        multistep_path=args.tasks.parent.parent/'validated'/(args.tasks.stem+'_multistep_references.jsonl')
+        report['automated_reference_scoring']=score_automated(
+            args.tasks,args.runs,review_csv,args.output_dir,
+            multistep_path=multistep_path,plots=plots,replace=True)
     (args.output_dir/'operational_report.json').write_text(json.dumps(report,indent=2)+'\n',encoding='utf-8')
     report['output_dir']=str(args.output_dir)
     return report

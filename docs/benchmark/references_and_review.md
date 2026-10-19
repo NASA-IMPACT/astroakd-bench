@@ -63,3 +63,7 @@ The detailed commands `reference-review-draft` and `gold-finalize` remain availa
 ## Feasibility gate versus collected references
 
 `create-queries --with-reference-answers` in 0.6.7.11.10 first checks that each *proposed core query* returns bounded, nonempty, untruncated MCP evidence, including required answer columns and no null values. The precheck's source-response SHA-256 is retained in the question provenance and the selected plan is saved. The independent `collect-references` step later reexecutes those exact frozen calls; archives can change between calls, so precheck acceptance does **not** guarantee subsequent collection succeeds. All final reference dispositions and coverage/exclusion reasons must be reported. Literature/ADS and multi-archive tasks still need separate multi-step evidence. See [Creating questions](create_queries.md).
+
+## Independent multi-step evidence (0.6.7.11.11)
+
+`collect-multistep-references` executes only new saved read-only multi-archive steps; it does not repeat the 80 single-call references. Use `--limit 5` for a pilot, then `--resume`. Its per-task JSONL journal preserves evidence hashes, completed steps, exclusions and missing literature plans. Literature citations collected during synthetic question generation are not automatically a verified paper-to-observation reference answer. Run `score-reference-answers` separately after complete references have been collected; it never makes external calls.

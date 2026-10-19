@@ -389,6 +389,25 @@ def build_parser() -> argparse.ArgumentParser:
     agrep.add_argument('--replace',action='store_true')
     agrep.add_argument('--runs',type=Path,help='Alternative diagnostic A/B/C journal (never replaces baseline)')
 
+    scoreref = commands.add_parser('score-reference-answers', parents=[common],
+        help='Offline question-aware agreement with independent MCP reference observations')
+    scoreref.add_argument('--name', default='synthetic_100')
+    scoreref.add_argument('--output-dir', type=Path, default=Path('datasets'))
+    scoreref.add_argument('--runs', type=Path, help='Optional diagnostic runs; baseline by default')
+    scoreref.add_argument('--no-plots', action='store_true')
+    scoreref.add_argument('--replace', action='store_true')
+
+    multiref = commands.add_parser('collect-multistep-references', parents=[common],
+        help='Collect missing independent multi-archive evidence without repeating saved references')
+    multiref.add_argument('--name', default='synthetic_100')
+    multiref.add_argument('--output-dir', type=Path, default=Path('datasets'))
+    multiref.add_argument('--literature-plans', type=Path,
+        help='Optional independently specified read-only archive calls for literature tasks')
+    multiref.add_argument('--attempts', type=int, default=2)
+    multiref.add_argument('--limit', type=int)
+    multiref.add_argument('--resume', action='store_true')
+    multiref.add_argument('--replace', action='store_true')
+
     inspect = commands.add_parser('inspect', parents=[common],
         help='Render a bounded JSONL sample or a JSON report for inspection')
     inspect.add_argument('--input', required=True, type=Path)
@@ -451,6 +470,24 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
         return create_operational_report(paths['tasks'],args.runs or paths['runs'],
             paths['plots']/('agents_diagnostic' if args.runs else 'agents'),
             replace=args.replace,plots=not args.no_plots)
+    if args.command == 'score-reference-answers':
+        from .simple_workflows import dataset_paths
+        from .automated_scoring import score_automated
+        paths=dataset_paths(name=args.name,output_dir=args.output_dir)
+        multi=paths['references'].with_name(args.name+'_multistep_references.jsonl')
+        return score_automated(paths['tasks'],args.runs or paths['runs'],
+            paths['references'].with_name(args.name+'_references_review.csv'),
+            paths['plots']/('automated_diagnostic' if args.runs else 'automated'),
+            multistep_path=multi, plots=not args.no_plots,replace=args.replace)
+    if args.command == 'collect-multistep-references':
+        from .multistep_reference import collect_multistep
+        if args.attempts<1 or (args.limit is not None and args.limit<1):
+            raise ValueError('--attempts and --limit must be positive')
+        return await collect_multistep(name=args.name,output_dir=args.output_dir,
+            url=args.mcp_url,timeout=args.timeout,attempts=args.attempts,
+            resume=args.resume,replace=args.replace,limit=args.limit,
+            literature_plans=args.literature_plans,
+            progress=lambda m:print(f'[AstroAKD-Bench multistep] {m}',file=sys.stderr,flush=True))
     if args.command == 'build-scorable':
         from .scorable import build_scorable
         return build_scorable(args.source_tasks,args.references,args.tasks_output,
@@ -713,7 +750,7 @@ def main(argv: list[str] | None = None) -> int:
                    "message": sanitize_mcp_error(exc, args.mcp_token)}}
     output = json_text(payload, args.json_format)
     print(output)
-    report_destination = (None if args.command in {"validate", "run", "evaluate", "build-fixtures", "gold-draft", "reference-review-draft", "gold-finalize", "run-three-arm", "score-three-arm", "export-answer-csv", "build-scorable", "score-scorable", "create-queries", "collect-references", "reference-report", "run-benchmark", "agent-report"} else
+    report_destination = (None if args.command in {"validate", "run", "evaluate", "build-fixtures", "gold-draft", "reference-review-draft", "gold-finalize", "run-three-arm", "score-three-arm", "export-answer-csv", "build-scorable", "score-scorable", "create-queries", "collect-references", "reference-report", "run-benchmark", "agent-report", "score-reference-answers", "collect-multistep-references"} else
                           args.report if args.command in {"generate", "audit-diversity"} else args.output)
     if report_destination is not None:
         try:
@@ -722,7 +759,7 @@ def main(argv: list[str] | None = None) -> int:
         except OSError as exc:
             print(f"Could not save report {report_destination}: {exc}", file=sys.stderr)
             return 2
-    return 0 if payload.get("status") in {"PASS", "PARTIAL", "COMPLETE", "REVIEW"} or (args.command == "inspect" and "data" in payload or args.command == "inspect" and "records" in payload) else 1
+    return 0 if payload.get("status") in {"PASS", "PARTIAL", "COMPLETE", "REVIEW", "PARTIAL_REFERENCE_COVERAGE"} or (args.command == "inspect" and "data" in payload or args.command == "inspect" and "records" in payload) else 1
 
 
 if __name__ == "__main__":

@@ -1,3 +1,11 @@
+## 0.6.7.11.11 — AUTOMATED_REFERENCE_ANSWER_SCORING
+
+- Adds `score-reference-answers`, an **offline** comparison of saved A/B/C agent answers with independently collected Astroquery MCP reference observations. No regenerated questions, replayed agent calls, or manually authored gold answers are required.
+- Supports scalar fields, multiplicity-preserving lists, normalized numeric measurements, coordinates, vector fields (such as J/H/K magnitudes and pmra/pmdec), and row-associated multi-field records. The scoring policy distinguishes `correct`, `partially_correct`, `incorrect`, `abstained`, and `failed` while reporting exact evaluable denominators and exclusions.
+- Generates `match_rate.png`, `accuracy_by_archive.png`, and `accuracy_by_question_type.png`, with SVG equivalents plus per-question CSV, breakdown CSV and JSON summary. The existing `agent-report` also includes the new scoring result while retaining operational measurements and a separate strict-snapshot summary.
+- Adds resumable `collect-multistep-references` for independently specified read-only archive calls. The mixed two-archive tasks have machine-readable query plans. Literature candidates without independently specified observation calls, or without paper-to-observation association evidence, remain **unscorable**, never silently promoted to verified reference answers. Existing 80 single-call references are not queried again.
+- Tested against the frozen `astroakd_100_v2` 100-question dataset and original 300 runs: 80/100 automatically evaluable single-call tasks; A and B each 79 strictly matching, one partial; C 13 matching. These are **archive-reference answer agreement rates**, not separately adjudicated scientific accuracy. Multi-step live collection remains host-pending.
+
 ## 0.6.7.11.10 — documentation follow-up (no version or science change)
 
 - Document the full `collect-references` archive-timeout/retry/deadline command

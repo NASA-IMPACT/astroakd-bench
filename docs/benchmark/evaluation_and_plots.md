@@ -1,3 +1,20 @@
+# Question-aware automatic reference-answer scoring (0.6.7.11.11)
+
+The following commands evaluate saved agent answers against saved independent Astroquery MCP reference observations; they do not run LLMs or the MCP server. Baseline A/B/C runs remain frozen.
+
+```bash
+uv run --with matplotlib python -m benchmark score-reference-answers \
+  --name astroakd_100_v2 --output-dir datasets
+```
+
+Outputs: `reports/astroakd_100_v2/automated/{match_rate,accuracy_by_archive,accuracy_by_question_type}.{png,svg}`, `automated_scores_per_question.csv`, `accuracy_breakdown.csv`, and `automated_scoring_summary.json`. Use `--replace` to regenerate reports. Each score is `correct`, `partially_correct`, `incorrect`, `abstained`, or `failed`, and the JSON includes an explicit exclusion count for tasks without complete, usable reference evidence. Strict match rates count only **correct**, not partial credit, over evaluable tasks.
+
+For missing independent multi-step evidence, `collect-multistep-references --name astroakd_100_v2 --output-dir datasets --timeout 900 --limit 5` creates a resumable journal; continue with `--resume`. The twelve two-archive questions have explicit per-step MCP read-only plans. The eight literature-driven questions require independent observation reference plans and verified paper–observation association evidence; ADS bibliographic searches alone do not supply complete ground truth. Existing questions, single-call reference results, and 300 agent traces are not regenerated or overwritten.
+
+**Scope:** Automated comparison is archive-reference agreement, not independently reviewed scientific accuracy. Tolerances, row multiplicity and matching decisions are described in the JSON scoring policy. Partial/abstained/failed counts remain distinct. Diagnostic higher-turn retries must not replace the original common-budget comparison.
+
+---
+
 # Run and report the A/B/C benchmark
 
 Run the three-agent experiment on one saved question dataset. Reference evidence and gold answers are hidden from the evaluated agents.
@@ -40,7 +57,7 @@ CSV output includes `arm_operational_summary.csv`, `per_task_operational.csv`, a
 
 ### Match-rate figure: provisional reference-snapshot agreement
 
-In 0.6.7.11.8 `agent-report` generates **`match_rate.png` / `.svg`** when `datasets/validated/astroakd_100_v2_references_review.csv` exists and contains complete, automatically comparable reference evidence. This is **not independently verified scientific accuracy**. The figure explicitly says “UNREVIEWED” and reports the number of eligible questions. Its exact-match denominator includes only supported complete single values, complete single-column record lists, and coordinate pairs; truncated, null, multifield, uncollected/multi-step and structurally unsuitable references are excluded. Errors and abstentions on eligible tasks are nonmatches. See `reference_agreement_summary.json` and `reference_agreement_per_question.csv` for a complete audit trail and exclusion reasons. If no usable snapshots exist, the program reports `NOT_SCORABLE` and does not invent a match rate.
+The legacy 0.6.7.11.8 scorer now writes **`strict_snapshot_match_rate.png` / `.svg`** (kept for audit comparison); 0.6.7.11.11 writes the enhanced `match_rate.png` when `datasets/validated/astroakd_100_v2_references_review.csv` exists and contains complete, automatically comparable reference evidence. This is **not independently verified scientific accuracy**. The figure explicitly says “UNREVIEWED” and reports the number of eligible questions. Its exact-match denominator includes only supported complete single values, complete single-column record lists, and coordinate pairs; truncated, null, multifield, uncollected/multi-step and structurally unsuitable references are excluded. Errors and abstentions on eligible tasks are nonmatches. See `reference_agreement_summary.json` and `reference_agreement_per_question.csv` for a complete audit trail and exclusion reasons. If no usable snapshots exist, the program reports `NOT_SCORABLE` and does not invent a match rate.
 
 The provisional snapshot match report does **not** establish verified scientific correctness.
 
