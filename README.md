@@ -1,6 +1,6 @@
 # AstroAKD-Bench
 
-**Current version: 0.6.7.11.11** · Benchmark for astronomy archive-search agents using an independent [Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp). Benchmark questions, archive observations, independently reviewed gold answers, and agent responses remain distinct.
+**Current version: 0.6.7.11.12** · Benchmark for astronomy archive-search agents using an independent [Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp). Benchmark questions, archive observations, independently reviewed gold answers, and agent responses remain distinct.
 
 ## Quick start: 100 new questions with references
 
@@ -280,7 +280,49 @@ report = bench.create_reference_report(name='astroakd_100_v2', output_dir='datas
 ```
 
 
-### Automated archive-reference answer scoring (0.6.7.11.11)
+### Multi-step closure and selective VizieR retry (0.6.7.11.12)
+
+**Do not regenerate the 100 questions or rerun the 300 A/B/C agent executions.** The existing `astroakd_100_v2` dataset has 80 complete single-call references and 20 completed *collection attempts*: 6 two-archive references complete, 6 VizieR-containing records incomplete, and 8 literature records without an independently verified paper-to-observation link.
+
+Preview the six incomplete multi-archive queries **without making MCP or OpenAI calls**:
+
+```bash
+uv run python -m benchmark collect-multistep-references \
+  --name astroakd_100_v2 --output-dir datasets \
+  --resume --retry-incomplete --dry-run
+```
+
+Retry **only the missing VizieR steps**, with completed steps reused from the immutable journal:
+
+```bash
+uv run python -m benchmark collect-multistep-references \
+  --name astroakd_100_v2 --output-dir datasets \
+  --timeout 900 --attempts 2 --resume --retry-incomplete
+```
+
+Before any retry, the original journal is preserved as `datasets/validated/astroakd_100_v2_multistep_references_preretry.jsonl`; subsequent records include retry history, per-step provenance, SHA-256 response hashes and bounded schema diagnostics. You may additionally restrict the retry to specific IDs using `--retry-task-ids ASTROAKD-MIX-00032,ASTROAKD-MIX-00036`. Do **not** use `--replace`: it discards the existing multi-step journal.
+
+VizieR's MCP `result` is a **list of structured tables**, not necessarily one table dictionary. The corrected collector supports both forms, with table-specific fields, preserved table indices, strict completeness checks, and no silent truncation. A retried task is scored only if all required archive steps contain complete evidence.
+
+Automatically generate bounded, non-executable **literature query-plan drafts** using existing saved target names, candidate bibcodes and requested archive types:
+
+```bash
+uv run python -m benchmark draft-literature-plans \
+  --name astroakd_100_v2 --output-dir datasets
+```
+
+This command does not query MCP, ADS or OpenAI. It saves SIMBAD target-resolution calls and dependent bounded archive-query templates for resolvable targets, but **never invents paper--observation associations or ObsIDs**. The eight literature questions remain unscorable until independent paper-linked evidence is available. If you supply independent executable plans using `--literature-plans`, the collector records observation evidence but still does **not** treat unverified publication associations as complete.
+
+Recompute only the scores and plots after reference retries:
+
+```bash
+uv run --with matplotlib python -m benchmark score-reference-answers \
+  --name astroakd_100_v2 --output-dir datasets --replace
+```
+
+The new comparator preserves archive/field labels and repeated values, parses explicitly labelled ObsIDs and mixed-field unit descriptions, and does not silently assign ambiguous values across archives. Before further live reference collection, the frozen dataset has 86 evaluable questions: A 85/86 (98.84%), B 85/86 (98.84%), C 13/86 (15.12%) automated archive-reference agreement. One MAST task remains partially correct under strict observation-level multiplicity. These are **not independently adjudicated scientific accuracy** and can change if more complete evidence is collected.
+
+### Automated archive-reference answer scoring (0.6.7.11.12)
 
 The 100 generated questions and the 300 completed A/B/C agent runs **do not need to be regenerated or rerun**. After collecting the 80 independent single-call references, score saved answers offline:
 
@@ -292,7 +334,7 @@ uv run --with matplotlib python -m benchmark score-reference-answers \
 
 Use `--replace` to regenerate only the scoring reports. This writes `datasets/reports/astroakd_100_v2/automated/` including `match_rate.png`, `accuracy_by_archive.png`, `accuracy_by_question_type.png`, their SVG versions, `automated_scores_per_question.csv`, `accuracy_breakdown.csv`, and `automated_scoring_summary.json`. `agent-report` will also generate these plots alongside operational metrics in its `agents/` directory. These are **automated agreement with retrieved archive reference values**; no independently adjudicated scientific gold is claimed. Excluded or incomplete reference tasks are never counted as correct or incorrect.
 
-The new comparator handles measurement tolerances, coordinate pairs, full lists with repeated entries, and per-row vector fields; it reports correct/partial/incorrect/abstained/failed separately. For the frozen `astroakd_100_v2` dataset, 80/100 questions have complete single-call reference evidence. The remaining 20 are literature-driven or multi-archive tasks that require their own independent evidence. Collect *only* those additional references:
+The new comparator handles measurement tolerances, coordinate pairs, full lists with repeated entries, and per-row vector fields; it reports correct/partial/incorrect/abstained/failed separately. For the frozen `astroakd_100_v2` dataset, 80 single-call references plus 6 complete two-archive references are available. The remaining 14 include 6 retryable VizieR steps and 8 literature tasks requiring independent paper-observation evidence. Collect *only* those additional references:
 
 ```bash
 uv run python -m benchmark collect-multistep-references \

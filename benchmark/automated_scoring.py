@@ -135,12 +135,140 @@ def _unit_compatible(answer, fields):
     return True
 
 
+def _canonical_field(field):
+    return str(field).split(':')[-1].lower()
+
+
+def _same_multistep(a,b,field):
+    """Explicit IDs preserve leading zeros; normalized *names* allow spacing."""
+    f=_canonical_field(field)
+    if f in ('main_id','matched_id','designation'):
+        return ' '.join(str(a).casefold().split())==' '.join(str(b).casefold().split())
+    if f in ('obsid','source_id','bibcode','2mass'):
+        return str(a).strip()==str(b).strip()
+    return _same(a,b,field=f)
+
+
+def _value_candidates(raw, fields):
+    """Extract only named requested fields, never unrelated source IDs or numbers."""
+    names=set(_canonical_field(f) for f in fields)
+    if isinstance(raw,dict):
+        return [(f,v,True) for k,v in raw.items() for f in fields if
+                str(k).casefold() in (f.casefold(),_canonical_field(f))]
+    if not isinstance(raw,str):return [(None,raw,False)]
+    result=[]
+    # Explicitly named scalar measurements and archive identifiers.
+    for f in fields:
+        short=_canonical_field(f)
+        if short not in names:continue
+        if short in {'pmra','pmdec','parallax','jmag','hmag','kmag','phot_g_mean_mag','duration','ra','dec'}:
+            aliases=[short]
+            if short in ('jmag','hmag','kmag'):aliases.append(short[0])
+            pattern=r'(?<![a-z0-9_])(?:'+ '|'.join(map(re.escape,aliases))+r')\s*[:=]\s*('+NUMBER.pattern+r')'
+        else:
+            pattern=r'(?<![a-z0-9_])'+re.escape(short)+r'(?:\(s\))?\s*[:=]\s*([^;\n]+)'
+        m=re.search(pattern,raw,re.I)
+        if not m:continue
+        captured=m.group(1).strip()
+        if short=='obsid':
+            # A comma-separated ObsID list must be exhaustive: keep every listed ID.
+            for token in captured.split(','):
+                v=token.strip().split()[0] if token.strip() else ''
+                if re.fullmatch(r'\d{3,16}',v):result.append((f,v,True))
+        else:
+            result.append((f,captured,True))
+    return result if result else [(None,raw,False)]
+
+
+def _multi_unit_ok(unit, fields):
+    """Mixed archive unit strings specify per-field units, not one global unit."""
+    if not isinstance(unit,str) or not unit.strip():return True
+    lower=unit.casefold()
+    rules={'duration':('s','sec','second','seconds'),
+           'pmra':('mas/yr','masyr'),'pmdec':('mas/yr','masyr'),
+           'jmag':('mag',),'hmag':('mag',),'kmag':('mag',),
+           'phot_g_mean_mag':('mag',),'parallax':('mas',)}
+    # Only parse explicit (field: unit) or (unit (archive field)) clauses.
+    for field in {_canonical_field(f) for f in fields}:
+        if field not in rules:continue
+        m=re.search(r'\b'+re.escape(field)+r'\s*[:=]\s*([a-z/]+)',lower)
+        if not m:
+            m=re.search(r'\b([a-z/]+)\s*\([^)]*\b'+re.escape(field)+r'\b[^)]*\)',lower)
+        if m and m.group(1) not in rules[field]:return False
+    # Unknown or absent unit descriptions are neutral: no conversion invented.
+    return True
+
+
+def _multi_compare(evidence, answer):
+    """Archive/field-aware, duplicate-sensitive maximum matching.
+
+    For unlabelled outputs, use unique field-compatible expected values, rather
+    than guessing a source for the same value in two independent archives.
+    """
+    fields=list(dict.fromkeys(e['field'] for e in evidence))
+    if not _multi_unit_ok(answer.get('unit'),fields):
+        return ('incorrect',0,len(evidence),'explicit_unit_mismatch')
+    supplied=answer.get('answer_values') or []
+    candidates=[]
+    for raw in supplied:
+        candidates.extend(_value_candidates(raw,fields))
+    # Explicit tagged fields may not be assigned to another archive.
+    adjacency=[]
+    for expected in evidence:
+        field=expected['field'];matches=[]
+        for j,(tag,val,explicit) in enumerate(candidates):
+            if tag and tag!=field:continue
+            if not _same_multistep(expected['value'],val,field):continue
+            if not explicit:
+                # Reject an unlabeled datum that equally matches a different
+                # archive or field.  Such matches are not provenance-safe.
+                other={e['field'] for e in evidence if _same_multistep(e['value'],val,e['field'])}
+                if len(other)>1:continue
+            matches.append(j)
+        adjacency.append(matches)
+    assigned={}
+    def augment(i,seen):
+        for j in adjacency[i]:
+            if j in seen:continue
+            seen.add(j)
+            if j not in assigned or augment(assigned[j],seen):
+                assigned[j]=i;return True
+        return False
+    count=sum(augment(i,set()) for i in range(len(evidence)))
+    # If a single archive returns multiple multi-field rows, comparing a bag
+    # of scalars cannot establish which photometry/coordinates belong to which
+    # source. Require complete per-row labelled tuples for *strict* credit.
+    rows=defaultdict(lambda:defaultdict(dict))
+    for e in evidence:
+        mod=e['field'].split(':',1)[0]
+        rows[mod][(e.get('table_index',0),e.get('row_index',0))][e['field']]=e['value']
+    for mod,byrow in rows.items():
+        fieldset=list(dict.fromkeys(e['field'] for e in evidence if e['field'].startswith(mod+':')))
+        if len(fieldset)<2 or len(byrow)<2:continue
+        records=[list(rec.get(f) for f in fieldset) for rec in byrow.values()]
+        if any(x is None for row in records for x in row):continue
+        predicted=[]
+        for raw in supplied:
+            possible=_value_candidates(raw,fieldset)
+            rec={f:v for f,v,tag in possible if tag and f in fieldset}
+            if len(rec)==len(fieldset):predicted.append([rec[f] for f in fieldset])
+        associated=_max_pairing(records,predicted,fieldset)
+        if associated!=len(records) or len(predicted)!=len(records):
+            if count>0:return ('partially_correct',count,len(evidence),'row_association_not_proven')
+            return ('incorrect',0,len(evidence),'row_association_not_proven')
+    if count==len(evidence) and len(candidates)==len(evidence):
+        return ('correct',count,len(evidence),'archive_field_reference_agreement')
+    if count>0:return ('partially_correct',count,len(evidence),'incomplete_extra_or_ambiguous_archive_values')
+    return ('incorrect',0,len(evidence),'archive_field_values_do_not_match')
+
 def compare_answer(shape,evidence, answer, task):
     """Return (classification, matched_entries, expected_entries, reason)."""
     if not isinstance(answer,dict):return ('incorrect',0,len(evidence),'missing_structured_answer')
     if answer.get('abstained') is True:return ('abstained',0,len(evidence),'agent_abstained')
     vals=answer.get('answer_values')
     if not isinstance(vals,list) or not vals:return ('incorrect',0,len(evidence),'missing_answer_values')
+    if shape=='multi_archive_values':
+        return _multi_compare(evidence,answer)
     if not _unit_compatible(answer,[v.get('field','') for v in evidence]):
         return ('incorrect',0,len(evidence),'explicit_unit_mismatch')
     expected=evidence if shape=='multi_archive_values' else _group(evidence,shape)
@@ -164,12 +292,6 @@ def compare_answer(shape,evidence, answer, task):
             exp=[[x] for x in dict.fromkeys(map(str,expected))]
             pred=[[x] for x in dict.fromkeys(map(str,vals))]
         matches=_max_pairing(exp,pred,fields)
-    elif shape=='multi_archive_values':
-        fields=[e.get('field','') for e in evidence]
-        exp=[[e['value']] for e in evidence]
-        pred=[[v] for v in vals]
-        # Archive-prefix is provenance; compare the requested scalar values only.
-        matches=_max_pairing(exp,pred,[''])*1
     else:
         fields,exp=expected
         n=len(fields)
@@ -279,7 +401,7 @@ def score_automated(tasks_path, runs_path, references_review_csv, output_dir, *,
            'evaluable':sum(counts[a].values()),
            'strict_match_pct':round(100*counts[a]['correct']/sum(counts[a].values()),2) if sum(counts[a].values()) else None}
             for a in ARMS}
-    summary={'milestone':'0.6.7.11.11 - AUTOMATED_REFERENCE_ANSWER_SCORING',
+    summary={'milestone':'0.6.7.11.12 - MULTISTEP_REFERENCE_AND_SCORING_CLOSURE',
         'status':'NOT_SCORABLE' if denominator==0 else ('COMPLETE' if denominator==len(tasks) else 'PARTIAL_REFERENCE_COVERAGE'),
         'metric':'AUTOMATED_ARCHIVE_REFERENCE_ANSWER_AGREEMENT_NOT_INDEPENDENT_SCIENTIFIC_GOLD',
         'dataset_sha256':digest,'runs_sha256':hashlib.sha256(runs_path.read_bytes()).hexdigest(),
@@ -292,7 +414,8 @@ def score_automated(tasks_path, runs_path, references_review_csv, output_dir, *,
         'scoring_policy':{'numeric_relative_tolerance':2e-5,'numeric_absolute_tolerance':0.0011,
             'coordinate_tolerance_deg':1e-5,'list_semantics':'duplicate-aware, order-independent',
             'statuses':'distinct values only when question requests statuses as a set',
-            'multi_field':'complete tuples by row; no cross-row mixing'},
+            'multi_field':'complete tuples by row; no cross-row mixing',
+            'multi_archive':'archive/field-aware, duplicate-sensitive; unlabelled ambiguous values are not assumed correct'},
         'note':'Automatic agreement to observed archive values; no manual gold approval or external scientific verification is implied.'}
     (output_dir/'automated_scoring_summary.json').write_text(json.dumps(summary,indent=2,ensure_ascii=False)+'\n',encoding='utf-8')
     with (output_dir/'accuracy_breakdown.csv').open('w',newline='',encoding='utf-8') as f:

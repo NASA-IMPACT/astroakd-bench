@@ -1,4 +1,4 @@
-# Question-aware automatic reference-answer scoring (0.6.7.11.11)
+# Question-aware automatic reference-answer scoring (0.6.7.11.12)
 
 The following commands evaluate saved agent answers against saved independent Astroquery MCP reference observations; they do not run LLMs or the MCP server. Baseline A/B/C runs remain frozen.
 
@@ -93,3 +93,9 @@ Its outputs are under `datasets/reports/astroakd_100_v2/agents_diagnostic/`. Nev
 For reference-side **archive completeness and response-time figures**, use the separate offline command documented in [Reference collection and scientific review](references_and_review.md).
 
 **Interpretation:** Successful agent execution or agreement with an unreviewed reference snapshot is not scientific accuracy. Report verified correctness only with a separate reviewed gold oracle and transparent denominators. Keep paper claims about the historical 50-question result separate from any new 100-question run.
+
+## Multi-archive scoring closure in 0.6.7.11.12
+
+The archive-reference comparator now checks each retrieved record with its **archive and field provenance** and preserves exact observation IDs, row multiplicity and mixed-field units. A comma-separated list of explicit HEASARC ObsIDs or archive-labelled SIMBAD matched IDs is parsed without accidentally extracting unrelated numbers from source descriptions. If one unlabeled value matches multiple archives or fields, the scorer refuses to invent its association. Extra records prevent a strict full match. Reported percentages are conditioned on *complete independent reference evidence*, not on independent scientific gold review.
+
+Run `uv run --with matplotlib python -m benchmark score-reference-answers --name astroakd_100_v2 --output-dir datasets --replace` after incomplete-step retries. The plotted denominator and explicit exclusion causes can change as independently collected references become complete; keep earlier figures archived when comparing results across scoring-policy versions.

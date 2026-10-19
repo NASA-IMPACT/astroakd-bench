@@ -406,7 +406,18 @@ def build_parser() -> argparse.ArgumentParser:
     multiref.add_argument('--attempts', type=int, default=2)
     multiref.add_argument('--limit', type=int)
     multiref.add_argument('--resume', action='store_true')
+    multiref.add_argument('--retry-incomplete', action='store_true',
+        help='With --resume, retry incomplete steps only; keep complete steps and an immutable pre-retry snapshot')
+    multiref.add_argument('--retry-task-ids',
+        help='Optional comma-separated subset of incomplete multi-step task IDs')
+    multiref.add_argument('--dry-run', action='store_true',help='Preview retry selection without MCP calls')
     multiref.add_argument('--replace', action='store_true')
+
+    litdraft=commands.add_parser('draft-literature-plans', parents=[common],
+        help='Offline bounded observation-query plan drafts, never verified paper associations')
+    litdraft.add_argument('--name',default='synthetic_100')
+    litdraft.add_argument('--output-dir',type=Path,default=Path('datasets'))
+    litdraft.add_argument('--replace',action='store_true')
 
     inspect = commands.add_parser('inspect', parents=[common],
         help='Render a bounded JSONL sample or a JSON report for inspection')
@@ -487,7 +498,13 @@ async def _execute(args: argparse.Namespace) -> dict[str, Any]:
             url=args.mcp_url,timeout=args.timeout,attempts=args.attempts,
             resume=args.resume,replace=args.replace,limit=args.limit,
             literature_plans=args.literature_plans,
+            retry_incomplete=args.retry_incomplete,
+            retry_task_ids=args.retry_task_ids.split(',') if args.retry_task_ids else None,
+            dry_run=args.dry_run,
             progress=lambda m:print(f'[AstroAKD-Bench multistep] {m}',file=sys.stderr,flush=True))
+    if args.command == 'draft-literature-plans':
+        from .multistep_reference import write_literature_drafts
+        return write_literature_drafts(args.name,args.output_dir,replace=args.replace)
     if args.command == 'build-scorable':
         from .scorable import build_scorable
         return build_scorable(args.source_tasks,args.references,args.tasks_output,
@@ -750,7 +767,7 @@ def main(argv: list[str] | None = None) -> int:
                    "message": sanitize_mcp_error(exc, args.mcp_token)}}
     output = json_text(payload, args.json_format)
     print(output)
-    report_destination = (None if args.command in {"validate", "run", "evaluate", "build-fixtures", "gold-draft", "reference-review-draft", "gold-finalize", "run-three-arm", "score-three-arm", "export-answer-csv", "build-scorable", "score-scorable", "create-queries", "collect-references", "reference-report", "run-benchmark", "agent-report", "score-reference-answers", "collect-multistep-references"} else
+    report_destination = (None if args.command in {"validate", "run", "evaluate", "build-fixtures", "gold-draft", "reference-review-draft", "gold-finalize", "run-three-arm", "score-three-arm", "export-answer-csv", "build-scorable", "score-scorable", "create-queries", "collect-references", "reference-report", "run-benchmark", "agent-report", "score-reference-answers", "collect-multistep-references", "draft-literature-plans"} else
                           args.report if args.command in {"generate", "audit-diversity"} else args.output)
     if report_destination is not None:
         try:

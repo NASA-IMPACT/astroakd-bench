@@ -1,3 +1,12 @@
+## 0.6.7.11.12 — MULTISTEP_REFERENCE_AND_SCORING_CLOSURE
+
+- Fix strict scoring false negatives from archive-labelled observation IDs, comma-separated ObsID lists, and mixed-field measurement unit metadata. Multi-archive comparison now preserves explicit archive/field provenance and duplicate multiplicity; ambiguous unlabeled values are not promoted to correct answers.
+- Accept both single-table MCP results and VizieR-style lists of structured tables, preserving table indices and completeness checks. Record bounded response shape diagnostics and hashes on failed steps, not full raw payloads.
+- Add `collect-multistep-references --resume --retry-incomplete [--dry-run]` with optional `--retry-task-ids`. Completed archive steps are reused; one immutable pre-retry evidence journal is created, and retry history is retained.
+- Add offline `draft-literature-plans` to produce bounded, source-independent SIMBAD target-resolution calls and dependent archive-query templates for resolvable literature targets. These are explicitly **unverified drafts**: candidate ADS bibcodes alone cannot establish paper--observation associations, so literature records remain unscorable until complete independently supported evidence exists.
+- Verified offline against the frozen 100-question and original 300-run `astroakd_100_v2` evidence: 86 evaluable references before any new live retry, A and B 85/86 (98.84%) strict archive-reference agreement, C 13/86 (15.12%). This is not independently adjudicated scientific accuracy. Live MCP VizieR retry and literary association collection remain host pending.
+- Preserve source-level question-generation instructions, original question files, 80 single-call references, and agent run journals. Update CLI, README, Sphinx documentation, and tests.
+
 ## 0.6.7.11.11 — AUTOMATED_REFERENCE_ANSWER_SCORING
 
 - Adds `score-reference-answers`, an **offline** comparison of saved A/B/C agent answers with independently collected Astroquery MCP reference observations. No regenerated questions, replayed agent calls, or manually authored gold answers are required.
