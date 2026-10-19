@@ -1,6 +1,15 @@
 # AstroAKD-Bench
 
-**Current version: 0.6.7.11.12** · Benchmark for astronomy archive-search agents using an independent [Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp). Benchmark questions, archive observations, independently reviewed gold answers, and agent responses remain distinct.
+**Current version: 0.6.7.11.13** · Benchmark for astronomy archive-search agents using an independent [Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp). Benchmark questions, archive observations, independently reviewed gold answers, and agent responses remain distinct.
+
+
+## GitHub Pages and wiki: automatic documentation publishing
+
+Starting in **0.6.7.11.13**, `.github/workflows/publish-docs.yml` runs on pushes to `main` that change the documentation, README/CHANGELOG/INSTALL, the documentation dependencies, or the publishing scripts. It can also be run manually from **Actions → Publish documentation → Run workflow**. It builds the **current-version** Sphinx HTML once, copies the build to the **root of the `gh-pages` branch** (`index.html` is at `/index.html`), deploys the same HTML via the GitHub Pages Actions deployment, and synchronizes Markdown pages into the **GitHub wiki** without deleting unrelated wiki pages. Neither archive services nor OpenAI keys are needed for this documentation job.
+
+**One-time GitHub setup:** enable **Settings → Pages → Source: GitHub Actions** (do *not* rely on a `GITHUB_TOKEN` push to `gh-pages` to trigger a Pages build). Enable **Settings → General → Features → Wikis** and **create the wiki's first page** before running the workflow; GitHub does not provide a cloneable `.wiki.git` remote until a wiki exists. The workflow uses scoped `GITHUB_TOKEN` permissions (`contents: write`, `pages: write`, `id-token: write`). If your organization does not permit the built-in token to push the wiki, add a repository secret `WIKI_TOKEN` with write access to that wiki; it is used only as a fallback. No PAT is needed for ordinary Pages deployment. See [documentation publishing instructions](docs/benchmark/documentation_build.md) for validation and troubleshooting.
+
+The publishing workflow **never modifies `main`**. Documentation sources remain `docs/*.md` and `docs/benchmark/*.md`; the wiki is generated, not an independent documentation source. Edits to generated wiki pages are overwritten on the next documentation update. Pages uses the live Actions deployment and `gh-pages` remains a source-controlled mirror.
 
 ## Quick start: 100 new questions with references
 

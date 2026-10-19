@@ -1,3 +1,10 @@
+## 0.6.7.11.13 — GH_PAGES_AND_WIKI_DOCUMENTATION_PUBLISHING
+
+- Add `.github/workflows/publish-docs.yml` on `main` to build warning-clean Sphinx HTML on documentation/source changes and manual dispatch, mirror the built site (with root `index.html` and `.nojekyll`) to `gh-pages`, and deploy that same artifact with GitHub Pages Actions. A `GITHUB_TOKEN` push to `gh-pages` alone does not trigger the live Pages build.
+- Export current Markdown guides, the README and CHANGELOG to GitHub-wiki-compatible pages with rewritten internal links, preserving the source in `main`; update only managed wiki pages and retain unrelated human-maintained pages.
+- Use least-privilege repository token permissions and an optional scoped `WIKI_TOKEN` secret if the wiki does not accept the built-in token. GitHub Pages and wiki setup are documented, including the required initial wiki page.
+- Add offline validation and tests for documentation export, managed-page synchronization, GitHub Actions configuration, shell syntax, and Sphinx entrypoint. No benchmark generation, MCP tool calls, frozen data, scoring, prompts, or A/B/C behavior changed.
+
 ## 0.6.7.11.12 — Documentation follow-up (2026-10-19; version unchanged)
 
 - Document successful live recovery of all six VizieR-containing multi-archive steps: 12/12 multi-archive references complete, 92/100 questions evaluable; all eight literature questions remain excluded.

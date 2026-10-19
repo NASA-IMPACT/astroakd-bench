@@ -1,0 +1,71 @@
+name: Publish documentation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "README.md"
+      - "INSTALL.md"
+      - "CHANGELOG.md"
+      - "pyproject.toml"
+      - "docs/requirements.txt"
+      - ".readthedocs.yaml"
+      - ".github/workflows/publish-docs.yml"
+      - "scripts/export_wiki.py"
+      - "scripts/sync_wiki.py"
+      - "scripts/publish_gh_pages.sh"
+      - "scripts/publish_wiki.sh"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: astroakd-documentation
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.pages.outputs.page_url }}
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: true
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: docs/requirements.txt
+      - name: Install documentation dependencies
+        run: python -m pip install -r docs/requirements.txt
+      - name: Build the current Sphinx HTML site
+        run: |
+          python -m sphinx -b html -n -W --keep-going docs "${RUNNER_TEMP}/astroakd-html"
+          test -s "${RUNNER_TEMP}/astroakd-html/index.html"
+          touch "${RUNNER_TEMP}/astroakd-html/.nojekyll"
+      - name: Export GitHub wiki Markdown from the same source
+        run: python scripts/export_wiki.py --output "${RUNNER_TEMP}/astroakd-wiki-export"
+      - name: Mirror generated site into the root of gh-pages
+        run: bash scripts/publish_gh_pages.sh "${RUNNER_TEMP}/astroakd-html" "${RUNNER_TEMP}/astroakd-gh-pages"
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ runner.temp }}/astroakd-html
+      - name: Deploy live GitHub Pages site
+        id: pages
+        uses: actions/deploy-pages@v4
+      - name: Synchronize managed GitHub wiki pages
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          WIKI_TOKEN: ${{ secrets.WIKI_TOKEN }}
+        run: bash scripts/publish_wiki.sh "${RUNNER_TEMP}/astroakd-wiki-export" "${RUNNER_TEMP}/astroakd-wiki-clone"
