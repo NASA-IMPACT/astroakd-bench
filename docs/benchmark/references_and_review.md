@@ -68,8 +68,36 @@ The detailed commands `reference-review-draft` and `gold-finalize` remain availa
 
 `collect-multistep-references` executes only new saved read-only multi-archive steps; it does not repeat the 80 single-call references. Use `--limit 5` for a pilot, then `--resume`. Its per-task JSONL journal preserves evidence hashes, completed steps, exclusions and missing literature plans. Literature citations collected during synthetic question generation are not automatically a verified paper-to-observation reference answer. Run `score-reference-answers` separately after complete references have been collected; it never makes external calls.
 
-## Incomplete multi-step evidence and selective retry (0.6.7.11.12)
+## Multi-step evidence closure and literature draft report (0.6.7.11.12)
 
-Use `collect-multistep-references --resume --retry-incomplete --dry-run` to preview only incompletely collected archive steps. Then rerun the same command with `--timeout 900 --attempts 2` and without `--dry-run`. Completed steps are reused; the original journal is preserved once as `*_multistep_references_preretry.jsonl`. For more targeted diagnostics pass `--retry-task-ids` with comma-separated IDs. No 100-question generation, single-call reference collection or A/B/C agent reruns are required. VizieR results may contain a **list of tables**; the new collector validates each table and its exact requested columns. Incomplete, truncated, empty, or null-bearing results are not promoted to reference answers. Failure records include SHA-256 hashes and bounded schema diagnostics, not entire potentially large data payloads.
+**Current `astroakd_100_v2` state (2026-10-19):** 80/80 single-call reference responses and 12/12 multi-archive references are complete. The six VizieR `not_structured_table` failures were resolved using `--resume --retry-incomplete`; no VizieR retries remain necessary. The remaining eight literature questions have no verified publication--observation association. Consequently 92/100 benchmark questions have complete automated reference evidence.
 
-The `draft-literature-plans --name astroakd_100_v2 --output-dir datasets` command creates candidate target-resolution and observation-archive query templates without any external calls. It neither proves that the cited paper uses the returned observation nor invents a paper-ObsID association. The remaining literature tasks cannot be scored until the required association is independently confirmed. Existing `--literature-plans` accepts independently specified executable steps, but unverified literature associations remain excluded.
+For other incomplete studies, `collect-multistep-references --resume --retry-incomplete --dry-run` previews only incomplete tasks. Add `--timeout 900 --attempts 2`, remove `--dry-run`, and retry; completed archive steps are reused. The pre-retry journal is saved under `*_multistep_references_preretry.jsonl`. Do not use `--replace` for selective recovery. VizieR responses may be a **list of tables**; every selected table is checked for the requested fields, truncation, and completeness.
+
+### What `draft-literature-plans` actually produces
+
+Run offline only when you need to generate or deliberately regenerate candidate literature plans:
+
+```bash
+uv run python -m benchmark draft-literature-plans \
+  --name astroakd_100_v2 --output-dir datasets
+```
+
+The saved output `datasets/validated/astroakd_100_v2_literature_plan_drafts.jsonl` has **8 drafts**, summarized as `DRAFT_ONLY_NOT_REFERENCE`: **6 `DRAFT_UNVERIFIED`**, **2 `REQUIRES_TARGET_OR_ARCHIVE_RESOLUTION`**. This is a *drafting success*, **not** completion of eight literature references. The program makes no MCP, ADS, or OpenAI calls; `--replace` is needed only if you intentionally overwrite an existing draft output.
+
+| Draft status | Task IDs | Meaning |
+| --- | --- | --- |
+| `DRAFT_UNVERIFIED` | `00004` PG 1211+143 (HEASARC); `00016` Haro 11 (HEASARC); `00029` NGC 1068 (HEASARC); `00045` PG 1211+143 (MAST); `00069` NGC 5548 (MAST); `00074` NGC 3783 (HEASARC) | A bounded archive call template can be prepared once SIMBAD coordinates and archive parameters are verified; cited papers are only candidates |
+| `REQUIRES_TARGET_OR_ARCHIVE_RESOLUTION` | `00026` planetary nebulae in `2022MNRAS.514.1217D`; `00068` paper-identified tidal-disruption transient | The actual object/targets or query route must first be identified from the source literature |
+
+Inspect the records using the existing CLI:
+
+```bash
+uv run python -m benchmark inspect \
+  --input datasets/validated/astroakd_100_v2_literature_plan_drafts.jsonl \
+  --limit 8
+```
+
+**Do not supply these draft records directly to `collect-multistep-references --literature-plans`.** The drafts contain `params_template` placeholders and are expressly **not executable reference plans**. `--literature-plans` expects separately specified `steps` containing complete, independently supported, read-only archive calls and expected fields. Even successful archive retrieval is insufficient when the question requires an observation linked to a particular paper; that association must also be verified. No inferred ObsIDs, invented associations, or automatic promotion of ADS candidates to references are allowed.
+
+Once complete evidence exists, rerun the offline `score-reference-answers --name astroakd_100_v2 --output-dir datasets --replace` command. **Do not regenerate any synthetic questions or rerun the existing 300 A/B/C executions.** The current evidence-based score covers 92/100 questions, with all eight literature questions explicitly excluded.

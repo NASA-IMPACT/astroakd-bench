@@ -1,3 +1,9 @@
+## 0.6.7.11.12 — Documentation follow-up (2026-10-19; version unchanged)
+
+- Document successful live recovery of all six VizieR-containing multi-archive steps: 12/12 multi-archive references complete, 92/100 questions evaluable; all eight literature questions remain excluded.
+- Explain `draft-literature-plans` live-output terminology: `DRAFT_ONLY_NOT_REFERENCE` with six `DRAFT_UNVERIFIED` candidate templates and two unresolved target/route cases; drafts are not executable `--literature-plans` inputs or paper-linked observation references.
+- Update README and current Sphinx guides only. No generator, reference collector, scoring, prompts, CLI, frozen data, or agent behavior changed.
+
 ## 0.6.7.11.12 — MULTISTEP_REFERENCE_AND_SCORING_CLOSURE
 
 - Fix strict scoring false negatives from archive-labelled observation IDs, comma-separated ObsID lists, and mixed-field measurement unit metadata. Multi-archive comparison now preserves explicit archive/field provenance and duplicate multiplicity; ambiguous unlabeled values are not promoted to correct answers.

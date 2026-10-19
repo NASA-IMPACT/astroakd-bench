@@ -58,7 +58,7 @@ uv run --with openai python -m benchmark create-queries \
 
 **Reference-aware question generation (0.6.7.11.10).** With `--with-reference-answers`, the benchmark now prechecks candidate *archive calls before GPT authoring*. It tries bounded search radii (particularly for Gaia/MAST), verifies that the returned data are nonempty, untruncated, contain all requested fields without nulls, and fit **20 complete rows / 65,536 response bytes** by default. It may probe several candidate targets/radii; `--max-reference-rows 20 --max-reference-bytes 65536 --max-feasibility-probes 500` adjusts these limits. Candidate acceptance is independent of agent A/B/C performance. **No GPT question batches are requested unless the single-call candidate quota can be filled.** An exhausted archive is replaced by another feasible module, with the actual module balance recorded. If candidates or the probe budget run out, every completed feasibility probe and accepted slot is saved for `--resume`; a failed run is still not a completed dataset. Live success depends on the MCP server and archive content.
 
-After all slots are accepted, the finalized question-slot plan is saved with a SHA-256 checksum at `datasets/generated/astroakd_100_v2_feasibility_plan.json` for reproducible `--resume`. Accepted probes are **not gold answers**; the collector independently retrieves the 80 eligible single-call references. The remaining 8 literature and 12 multi-archive questions still need multi-step reference collection. This milestone **does not change A/B/C scoring**. To keep the original 100-question/300-run benchmark frozen, generate with **a new name** (`astroakd_100_v2`, not `astroakd_100`). Use `--no-reference-aware` only when you explicitly want the legacy, potentially large-result question policy.
+After all slots are accepted, the finalized question-slot plan is saved with a SHA-256 checksum at `datasets/generated/astroakd_100_v2_feasibility_plan.json` for reproducible `--resume`. Accepted probes are **not gold answers**; the collector independently retrieves the 80 eligible single-call references. At initial generation, the 8 literature and 12 multi-archive questions need separate multi-step reference evidence; in the current saved `astroakd_100_v2` study the 12 multi-archive references have since been completed, while the 8 literature questions remain unresolved (see below). The reference-aware *generation* milestone did not change A/B/C scoring. To keep the original 100-question/300-run benchmark frozen, generate with **a new name** (`astroakd_100_v2`, not `astroakd_100`). Use `--no-reference-aware` only when you explicitly want the legacy, potentially large-result question policy.
 
 `--name` sets the file prefix; `--count` selects 1–100 questions; `--output-dir` is the study root. The `--seed` option is optional (default `20261018`); fixed seeds do **not** guarantee byte-identical results from remote GPT models. To reproduce an evaluation, **reuse the saved JSONL**. New outputs create their own subdirectories; there is no need for manual `mkdir`.
 
@@ -280,11 +280,11 @@ report = bench.create_reference_report(name='astroakd_100_v2', output_dir='datas
 ```
 
 
-### Multi-step closure and selective VizieR retry (0.6.7.11.12)
+### Multi-step reference closure and literature plan drafting (0.6.7.11.12)
 
-**Do not regenerate the 100 questions or rerun the 300 A/B/C agent executions.** The existing `astroakd_100_v2` dataset has 80 complete single-call references and 20 completed *collection attempts*: 6 two-archive references complete, 6 VizieR-containing records incomplete, and 8 literature records without an independently verified paper-to-observation link.
+**Recorded `astroakd_100_v2` state (2026-10-19):** all 80 single-call references and all 12 two-archive multi-step references have been collected. The six VizieR steps that were previously incomplete succeeded when selectively retried; do **not** repeat that retry on the current complete journal. The remaining eight literature-driven questions lack independently established paper-to-observation associations, so **92/100 questions are evaluable**. Preserve the frozen questions, all saved archive evidence, and the original 300 A/B/C runs.
 
-Preview the six incomplete multi-archive queries **without making MCP or OpenAI calls**:
+For reference, if a *different* dataset contains incomplete multi-archive steps, preview the incomplete task IDs before any live calls:
 
 ```bash
 uv run python -m benchmark collect-multistep-references \
@@ -292,7 +292,7 @@ uv run python -m benchmark collect-multistep-references \
   --resume --retry-incomplete --dry-run
 ```
 
-Retry **only the missing VizieR steps**, with completed steps reused from the immutable journal:
+If the preview selects genuinely incomplete tasks, retry only those steps:
 
 ```bash
 uv run python -m benchmark collect-multistep-references \
@@ -300,27 +300,41 @@ uv run python -m benchmark collect-multistep-references \
   --timeout 900 --attempts 2 --resume --retry-incomplete
 ```
 
-Before any retry, the original journal is preserved as `datasets/validated/astroakd_100_v2_multistep_references_preretry.jsonl`; subsequent records include retry history, per-step provenance, SHA-256 response hashes and bounded schema diagnostics. You may additionally restrict the retry to specific IDs using `--retry-task-ids ASTROAKD-MIX-00032,ASTROAKD-MIX-00036`. Do **not** use `--replace`: it discards the existing multi-step journal.
+The collector reuses completed archive steps and retains the pre-retry journal at `datasets/validated/astroakd_100_v2_multistep_references_preretry.jsonl`. **Never use `--replace` to retry an incomplete journal.** The current study has no remaining incomplete two-archive steps.
 
-VizieR's MCP `result` is a **list of structured tables**, not necessarily one table dictionary. The corrected collector supports both forms, with table-specific fields, preserved table indices, strict completeness checks, and no silent truncation. A retried task is scored only if all required archive steps contain complete evidence.
+#### Literature drafts: 6 bounded templates; 2 unresolved targets
 
-Automatically generate bounded, non-executable **literature query-plan drafts** using existing saved target names, candidate bibcodes and requested archive types:
+The following **offline** command has already completed for the current study:
 
 ```bash
 uv run python -m benchmark draft-literature-plans \
-  --name astroakd_100_v2 --output-dir datasets
+  --name astroakd_100_v2 \
+  --output-dir datasets
 ```
 
-This command does not query MCP, ADS or OpenAI. It saves SIMBAD target-resolution calls and dependent bounded archive-query templates for resolvable targets, but **never invents paper--observation associations or ObsIDs**. The eight literature questions remain unscorable until independent paper-linked evidence is available. If you supply independent executable plans using `--literature-plans`, the collector records observation evidence but still does **not** treat unverified publication associations as complete.
+It returned `status: DRAFT_ONLY_NOT_REFERENCE`, `total: 8`, `draft_ready: 6`, and `requires_resolution: 2`. The output is `datasets/validated/astroakd_100_v2_literature_plan_drafts.jsonl` (eight records). Here `draft_ready` means **a candidate target-resolution call and a bounded archive-query template can be drafted**, *not* that the plan is executable, the publication--observation link is verified, or a reference answer is available.
 
-Recompute only the scores and plots after reference retries:
+- **Six `DRAFT_UNVERIFIED` templates:** `00004` (PG 1211+143 / HEASARC), `00016` (Haro 11 / HEASARC), `00029` (NGC 1068 / HEASARC), `00045` (PG 1211+143 / MAST), `00069` (NGC 5548 / MAST), and `00074` (NGC 3783 / HEASARC).
+- **Two `REQUIRES_TARGET_OR_ARCHIVE_RESOLUTION` records:** `00026` (planetary nebulae referenced by `2022MNRAS.514.1217D`) and `00068` (a tidal-disruption transient identified by a paper). Their targets must be established from the literature before archive calls can be finalized.
+
+Inspect the saved drafts without querying archives or spending OpenAI tokens:
+
+```bash
+uv run python -m benchmark inspect \
+  --input datasets/validated/astroakd_100_v2_literature_plan_drafts.jsonl \
+  --limit 8
+```
+
+**Do not pass the draft JSONL directly to `collect-multistep-references --literature-plans`.** That option expects separately validated **executable** `steps` with actual archive parameters and expected columns, not the drafts' placeholder `params_template`. A valid literature reference also needs independent evidence that the cited paper is associated with the claimed observation(s); an ADS candidate bibcode is not sufficient. These eight tasks remain excluded until both the archive evidence and the paper--observation association are supported. Re-running the draft command on the existing output requires `--replace`, but will not itself resolve these gaps.
+
+Recalculate the **offline** A/B/C scores after any newly completed reference evidence (no agent reruns):
 
 ```bash
 uv run --with matplotlib python -m benchmark score-reference-answers \
   --name astroakd_100_v2 --output-dir datasets --replace
 ```
 
-The new comparator preserves archive/field labels and repeated values, parses explicitly labelled ObsIDs and mixed-field unit descriptions, and does not silently assign ambiguous values across archives. Before further live reference collection, the frozen dataset has 86 evaluable questions: A 85/86 (98.84%), B 85/86 (98.84%), C 13/86 (15.12%) automated archive-reference agreement. One MAST task remains partially correct under strict observation-level multiplicity. These are **not independently adjudicated scientific accuracy** and can change if more complete evidence is collected.
+For the saved 92-question evidence set, strict automated archive-reference agreement is A **87/92 (94.57%)**, B **88/92 (95.65%)**, C **13/92 (14.13%)**, excluding all eight literature tasks. This is *not independently adjudicated scientific accuracy*.
 
 ### Automated archive-reference answer scoring (0.6.7.11.12)
 
@@ -334,7 +348,7 @@ uv run --with matplotlib python -m benchmark score-reference-answers \
 
 Use `--replace` to regenerate only the scoring reports. This writes `datasets/reports/astroakd_100_v2/automated/` including `match_rate.png`, `accuracy_by_archive.png`, `accuracy_by_question_type.png`, their SVG versions, `automated_scores_per_question.csv`, `accuracy_breakdown.csv`, and `automated_scoring_summary.json`. `agent-report` will also generate these plots alongside operational metrics in its `agents/` directory. These are **automated agreement with retrieved archive reference values**; no independently adjudicated scientific gold is claimed. Excluded or incomplete reference tasks are never counted as correct or incorrect.
 
-The new comparator handles measurement tolerances, coordinate pairs, full lists with repeated entries, and per-row vector fields; it reports correct/partial/incorrect/abstained/failed separately. For the frozen `astroakd_100_v2` dataset, 80 single-call references plus 6 complete two-archive references are available. The remaining 14 include 6 retryable VizieR steps and 8 literature tasks requiring independent paper-observation evidence. Collect *only* those additional references:
+The new comparator handles measurement tolerances, coordinate pairs, full lists with repeated entries, and per-row vector fields; it reports correct/partial/incorrect/abstained/failed separately. In the latest `astroakd_100_v2` evidence set, **80 single-call references plus 12 complete two-archive references** are available. All six formerly incomplete VizieR steps have been recovered; **only eight literature questions remain without independently established reference answers**. The commands below document initial collection for *new* studies; do not repeat them for this completed multi-archive journal:
 
 ```bash
 uv run python -m benchmark collect-multistep-references \
@@ -351,7 +365,7 @@ uv run python -m benchmark collect-multistep-references \
   --resume
 ```
 
-Multi-archive questions have two query plans saved with the generated tasks. Literature questions typically contain ADS candidate citations, **not complete observation-query plans or verified links between publications and observations**. Those questions are explicitly marked `needs_independent_archive_query_plan`; an optional `--literature-plans` JSONL of independently specified read-only archive steps can add observational evidence, but paper-to-observation associations still need independent verification before they can be scored. Review `datasets/validated/astroakd_100_v2_multistep_references.jsonl` and the audit report before interpreting changes in coverage. The command never touches the prior 80 reference records.
+Multi-archive questions have two query plans saved with the generated tasks. All 12 currently have complete archive evidence. Literature questions typically contain ADS candidate citations, **not complete observation-query plans or verified links between publications and observations**. Those eight questions are still marked `needs_independent_archive_query_plan`; the separate `draft-literature-plans` command produces templates only, as explained above. An optional `--literature-plans` JSONL of independently specified read-only **executable** steps can add observational evidence, but paper-to-observation associations still need independent verification before those tasks can be scored. Review `datasets/validated/astroakd_100_v2_multistep_references.jsonl` and the audit report before interpreting changes in coverage. The collector never touches the prior 80 reference records.
 
 After collecting new independent evidence, rerun `score-reference-answers --replace`. To evaluate the changed-budget two-run retry journal, pass `--runs datasets/agent/astroakd_100_v2_ABC_runs_turn16_diagnostic.jsonl`; its plots are kept under `automated_diagnostic/`, separate from the baseline results.
 

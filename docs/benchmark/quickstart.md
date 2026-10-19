@@ -96,6 +96,17 @@ evidence. See [reference collection and reports](references_and_review.md).
 
 `--seed` is optional, defaulting to `20261018`, and does not guarantee identical responses from GPT-5.2. Preserve the generated JSONL for reproducibility.
 
+## Current v2 reference coverage and literature drafts (2026-10-19)
+
+The current saved `astroakd_100_v2` dataset contains 80 complete single-call references and 12 complete two-archive references. The recovered VizieR steps need no further retries; eight literature questions still lack verified paper-linked observation evidence. The offline scorer evaluates **92/100** questions. The literature draft command
+
+```bash
+uv run python -m benchmark draft-literature-plans \
+  --name astroakd_100_v2 --output-dir datasets
+```
+
+has already produced `datasets/validated/astroakd_100_v2_literature_plan_drafts.jsonl` with `DRAFT_ONLY_NOT_REFERENCE`: six unverified candidate templates and two requiring target/archive resolution. **These drafts are not runnable `--literature-plans` input and are not reference answers.** Read [Reference collection and scientific review](references_and_review.md) before preparing independently verifiable literature-observation plans. No question regeneration or A/B/C reruns are necessary.
+
 ## What is measured?
 
 A is MCP only, B is MCP with the AstroAKD specialist instruction, and C is Web only. One hundred questions create up to 300 agent runs. **Completion, time and tool metrics are not scientific correctness.** Scientific accuracy requires independently verified gold answers.
