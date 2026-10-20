@@ -1,0 +1,231 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reference collection and scientific review &mdash; AstroAKD-Bench 0.6.7.11.13</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=d1655f8a"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Question-aware automatic reference-answer scoring (0.6.7.11.12)" href="evaluation_and_plots.html" />
+    <link rel="prev" title="ADS and MCP connectivity" href="ads_and_mcp.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            AstroAKD-Bench
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="create_queries.html">Create synthetic astronomical questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ads_and_mcp.html">ADS and MCP connectivity</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Reference collection and scientific review</a></li>
+<li class="toctree-l1"><a class="reference internal" href="evaluation_and_plots.html">Question-aware automatic reference-answer scoring (0.6.7.11.12)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="evaluation_and_plots.html#run-and-report-the-a-b-c-benchmark">Run and report the A/B/C benchmark</a></li>
+<li class="toctree-l1"><a class="reference internal" href="python_api.html">Python API</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="documentation_build.html">Build and publish the current documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">AstroAKD-Bench</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Reference collection and scientific review</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="reference-collection-and-scientific-review">
+<h1>Reference collection and scientific review<a class="headerlink" href="#reference-collection-and-scientific-review" title="Link to this heading"></a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">create-queries</span> <span class="pre">--with-reference-answers</span></code> collects <em>reference observations</em>,
+not independently verified gold answers. If question generation succeeded but
+reference collection did not finish (or you intentionally generated only
+questions), reuse the saved question files. Do <strong>not</strong> rerun OpenAI generation:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>collect-references<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>astroakd_100_v2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--output-dir<span class="w"> </span>datasets<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--timeout<span class="w"> </span><span class="m">900</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--archive-timeouts<span class="w"> </span><span class="nv">mast</span><span class="o">=</span><span class="m">900</span>,simbad<span class="o">=</span><span class="m">180</span>,heasarc<span class="o">=</span><span class="m">900</span>,gaia<span class="o">=</span><span class="m">900</span>,vizier<span class="o">=</span><span class="m">300</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--archive-attempts<span class="w"> </span><span class="nv">mast</span><span class="o">=</span><span class="m">2</span>,simbad<span class="o">=</span><span class="m">1</span>,heasarc<span class="o">=</span><span class="m">2</span>,gaia<span class="o">=</span><span class="m">2</span>,vizier<span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--reference-deadline<span class="w"> </span><span class="m">2100</span>
+</pre></div>
+</div>
+<p>This command is available natively in 0.6.7.11.10; <code class="docutils literal notranslate"><span class="pre">--timeout</span></code> applies to
+MCP operations, while <code class="docutils literal notranslate"><span class="pre">--archive-timeouts</span></code>, <code class="docutils literal notranslate"><span class="pre">--archive-attempts</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">--reference-deadline</span></code> provide the specific collection policy. For an
+interrupted collection append <code class="docutils literal notranslate"><span class="pre">--resume</span></code>; omit <code class="docutils literal notranslate"><span class="pre">--resume</span></code> on a first attempt.
+For a pilot you can use <code class="docutils literal notranslate"><span class="pre">--limit</span> <span class="pre">5</span></code> and subsequently resume. The reference
+journal and output are under <code class="docutils literal notranslate"><span class="pre">datasets/validated/</span></code>. When all 80/80 references
+have already been collected, do not call the collector again.</p>
+<section id="completeness-reports-and-plots">
+<h2>Completeness reports and plots<a class="headerlink" href="#completeness-reports-and-plots" title="Link to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>--with<span class="w"> </span>matplotlib<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>reference-report<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>astroakd_100_v2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--output-dir<span class="w"> </span>datasets
+</pre></div>
+</div>
+<p>Outputs appear in <code class="docutils literal notranslate"><span class="pre">datasets/reports/astroakd_100_v2/references/</span></code>. This is <strong>reference evidence reporting</strong>, not an agent A/B/C comparison. Run the command <strong>after</strong> <code class="docutils literal notranslate"><span class="pre">create-queries</span> <span class="pre">--with-reference-answers</span></code> or <code class="docutils literal notranslate"><span class="pre">collect-references</span></code>; it never runs GPT or makes MCP calls. It can also report on incomplete evidence, with pending multi-step tasks clearly labeled.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>File</p></th>
+<th class="head"><p>Contents</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">reference_summary.json</span></code>, <code class="docutils literal notranslate"><span class="pre">reference_questions.csv</span></code>, <code class="docutils literal notranslate"><span class="pre">reference_archives.csv</span></code></p></td>
+<td><p>Task and archive summaries, including pending/unreviewed status</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">questions_by_archive.png</span></code>, <code class="docutils literal notranslate"><span class="pre">answer_shapes.png</span></code>, <code class="docutils literal notranslate"><span class="pre">reference_dispositions.png</span></code></p></td>
+<td><p>Distribution of questions, answer shapes and collection status</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">review_flags.png</span></code>, <code class="docutils literal notranslate"><span class="pre">truncation_null_by_archive.png</span></code></p></td>
+<td><p>Scientific review, truncation and null-measurement flags</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">response_times.png</span></code>, <code class="docutils literal notranslate"><span class="pre">response_time_distribution.png</span></code></p></td>
+<td><p>Median per-archive runtime and observed runtime distribution</p></td>
+</tr>
+</tbody>
+</table>
+<p>All plots also have SVG versions. <strong>Archives with no recorded response times are omitted only from the median-runtime plot</strong>, not from the question counts or pending status. This avoids calculating a median from empty data when multi-step reference collection is outstanding.</p>
+<p>If a prior attempt produced only some report files, rerun with <code class="docutils literal notranslate"><span class="pre">--replace</span></code> (reports/plots only; <strong>not</strong> the original questions/references):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>--with<span class="w"> </span>matplotlib<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>reference-report<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>astroakd_100_v2<span class="w"> </span>--output-dir<span class="w"> </span>datasets<span class="w"> </span>--replace
+</pre></div>
+</div>
+<p>For CSV/JSON summaries without figures or matplotlib, run <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">run</span> <span class="pre">python</span> <span class="pre">-m</span> <span class="pre">benchmark</span> <span class="pre">reference-report</span> <span class="pre">--name</span> <span class="pre">astroakd_100_v2</span> <span class="pre">--output-dir</span> <span class="pre">datasets</span> <span class="pre">--no-plots</span> <span class="pre">--replace</span></code>. For A/B/C runtime and token comparisons see <a class="reference internal" href="evaluation_and_plots.html"><span class="std std-doc">A/B/C evaluation and plots</span></a>.</p>
+</section>
+<section id="review-before-scoring">
+<h2>Review before scoring<a class="headerlink" href="#review-before-scoring" title="Link to this heading"></a></h2>
+<p>Archive observations are <strong>unreviewed evidence</strong>. Multiple matching rows, truncation, units, coordinates and ambiguous cross-identifications need scientific review. Literature and multi-archive tasks in a mixed set require separate multi-step evidence collection and cannot be considered complete gold through the single-call collector. A <code class="docutils literal notranslate"><span class="pre">status:</span> <span class="pre">REVIEW</span></code> report does not mean the
+80 single-call references failed: 80 nonempty records may be collected while
+20 literature/multi-archive questions still require separate multi-step
+evidence and the references remain unreviewed.</p>
+<p>The detailed commands <code class="docutils literal notranslate"><span class="pre">reference-review-draft</span></code> and <code class="docutils literal notranslate"><span class="pre">gold-finalize</span></code> remain available for explicitly reviewed single-call datasets. Do not promote generated questions or raw archive values to scientifically verified gold automatically.</p>
+</section>
+<section id="feasibility-gate-versus-collected-references">
+<h2>Feasibility gate versus collected references<a class="headerlink" href="#feasibility-gate-versus-collected-references" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">create-queries</span> <span class="pre">--with-reference-answers</span></code> in 0.6.7.11.10 first checks that each <em>proposed core query</em> returns bounded, nonempty, untruncated MCP evidence, including required answer columns and no null values. The precheck’s source-response SHA-256 is retained in the question provenance and the selected plan is saved. The independent <code class="docutils literal notranslate"><span class="pre">collect-references</span></code> step later reexecutes those exact frozen calls; archives can change between calls, so precheck acceptance does <strong>not</strong> guarantee subsequent collection succeeds. All final reference dispositions and coverage/exclusion reasons must be reported. Literature/ADS and multi-archive tasks still need separate multi-step evidence. See <a class="reference internal" href="create_queries.html"><span class="std std-doc">Creating questions</span></a>.</p>
+</section>
+<section id="independent-multi-step-evidence-0-6-7-11-11">
+<h2>Independent multi-step evidence (0.6.7.11.11)<a class="headerlink" href="#independent-multi-step-evidence-0-6-7-11-11" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">collect-multistep-references</span></code> executes only new saved read-only multi-archive steps; it does not repeat the 80 single-call references. Use <code class="docutils literal notranslate"><span class="pre">--limit</span> <span class="pre">5</span></code> for a pilot, then <code class="docutils literal notranslate"><span class="pre">--resume</span></code>. Its per-task JSONL journal preserves evidence hashes, completed steps, exclusions and missing literature plans. Literature citations collected during synthetic question generation are not automatically a verified paper-to-observation reference answer. Run <code class="docutils literal notranslate"><span class="pre">score-reference-answers</span></code> separately after complete references have been collected; it never makes external calls.</p>
+</section>
+<section id="multi-step-evidence-closure-and-literature-draft-report-0-6-7-11-12">
+<h2>Multi-step evidence closure and literature draft report (0.6.7.11.12)<a class="headerlink" href="#multi-step-evidence-closure-and-literature-draft-report-0-6-7-11-12" title="Link to this heading"></a></h2>
+<p><strong>Current <code class="docutils literal notranslate"><span class="pre">astroakd_100_v2</span></code> state (2026-10-19):</strong> 80/80 single-call reference responses and 12/12 multi-archive references are complete. The six VizieR <code class="docutils literal notranslate"><span class="pre">not_structured_table</span></code> failures were resolved using <code class="docutils literal notranslate"><span class="pre">--resume</span> <span class="pre">--retry-incomplete</span></code>; no VizieR retries remain necessary. The remaining eight literature questions have no verified publication–observation association. Consequently 92/100 benchmark questions have complete automated reference evidence.</p>
+<p>For other incomplete studies, <code class="docutils literal notranslate"><span class="pre">collect-multistep-references</span> <span class="pre">--resume</span> <span class="pre">--retry-incomplete</span> <span class="pre">--dry-run</span></code> previews only incomplete tasks. Add <code class="docutils literal notranslate"><span class="pre">--timeout</span> <span class="pre">900</span> <span class="pre">--attempts</span> <span class="pre">2</span></code>, remove <code class="docutils literal notranslate"><span class="pre">--dry-run</span></code>, and retry; completed archive steps are reused. The pre-retry journal is saved under <code class="docutils literal notranslate"><span class="pre">*_multistep_references_preretry.jsonl</span></code>. Do not use <code class="docutils literal notranslate"><span class="pre">--replace</span></code> for selective recovery. VizieR responses may be a <strong>list of tables</strong>; every selected table is checked for the requested fields, truncation, and completeness.</p>
+<section id="what-draft-literature-plans-actually-produces">
+<h3>What <code class="docutils literal notranslate"><span class="pre">draft-literature-plans</span></code> actually produces<a class="headerlink" href="#what-draft-literature-plans-actually-produces" title="Link to this heading"></a></h3>
+<p>Run offline only when you need to generate or deliberately regenerate candidate literature plans:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>draft-literature-plans<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>astroakd_100_v2<span class="w"> </span>--output-dir<span class="w"> </span>datasets
+</pre></div>
+</div>
+<p>The saved output <code class="docutils literal notranslate"><span class="pre">datasets/validated/astroakd_100_v2_literature_plan_drafts.jsonl</span></code> has <strong>8 drafts</strong>, summarized as <code class="docutils literal notranslate"><span class="pre">DRAFT_ONLY_NOT_REFERENCE</span></code>: <strong>6 <code class="docutils literal notranslate"><span class="pre">DRAFT_UNVERIFIED</span></code></strong>, <strong>2 <code class="docutils literal notranslate"><span class="pre">REQUIRES_TARGET_OR_ARCHIVE_RESOLUTION</span></code></strong>. This is a <em>drafting success</em>, <strong>not</strong> completion of eight literature references. The program makes no MCP, ADS, or OpenAI calls; <code class="docutils literal notranslate"><span class="pre">--replace</span></code> is needed only if you intentionally overwrite an existing draft output.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Draft status</p></th>
+<th class="head"><p>Task IDs</p></th>
+<th class="head"><p>Meaning</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">DRAFT_UNVERIFIED</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">00004</span></code> PG 1211+143 (HEASARC); <code class="docutils literal notranslate"><span class="pre">00016</span></code> Haro 11 (HEASARC); <code class="docutils literal notranslate"><span class="pre">00029</span></code> NGC 1068 (HEASARC); <code class="docutils literal notranslate"><span class="pre">00045</span></code> PG 1211+143 (MAST); <code class="docutils literal notranslate"><span class="pre">00069</span></code> NGC 5548 (MAST); <code class="docutils literal notranslate"><span class="pre">00074</span></code> NGC 3783 (HEASARC)</p></td>
+<td><p>A bounded archive call template can be prepared once SIMBAD coordinates and archive parameters are verified; cited papers are only candidates</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">REQUIRES_TARGET_OR_ARCHIVE_RESOLUTION</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">00026</span></code> planetary nebulae in <code class="docutils literal notranslate"><span class="pre">2022MNRAS.514.1217D</span></code>; <code class="docutils literal notranslate"><span class="pre">00068</span></code> paper-identified tidal-disruption transient</p></td>
+<td><p>The actual object/targets or query route must first be identified from the source literature</p></td>
+</tr>
+</tbody>
+</table>
+<p>Inspect the records using the existing CLI:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>inspect<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--input<span class="w"> </span>datasets/validated/astroakd_100_v2_literature_plan_drafts.jsonl<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--limit<span class="w"> </span><span class="m">8</span>
+</pre></div>
+</div>
+<p><strong>Do not supply these draft records directly to <code class="docutils literal notranslate"><span class="pre">collect-multistep-references</span> <span class="pre">--literature-plans</span></code>.</strong> The drafts contain <code class="docutils literal notranslate"><span class="pre">params_template</span></code> placeholders and are expressly <strong>not executable reference plans</strong>. <code class="docutils literal notranslate"><span class="pre">--literature-plans</span></code> expects separately specified <code class="docutils literal notranslate"><span class="pre">steps</span></code> containing complete, independently supported, read-only archive calls and expected fields. Even successful archive retrieval is insufficient when the question requires an observation linked to a particular paper; that association must also be verified. No inferred ObsIDs, invented associations, or automatic promotion of ADS candidates to references are allowed.</p>
+<p>Once complete evidence exists, rerun the offline <code class="docutils literal notranslate"><span class="pre">score-reference-answers</span> <span class="pre">--name</span> <span class="pre">astroakd_100_v2</span> <span class="pre">--output-dir</span> <span class="pre">datasets</span> <span class="pre">--replace</span></code> command. <strong>Do not regenerate any synthetic questions or rerun the existing 300 A/B/C executions.</strong> The current evidence-based score covers 92/100 questions, with all eight literature questions explicitly excluded.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="ads_and_mcp.html" class="btn btn-neutral float-left" title="ADS and MCP connectivity" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="evaluation_and_plots.html" class="btn btn-neutral float-right" title="Question-aware automatic reference-answer scoring (0.6.7.11.12)" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

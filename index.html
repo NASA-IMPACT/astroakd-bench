@@ -1,0 +1,175 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AstroAKD-Bench &mdash; AstroAKD-Bench 0.6.7.11.13</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=d1655f8a"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Getting started" href="benchmark/quickstart.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="#" class="icon icon-home">
+            AstroAKD-Bench
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="benchmark/quickstart.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="benchmark/create_queries.html">Create synthetic astronomical questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="benchmark/ads_and_mcp.html">ADS and MCP connectivity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="benchmark/references_and_review.html">Reference collection and scientific review</a></li>
+<li class="toctree-l1"><a class="reference internal" href="benchmark/evaluation_and_plots.html">Question-aware automatic reference-answer scoring (0.6.7.11.12)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="benchmark/evaluation_and_plots.html#run-and-report-the-a-b-c-benchmark">Run and report the A/B/C benchmark</a></li>
+<li class="toctree-l1"><a class="reference internal" href="benchmark/python_api.html">Python API</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="benchmark/documentation_build.html">Build and publish the current documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">AstroAKD-Bench</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">AstroAKD-Bench</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="astroakd-bench">
+<h1>AstroAKD-Bench<a class="headerlink" href="#astroakd-bench" title="Link to this heading"></a></h1>
+<p><strong>Current documentation</strong> for generating astronomy-search benchmark questions, collecting observable archive evidence, and evaluating AstroAKD across three agent configurations.</p>
+<p>Start with <a class="reference internal" href="benchmark/quickstart.html"><span class="std std-doc">Getting started</span></a>, including full installation of the external Astroquery MCP server. The independent <a class="reference external" href="https://github.com/NASA-IMPACT/astroquery-mcp">Astroquery MCP server</a> provides the archive tools; an ADS token must be configured <strong>on that server</strong> if you require literature evidence.</p>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="benchmark/quickstart.html">Getting started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="benchmark/quickstart.html#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark/quickstart.html#install-the-external-astroquery-mcp-server-terminal-1">Install the external Astroquery MCP server (Terminal 1)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark/quickstart.html#install-and-check-astroakd-bench-terminal-2">Install and check AstroAKD-Bench (Terminal 2)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark/quickstart.html#recommended-100-question-workflow">Recommended 100-question workflow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark/quickstart.html#current-v2-reference-coverage-and-literature-drafts-2026-10-19">Current v2 reference coverage and literature drafts (2026-10-19)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark/quickstart.html#what-is-measured">What is measured?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark/quickstart.html#match-rate-figure-and-selective-mcp-only-retry">Match-rate figure and selective MCP-only retry</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark/quickstart.html#new-generation-policy">New generation policy</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="benchmark/create_queries.html">Create synthetic astronomical questions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="benchmark/create_queries.html#keep-paid-gpt-batches-after-a-failure">Keep paid GPT batches after a failure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark/create_queries.html#long-reference-timeouts-in-a-single-command">Long reference timeouts in a single command</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark/create_queries.html#reference-aware-synthetic-questions-0-6-7-11-10">Reference-aware synthetic questions (0.6.7.11.10)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark/create_queries.html#durable-archive-feasibility-progress-and-fallback-0-6-7-11-10">Durable archive feasibility progress and fallback (0.6.7.11.10)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="benchmark/ads_and_mcp.html">ADS and MCP connectivity</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="benchmark/ads_and_mcp.html#install-and-start-the-local-mcp-service">Install and start the local MCP service</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark/ads_and_mcp.html#check-before-generation">Check before generation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark/ads_and_mcp.html#required-vs-optional-ads">Required vs optional ADS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark/ads_and_mcp.html#mcp-endpoint">MCP endpoint</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="benchmark/references_and_review.html">Reference collection and scientific review</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="benchmark/references_and_review.html#completeness-reports-and-plots">Completeness reports and plots</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark/references_and_review.html#review-before-scoring">Review before scoring</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark/references_and_review.html#feasibility-gate-versus-collected-references">Feasibility gate versus collected references</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark/references_and_review.html#independent-multi-step-evidence-0-6-7-11-11">Independent multi-step evidence (0.6.7.11.11)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark/references_and_review.html#multi-step-evidence-closure-and-literature-draft-report-0-6-7-11-12">Multi-step evidence closure and literature draft report (0.6.7.11.12)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="benchmark/evaluation_and_plots.html">Question-aware automatic reference-answer scoring (0.6.7.11.12)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="benchmark/evaluation_and_plots.html#run-and-report-the-a-b-c-benchmark">Run and report the A/B/C benchmark</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="benchmark/evaluation_and_plots.html#offline-reports-and-figures">Offline reports and figures</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark/evaluation_and_plots.html#multi-archive-scoring-closure-in-0-6-7-11-12">Multi-archive scoring closure in 0.6.7.11.12</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="benchmark/python_api.html">Python API</a></li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="benchmark/documentation_build.html">Build and publish the current documentation</a></li>
+</ul>
+</div>
+<section id="what-the-results-mean">
+<h2>What the results mean<a class="headerlink" href="#what-the-results-mean" title="Link to this heading"></a></h2>
+<p><strong>Archive observations are unreviewed evidence, not automatically verified scientific answers.</strong> A/B/C completion and tool-use plots measure agent behavior; independently reviewed gold references are required to report scientific accuracy.</p>
+<p>The README and <code class="docutils literal notranslate"><span class="pre">CHANGELOG.md</span></code> cover the current interface and release changes. Historical version-specific documentation is intentionally excluded from the HTML site and preserved separately as archival evidence.</p>
+<p>Frozen prompts: <code class="docutils literal notranslate"><span class="pre">instructions/astroakd/AstroAKD_Instruction.md</span></code> (arm B) and <code class="docutils literal notranslate"><span class="pre">instructions/astroakd_bench/AstroAKD-Bench_Instruction.md</span></code> (generation only).</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="benchmark/quickstart.html" class="btn btn-neutral float-right" title="Getting started" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

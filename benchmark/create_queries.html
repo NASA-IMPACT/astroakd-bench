@@ -1,0 +1,220 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create synthetic astronomical questions &mdash; AstroAKD-Bench 0.6.7.11.13</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=d1655f8a"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="ADS and MCP connectivity" href="ads_and_mcp.html" />
+    <link rel="prev" title="Getting started" href="quickstart.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            AstroAKD-Bench
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Getting started</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Create synthetic astronomical questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ads_and_mcp.html">ADS and MCP connectivity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references_and_review.html">Reference collection and scientific review</a></li>
+<li class="toctree-l1"><a class="reference internal" href="evaluation_and_plots.html">Question-aware automatic reference-answer scoring (0.6.7.11.12)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="evaluation_and_plots.html#run-and-report-the-a-b-c-benchmark">Run and report the A/B/C benchmark</a></li>
+<li class="toctree-l1"><a class="reference internal" href="python_api.html">Python API</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="documentation_build.html">Build and publish the current documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">AstroAKD-Bench</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Create synthetic astronomical questions</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="create-synthetic-astronomical-questions">
+<h1>Create synthetic astronomical questions<a class="headerlink" href="#create-synthetic-astronomical-questions" title="Link to this heading"></a></h1>
+<p>The short command is <code class="docutils literal notranslate"><span class="pre">create-queries</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>--with<span class="w"> </span>openai<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>create-queries<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>astroakd_100_v2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--count<span class="w"> </span><span class="m">100</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--output-dir<span class="w"> </span>datasets<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--require-ads<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--with-reference-answers
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">--name</span></code> is the filename prefix; <code class="docutils literal notranslate"><span class="pre">--count</span></code> controls the number of questions (1–100 with the built-in curated target pool); <code class="docutils literal notranslate"><span class="pre">--output-dir</span></code> is the <strong>study root</strong>, not a JSONL filename. Default seed is <code class="docutils literal notranslate"><span class="pre">20261018</span></code>; you can override it with <code class="docutils literal notranslate"><span class="pre">--seed</span> <span class="pre">42</span></code>.</p>
+<p>The balanced 100-question set has 60 single-archive, 20 coordinate-driven, 8 literature/ADS, and 12 multi-archive questions. For other counts, the mixture scales. For custom quotas use <code class="docutils literal notranslate"><span class="pre">--mix</span> <span class="pre">archive_driven=60,coordinate_driven=20,literature_driven=8,multi_archive=12</span></code> with matching <code class="docutils literal notranslate"><span class="pre">--count</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">--require-ads</span></code> checks ADS authentication and probes <strong>the actual planned literature queries</strong>, not only a generic authentication bibcode. It tries conservative target-based query formulations with compact ADS requests and reports safe HTTP/transport failure categories. Diagnose a particular failure using <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">run</span> <span class="pre">python</span> <span class="pre">-m</span> <span class="pre">benchmark</span> <span class="pre">literature-auth</span> <span class="pre">--probe</span> <span class="pre">--query</span> <span class="pre">'PG</span> <span class="pre">1211+143'</span></code>. A generic ADS bibcode success alone cannot qualify general literature search. If ADS research remains unavailable, generation stops <strong>before OpenAI question authoring</strong>. Without <code class="docutils literal notranslate"><span class="pre">--require-ads</span></code>, literature research can use the explicitly labeled web fallback. For server configuration see <a class="reference internal" href="ads_and_mcp.html"><span class="std std-doc">ADS and MCP</span></a>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">--with-reference-answers</span></code> collects unreviewed archive observations for the 80 single-call questions <strong>after questions are generated</strong>. Literature and multi-archive questions remain pending multi-step reference collection, not automatically solved. For a bounded pilot add <code class="docutils literal notranslate"><span class="pre">--reference-limit</span> <span class="pre">5</span></code>, then finish with <code class="docutils literal notranslate"><span class="pre">collect-references</span> <span class="pre">--name</span> <span class="pre">astroakd_100_v2</span> <span class="pre">--output-dir</span> <span class="pre">datasets</span> <span class="pre">--resume</span></code> without regenerating.</p>
+<p>You may omit <code class="docutils literal notranslate"><span class="pre">--with-reference-answers</span></code> to generate questions only. Outputs are created under <code class="docutils literal notranslate"><span class="pre">datasets/generated/</span></code>: <code class="docutils literal notranslate"><span class="pre">astroakd_100_v2.jsonl</span></code>, <code class="docutils literal notranslate"><span class="pre">.csv</span></code>, <code class="docutils literal notranslate"><span class="pre">_single_call.jsonl</span></code>, <code class="docutils literal notranslate"><span class="pre">_multistep.jsonl</span></code>, and <code class="docutils literal notranslate"><span class="pre">_generation_report.json</span></code>. Reference observations, if requested, are under <code class="docutils literal notranslate"><span class="pre">datasets/validated/</span></code>.</p>
+<p>Do <strong>not</strong> use <code class="docutils literal notranslate"><span class="pre">--replace</span></code> on a frozen experiment. Use a fresh name or directory for a new independent dataset.</p>
+<section id="keep-paid-gpt-batches-after-a-failure">
+<h2>Keep paid GPT batches after a failure<a class="headerlink" href="#keep-paid-gpt-batches-after-a-failure" title="Link to this heading"></a></h2>
+<p>After every successful OpenAI batch, <code class="docutils literal notranslate"><span class="pre">create-queries</span></code> writes two recoverable artifacts:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">datasets/generated/&lt;name&gt;.progress.jsonl</span></code>: checksum-verified progress journal with validated question batches and completed literature questions</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">datasets/generated/&lt;name&gt;_partial.jsonl</span></code>: inspectable but <strong>unvalidated</strong> questions; not a complete benchmark dataset, and never gold</p></li>
+</ul>
+<p>If generation is interrupted, diagnose the failure and repeat your original command <strong>with <code class="docutils literal notranslate"><span class="pre">--resume</span></code></strong>. The journal verifies your name, count, model, seed, mix, module list, batch size, ADS policy and MCP endpoint before reusing completed batches. A new run without <code class="docutils literal notranslate"><span class="pre">--resume</span></code> refuses to overwrite incomplete work. Do not use <code class="docutils literal notranslate"><span class="pre">--replace</span></code> to recover paid batches.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>--with<span class="w"> </span>openai<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>create-queries<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>astroakd_100_v2<span class="w"> </span>--count<span class="w"> </span><span class="m">100</span><span class="w"> </span>--output-dir<span class="w"> </span>datasets<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--require-ads<span class="w"> </span>--with-reference-answers<span class="w"> </span>--resume
+</pre></div>
+</div>
+<p>The finished JSONL/CSV and generation report are published only after all question families pass their checks. Successful publication removes both checkpoint files. Archive-reference interruptions occur <strong>after</strong> candidate publication; resume those using <code class="docutils literal notranslate"><span class="pre">collect-references</span> <span class="pre">--resume</span></code> instead.</p>
+</section>
+<section id="long-reference-timeouts-in-a-single-command">
+<h2>Long reference timeouts in a single command<a class="headerlink" href="#long-reference-timeouts-in-a-single-command" title="Link to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">create-queries</span> <span class="pre">--with-reference-answers</span></code> supports exactly the same per-archive timeout, retry, and total deadline policy as <code class="docutils literal notranslate"><span class="pre">collect-references</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>--with<span class="w"> </span>openai<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>create-queries<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>astroakd_100_v2<span class="w"> </span>--count<span class="w"> </span><span class="m">100</span><span class="w"> </span>--output-dir<span class="w"> </span>datasets<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--require-ads<span class="w"> </span>--with-reference-answers<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--archive-timeouts<span class="w"> </span><span class="nv">mast</span><span class="o">=</span><span class="m">900</span>,simbad<span class="o">=</span><span class="m">180</span>,heasarc<span class="o">=</span><span class="m">900</span>,gaia<span class="o">=</span><span class="m">900</span>,vizier<span class="o">=</span><span class="m">300</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--archive-attempts<span class="w"> </span><span class="nv">mast</span><span class="o">=</span><span class="m">2</span>,simbad<span class="o">=</span><span class="m">1</span>,heasarc<span class="o">=</span><span class="m">2</span>,gaia<span class="o">=</span><span class="m">2</span>,vizier<span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--reference-deadline<span class="w"> </span><span class="m">2100</span>
+</pre></div>
+</div>
+<p>For the eight ADS-literature and 12 multi-archive questions (at count 100), standalone multi-step evidence is still pending separate collection; single-call reference observations are not gold.</p>
+<section id="collect-references-after-generation-has-already-completed">
+<h3>Collect references after generation has already completed<a class="headerlink" href="#collect-references-after-generation-has-already-completed" title="Link to this heading"></a></h3>
+<p>If <code class="docutils literal notranslate"><span class="pre">create-queries</span></code> published the question files but did not complete the
+reference stage, <strong>do not pay to generate the questions again</strong>. Run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>collect-references<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>astroakd_100_v2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--output-dir<span class="w"> </span>datasets<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--timeout<span class="w"> </span><span class="m">900</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--archive-timeouts<span class="w"> </span><span class="nv">mast</span><span class="o">=</span><span class="m">900</span>,simbad<span class="o">=</span><span class="m">180</span>,heasarc<span class="o">=</span><span class="m">900</span>,gaia<span class="o">=</span><span class="m">900</span>,vizier<span class="o">=</span><span class="m">300</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--archive-attempts<span class="w"> </span><span class="nv">mast</span><span class="o">=</span><span class="m">2</span>,simbad<span class="o">=</span><span class="m">1</span>,heasarc<span class="o">=</span><span class="m">2</span>,gaia<span class="o">=</span><span class="m">2</span>,vizier<span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--reference-deadline<span class="w"> </span><span class="m">2100</span>
+</pre></div>
+</div>
+<p>On an interrupted collector, repeat with <code class="docutils literal notranslate"><span class="pre">--resume</span></code>; do not use <code class="docutils literal notranslate"><span class="pre">--replace</span></code>.
+When all 80 single-call records already exist with <code class="docutils literal notranslate"><span class="pre">accepted_nonempty</span></code>, no
+collection call is needed. Summarize them offline with:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>--with<span class="w"> </span>matplotlib<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>reference-report<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>astroakd_100_v2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--output-dir<span class="w"> </span>datasets
+</pre></div>
+</div>
+<p>The generated plots are in <code class="docutils literal notranslate"><span class="pre">datasets/reports/astroakd_100_v2/references/</span></code>.
+The report’s <code class="docutils literal notranslate"><span class="pre">REVIEW</span></code> status refers to outstanding scientific review and
+20 multi-step questions, not an error in collecting the 80 single-call
+references.</p>
+</section>
+</section>
+<section id="reference-aware-synthetic-questions-0-6-7-11-10">
+<h2>Reference-aware synthetic questions (0.6.7.11.10)<a class="headerlink" href="#reference-aware-synthetic-questions-0-6-7-11-10" title="Link to this heading"></a></h2>
+<p>For a <em>new</em> experiment named <code class="docutils literal notranslate"><span class="pre">astroakd_100_v2</span></code>, <code class="docutils literal notranslate"><span class="pre">create-queries</span> <span class="pre">--with-reference-answers</span></code> enables reference-aware preselection by default. Before any OpenAI question-authoring batch, the benchmark runs read-only MCP feasibility queries and admits only bounded, nonempty, untruncated candidate results with the requested fields and no null measurements. Gaia and MAST search radii can be narrowed as needed. This is a source-code policy, not merely a prompt request; the generator instruction file also documents it.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>--with<span class="w"> </span>openai<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>create-queries<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>astroakd_100_v2<span class="w"> </span>--count<span class="w"> </span><span class="m">100</span><span class="w"> </span>--output-dir<span class="w"> </span>datasets<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--require-ads<span class="w"> </span>--with-reference-answers<span class="w"> </span>--timeout<span class="w"> </span><span class="m">900</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--archive-timeouts<span class="w"> </span><span class="nv">mast</span><span class="o">=</span><span class="m">900</span>,simbad<span class="o">=</span><span class="m">180</span>,heasarc<span class="o">=</span><span class="m">900</span>,gaia<span class="o">=</span><span class="m">900</span>,vizier<span class="o">=</span><span class="m">300</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--archive-attempts<span class="w"> </span><span class="nv">mast</span><span class="o">=</span><span class="m">2</span>,simbad<span class="o">=</span><span class="m">1</span>,heasarc<span class="o">=</span><span class="m">2</span>,gaia<span class="o">=</span><span class="m">2</span>,vizier<span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--reference-deadline<span class="w"> </span><span class="m">2100</span>
+</pre></div>
+</div>
+<p>Default feasibility limits are <code class="docutils literal notranslate"><span class="pre">--max-reference-rows</span> <span class="pre">20</span></code>, <code class="docutils literal notranslate"><span class="pre">--max-reference-bytes</span> <span class="pre">65536</span></code>, and <code class="docutils literal notranslate"><span class="pre">--max-feasibility-probes</span> <span class="pre">500</span></code>. The first two are <em>maximum complete result</em> thresholds, not hidden result truncation. If sufficient feasible candidates do not exist, generation fails with an archive-level rejection summary <strong>before GPT calls</strong>; it never changes expected answers to accommodate incomplete archive data. Broader quotas may require expanding curated candidates or adjusting the mix, and live feasibility cannot be promised offline.</p>
+<p>After all slots pass, the checksum-protected <code class="docutils literal notranslate"><span class="pre">datasets/generated/astroakd_100_v2_feasibility_plan.json</span></code> records accepted MCP call parameters and precheck hashes and is reused by <code class="docutils literal notranslate"><span class="pre">--resume</span></code> with the same configuration. The actual reference collection is independent and occurs after task publication. Ordinary ADS-literature and multi-archive tasks remain on their distinct multi-step evidence track; neither this precheck nor <code class="docutils literal notranslate"><span class="pre">--with-reference-answers</span></code> establishes their final reference answers. To reproduce A/B/C results exactly, reuse the saved JSONL and do not modify the original <code class="docutils literal notranslate"><span class="pre">astroakd_100</span></code> study.</p>
+</section>
+<section id="durable-archive-feasibility-progress-and-fallback-0-6-7-11-10">
+<h2>Durable archive feasibility progress and fallback (0.6.7.11.10)<a class="headerlink" href="#durable-archive-feasibility-progress-and-fallback-0-6-7-11-10" title="Link to this heading"></a></h2>
+<p>The precheck is now <strong>checkpointed per MCP call</strong> rather than written only
+after 92 accepted slots. Accepted candidates, rejected attempts, and the
+configurations are saved under
+<code class="docutils literal notranslate"><span class="pre">datasets/generated/&lt;name&gt;_feasibility_progress.json</span></code>. If a module (especially
+MAST) has only truncated or oversized answers, the selector can use another
+archive, preserves the actual module balance, and never accepts incomplete
+references. Smaller cone searches are prioritized; larger cones are skipped
+when the smallest cone is already truncated or oversized.</p>
+<p>After an interrupted or probe-budget-limited run, rerun the same
+<code class="docutils literal notranslate"><span class="pre">create-queries</span></code> command with <code class="docutils literal notranslate"><span class="pre">--resume</span></code> to reuse prior probe outcomes.
+You may increase <code class="docutils literal notranslate"><span class="pre">--max-feasibility-probes</span></code> when resuming without losing
+previously accepted or rejected calls. Other feasibility settings remain
+checksum-protected. <strong>Do not use <code class="docutils literal notranslate"><span class="pre">--replace</span></code> to recover an unfinished run.</strong>
+The final dataset and reference CSV are published only after all tasks pass.
+For version 0.6.7.11.9 failures, previous unsaved archive probes are
+not reconstructible from console logs.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="quickstart.html" class="btn btn-neutral float-left" title="Getting started" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="ads_and_mcp.html" class="btn btn-neutral float-right" title="ADS and MCP connectivity" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,235 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Getting started &mdash; AstroAKD-Bench 0.6.7.11.13</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=d1655f8a"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Create synthetic astronomical questions" href="create_queries.html" />
+    <link rel="prev" title="AstroAKD-Bench" href="../index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            AstroAKD-Bench
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="create_queries.html">Create synthetic astronomical questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ads_and_mcp.html">ADS and MCP connectivity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references_and_review.html">Reference collection and scientific review</a></li>
+<li class="toctree-l1"><a class="reference internal" href="evaluation_and_plots.html">Question-aware automatic reference-answer scoring (0.6.7.11.12)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="evaluation_and_plots.html#run-and-report-the-a-b-c-benchmark">Run and report the A/B/C benchmark</a></li>
+<li class="toctree-l1"><a class="reference internal" href="python_api.html">Python API</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="documentation_build.html">Build and publish the current documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">AstroAKD-Bench</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Getting started</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="getting-started">
+<h1>Getting started<a class="headerlink" href="#getting-started" title="Link to this heading"></a></h1>
+<p>AstroAKD-Bench evaluates astronomical archive-search agents. The benchmark <strong>creates questions</strong> and compares three agent configurations using a separately running <a class="reference external" href="https://github.com/NASA-IMPACT/astroquery-mcp">Astroquery MCP server</a>.</p>
+<section id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Python 3.11+ and <a class="reference external" href="https://docs.astral.sh/uv/">uv</a></p></li>
+<li><p>An <code class="docutils literal notranslate"><span class="pre">OPENAI_API_KEY</span></code> in the environment when generating or running the agents</p></li>
+<li><p>An Astroquery MCP server serving <code class="docutils literal notranslate"><span class="pre">http://127.0.0.1:8000/mcp</span></code> (or set <code class="docutils literal notranslate"><span class="pre">ASTROAKD_MCP_URL</span></code>)</p></li>
+<li><p>Working ADS credentials <strong>on the MCP server</strong> if using <code class="docutils literal notranslate"><span class="pre">--require-ads</span></code></p></li>
+</ul>
+</section>
+<section id="install-the-external-astroquery-mcp-server-terminal-1">
+<h2>Install the external Astroquery MCP server (Terminal 1)<a class="headerlink" href="#install-the-external-astroquery-mcp-server-terminal-1" title="Link to this heading"></a></h2>
+<p>In a <strong>separate terminal</strong>, from the directory where you want the independent server checkout:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/NASA-IMPACT/astroquery-mcp.git
+<span class="nb">cd</span><span class="w"> </span>astroquery-mcp
+uv<span class="w"> </span>sync
+uv<span class="w"> </span>run<span class="w"> </span>fastmcp<span class="w"> </span>run<span class="w"> </span>server.py<span class="w"> </span>--transport<span class="w"> </span>http<span class="w"> </span>--host<span class="w"> </span><span class="m">127</span>.0.0.1<span class="w"> </span>--port<span class="w"> </span><span class="m">8000</span>
+</pre></div>
+</div>
+<p>Keep the MCP server running while using the benchmark. The command starts the local endpoint at <code class="docutils literal notranslate"><span class="pre">http://127.0.0.1:8000/mcp</span></code>. For ADS-backed literature questions, set an ADS token (<code class="docutils literal notranslate"><span class="pre">API_DEV_KEY</span></code> or server-supported <code class="docutils literal notranslate"><span class="pre">ADS_API_KEY</span></code>) <strong>in the server process environment before starting it</strong>, then restart the server if its environment changes. Do not add the token to source files, questions or logs.</p>
+</section>
+<section id="install-and-check-astroakd-bench-terminal-2">
+<h2>Install and check AstroAKD-Bench (Terminal 2)<a class="headerlink" href="#install-and-check-astroakd-bench-terminal-2" title="Link to this heading"></a></h2>
+<p>In a <strong>second terminal</strong>, switch to your AstroAKD-Bench checkout, not the <code class="docutils literal notranslate"><span class="pre">astroquery-mcp</span></code> directory:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>sync
+uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>--version
+uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>doctor<span class="w"> </span>--fast
+</pre></div>
+</div>
+<p>Configure <code class="docutils literal notranslate"><span class="pre">OPENAI_API_KEY</span></code> securely in the benchmark terminal before generating questions or evaluating agents. To check literature search, run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>literature-auth<span class="w"> </span>--probe<span class="w"> </span>--query<span class="w"> </span><span class="s1">'PG 1211+143'</span>
+</pre></div>
+</div>
+<p>The benchmark defaults to <code class="docutils literal notranslate"><span class="pre">http://127.0.0.1:8000/mcp</span></code>. Use <code class="docutils literal notranslate"><span class="pre">ASTROAKD_MCP_URL</span></code> (and optionally <code class="docutils literal notranslate"><span class="pre">ASTROAKD_MCP_TOKEN</span></code> for a protected MCP endpoint) only when connecting elsewhere. The MCP client token is distinct from the server-side ADS token. For details, see <a class="reference internal" href="ads_and_mcp.html"><span class="std std-doc">ADS and MCP connectivity</span></a>.</p>
+</section>
+<section id="recommended-100-question-workflow">
+<h2>Recommended 100-question workflow<a class="headerlink" href="#recommended-100-question-workflow" title="Link to this heading"></a></h2>
+<p>In the AstroAKD-Bench repository root:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Check ADS authentication and a real small ADS query before spending OpenAI credits</span>
+uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>literature-auth<span class="w"> </span>--probe
+
+<span class="c1"># Create a mixed 100-question experiment and collect eligible reference evidence</span>
+uv<span class="w"> </span>run<span class="w"> </span>--with<span class="w"> </span>openai<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>create-queries<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>astroakd_100_v2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--count<span class="w"> </span><span class="m">100</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--output-dir<span class="w"> </span>datasets<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--require-ads<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--with-reference-answers
+
+<span class="c1"># Offline reference quality report</span>
+uv<span class="w"> </span>run<span class="w"> </span>--with<span class="w"> </span>matplotlib<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>reference-report<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>astroakd_100_v2<span class="w"> </span>--output-dir<span class="w"> </span>datasets
+
+<span class="c1"># Test five questions before running all three agents on 100 questions</span>
+uv<span class="w"> </span>run<span class="w"> </span>--with<span class="w"> </span>openai<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>run-benchmark<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>astroakd_100_v2<span class="w"> </span>--output-dir<span class="w"> </span>datasets<span class="w"> </span>--limit<span class="w"> </span><span class="m">5</span>
+uv<span class="w"> </span>run<span class="w"> </span>--with<span class="w"> </span>openai<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>run-benchmark<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>astroakd_100_v2<span class="w"> </span>--output-dir<span class="w"> </span>datasets<span class="w"> </span>--resume
+
+<span class="c1"># Offline A/B/C plots and CSVs</span>
+uv<span class="w"> </span>run<span class="w"> </span>--with<span class="w"> </span>matplotlib<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>agent-report<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>astroakd_100_v2<span class="w"> </span>--output-dir<span class="w"> </span>datasets
+</pre></div>
+</div>
+<p>The five named commands create their needed output subdirectories automatically.</p>
+<section id="recover-references-without-regenerating-questions">
+<h3>Recover references without regenerating questions<a class="headerlink" href="#recover-references-without-regenerating-questions" title="Link to this heading"></a></h3>
+<p>If the question JSONL was saved but reference collection stopped, finish the
+80 single-call MCP queries directly (no OpenAI calls):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>collect-references<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>astroakd_100_v2<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--output-dir<span class="w"> </span>datasets<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--timeout<span class="w"> </span><span class="m">900</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--archive-timeouts<span class="w"> </span><span class="nv">mast</span><span class="o">=</span><span class="m">900</span>,simbad<span class="o">=</span><span class="m">180</span>,heasarc<span class="o">=</span><span class="m">900</span>,gaia<span class="o">=</span><span class="m">900</span>,vizier<span class="o">=</span><span class="m">300</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--archive-attempts<span class="w"> </span><span class="nv">mast</span><span class="o">=</span><span class="m">2</span>,simbad<span class="o">=</span><span class="m">1</span>,heasarc<span class="o">=</span><span class="m">2</span>,gaia<span class="o">=</span><span class="m">2</span>,vizier<span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--reference-deadline<span class="w"> </span><span class="m">2100</span>
+</pre></div>
+</div>
+<p>Append <code class="docutils literal notranslate"><span class="pre">--resume</span></code> only for an interrupted collector with a saved progress
+journal. If the 80/80 references were already collected successfully, skip
+this step and run only the offline <code class="docutils literal notranslate"><span class="pre">reference-report</span></code> command shown above.
+The 20 literature/multi-archive questions require separate multi-step
+evidence. See <a class="reference internal" href="references_and_review.html"><span class="std std-doc">reference collection and reports</span></a>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">--seed</span></code> is optional, defaulting to <code class="docutils literal notranslate"><span class="pre">20261018</span></code>, and does not guarantee identical responses from GPT-5.2. Preserve the generated JSONL for reproducibility.</p>
+</section>
+</section>
+<section id="current-v2-reference-coverage-and-literature-drafts-2026-10-19">
+<h2>Current v2 reference coverage and literature drafts (2026-10-19)<a class="headerlink" href="#current-v2-reference-coverage-and-literature-drafts-2026-10-19" title="Link to this heading"></a></h2>
+<p>The current saved <code class="docutils literal notranslate"><span class="pre">astroakd_100_v2</span></code> dataset contains 80 complete single-call references and 12 complete two-archive references. The recovered VizieR steps need no further retries; eight literature questions still lack verified paper-linked observation evidence. The offline scorer evaluates <strong>92/100</strong> questions. The literature draft command</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>draft-literature-plans<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>astroakd_100_v2<span class="w"> </span>--output-dir<span class="w"> </span>datasets
+</pre></div>
+</div>
+<p>has already produced <code class="docutils literal notranslate"><span class="pre">datasets/validated/astroakd_100_v2_literature_plan_drafts.jsonl</span></code> with <code class="docutils literal notranslate"><span class="pre">DRAFT_ONLY_NOT_REFERENCE</span></code>: six unverified candidate templates and two requiring target/archive resolution. <strong>These drafts are not runnable <code class="docutils literal notranslate"><span class="pre">--literature-plans</span></code> input and are not reference answers.</strong> Read <a class="reference internal" href="references_and_review.html"><span class="std std-doc">Reference collection and scientific review</span></a> before preparing independently verifiable literature-observation plans. No question regeneration or A/B/C reruns are necessary.</p>
+</section>
+<section id="what-is-measured">
+<h2>What is measured?<a class="headerlink" href="#what-is-measured" title="Link to this heading"></a></h2>
+<p>A is MCP only, B is MCP with the AstroAKD specialist instruction, and C is Web only. One hundred questions create up to 300 agent runs. <strong>Completion, time and tool metrics are not scientific correctness.</strong> Scientific accuracy requires independently verified gold answers.</p>
+<p><strong>Figure commands are separate from execution.</strong> <code class="docutils literal notranslate"><span class="pre">run-benchmark</span></code> saves agent runs; the subsequent <code class="docutils literal notranslate"><span class="pre">agent-report</span></code> command saves <code class="docutils literal notranslate"><span class="pre">mean_runtime.png</span></code>, <code class="docutils literal notranslate"><span class="pre">total_tokens.png</span></code>, <code class="docutils literal notranslate"><span class="pre">completed_runs.png</span></code>, <code class="docutils literal notranslate"><span class="pre">mean_mcp_events.png</span></code>, and <code class="docutils literal notranslate"><span class="pre">web_search_calls.png</span></code> to <code class="docutils literal notranslate"><span class="pre">datasets/reports/astroakd_100_v2/agents/</span></code>. To refresh plots, rerun <code class="docutils literal notranslate"><span class="pre">agent-report</span> <span class="pre">--name</span> <span class="pre">astroakd_100_v2</span> <span class="pre">--output-dir</span> <span class="pre">datasets</span> <span class="pre">--replace</span></code>. For archive observations, <code class="docutils literal notranslate"><span class="pre">reference-report</span> <span class="pre">--name</span> <span class="pre">astroakd_100_v2</span> <span class="pre">--output-dir</span> <span class="pre">datasets</span> <span class="pre">--replace</span></code> creates <code class="docutils literal notranslate"><span class="pre">response_times.png</span></code> and the other reference completeness figures under <code class="docutils literal notranslate"><span class="pre">datasets/reports/astroakd_100_v2/references/</span></code>. The current <code class="docutils literal notranslate"><span class="pre">agent-report</span></code> also generates question-aware automated archive-reference <code class="docutils literal notranslate"><span class="pre">match_rate.png</span></code> when there are automatically scorable complete reference records. It reports the scorable denominator and exclusions; it is not independently reviewed scientific accuracy.</p>
+<p>Continue with <a class="reference internal" href="create_queries.html"><span class="std std-doc">question generation</span></a>, <a class="reference internal" href="references_and_review.html"><span class="std std-doc">references</span></a>, and <a class="reference internal" href="evaluation_and_plots.html"><span class="std std-doc">evaluation</span></a>.</p>
+<p>Frozen prompts: <code class="docutils literal notranslate"><span class="pre">instructions/astroakd/AstroAKD_Instruction.md</span></code> (arm B) and <code class="docutils literal notranslate"><span class="pre">instructions/astroakd_bench/AstroAKD-Bench_Instruction.md</span></code> (generation only).</p>
+<p>To build the HTML documentation from the repository root: <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">-C</span> <span class="pre">docs/sphinx</span> <span class="pre">html</span></code>.</p>
+</section>
+<section id="match-rate-figure-and-selective-mcp-only-retry">
+<h2>Match-rate figure and selective MCP-only retry<a class="headerlink" href="#match-rate-figure-and-selective-mcp-only-retry" title="Link to this heading"></a></h2>
+<p>For a saved <code class="docutils literal notranslate"><span class="pre">astroakd_100_v2</span></code> dataset with single-call reference evidence, run <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">run</span> <span class="pre">--with</span> <span class="pre">matplotlib</span> <span class="pre">python</span> <span class="pre">-m</span> <span class="pre">benchmark</span> <span class="pre">agent-report</span> <span class="pre">--name</span> <span class="pre">astroakd_100_v2</span> <span class="pre">--output-dir</span> <span class="pre">datasets</span> <span class="pre">--replace</span></code>. Alongside runtime and token plots this now creates <code class="docutils literal notranslate"><span class="pre">datasets/reports/astroakd_100_v2/agents/match_rate.png</span></code>, explicitly labeled <strong>automated archive-reference agreement</strong> on the currently evaluable denominator; read <code class="docutils literal notranslate"><span class="pre">automated_scoring_summary.json</span></code> for scorable/excluded counts. It is not verified scientific accuracy.</p>
+<p>After a complete A/B/C run, <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">run</span> <span class="pre">python</span> <span class="pre">-m</span> <span class="pre">benchmark</span> <span class="pre">run-benchmark</span> <span class="pre">--name</span> <span class="pre">astroakd_100_v2</span> <span class="pre">--output-dir</span> <span class="pre">datasets</span> <span class="pre">--retry-errors</span> <span class="pre">--dry-run</span></code> previews failed MCP-only tasks. Remove <code class="docutils literal notranslate"><span class="pre">--dry-run</span></code> and add <code class="docutils literal notranslate"><span class="pre">--with</span> <span class="pre">openai</span></code> to <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">run</span></code>, <code class="docutils literal notranslate"><span class="pre">--max-turns</span> <span class="pre">16</span> <span class="pre">--max-calls</span> <span class="pre">20</span> <span class="pre">--timeout</span> <span class="pre">900</span> <span class="pre">--task-timeout</span> <span class="pre">2400</span></code> to execute <strong>only those failed MCP-only tasks</strong>. A separate diagnostic journal is created; the original 300 runs are preserved. See <a class="reference internal" href="evaluation_and_plots.html"><span class="std std-doc">A/B/C evaluation and plots</span></a>.</p>
+</section>
+<section id="new-generation-policy">
+<h2>New generation policy<a class="headerlink" href="#new-generation-policy" title="Link to this heading"></a></h2>
+<p>Version 0.6.7.11.10 performs agent-independent, reference-aware MCP prechecks <strong>before</strong> GPT question writing when <code class="docutils literal notranslate"><span class="pre">--with-reference-answers</span></code> is selected. It tries bounded Gaia/MAST/HEASARC/VizieR queries, rejects incomplete/oversized/null results and selects alternate target/radius combinations. Accepted slots are frozen in a checksum-protected feasibility plan so <code class="docutils literal notranslate"><span class="pre">--resume</span></code> keeps the same questions and MCP calls. A precheck is not an independently validated reference answer. If no feasible 100-question candidate mix is available, the command fails <em>before</em> GPT rather than silently creating unscorable questions. For your fresh study use <code class="docutils literal notranslate"><span class="pre">--name</span> <span class="pre">astroakd_100_v2</span></code> throughout; see <a class="reference internal" href="create_queries.html"><span class="std std-doc">Question creation</span></a>.</p>
+<p>If reference-aware probing stops before GPT writing, check
+<code class="docutils literal notranslate"><span class="pre">datasets/generated/&lt;name&gt;_feasibility_progress.json</span></code> and run the same
+<code class="docutils literal notranslate"><span class="pre">create-queries</span></code> command with <code class="docutils literal notranslate"><span class="pre">--resume</span></code>. This reuses saved MCP probes and
+accepted slots. When an archive has no complete, bounded candidate, the
+selector tries another archive and records the new distribution.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../index.html" class="btn btn-neutral float-left" title="AstroAKD-Bench" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="create_queries.html" class="btn btn-neutral float-right" title="Create synthetic astronomical questions" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

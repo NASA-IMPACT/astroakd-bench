@@ -1,0 +1,153 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ADS and MCP connectivity &mdash; AstroAKD-Bench 0.6.7.11.13</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=d1655f8a"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Reference collection and scientific review" href="references_and_review.html" />
+    <link rel="prev" title="Create synthetic astronomical questions" href="create_queries.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            AstroAKD-Bench
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="create_queries.html">Create synthetic astronomical questions</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">ADS and MCP connectivity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references_and_review.html">Reference collection and scientific review</a></li>
+<li class="toctree-l1"><a class="reference internal" href="evaluation_and_plots.html">Question-aware automatic reference-answer scoring (0.6.7.11.12)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="evaluation_and_plots.html#run-and-report-the-a-b-c-benchmark">Run and report the A/B/C benchmark</a></li>
+<li class="toctree-l1"><a class="reference internal" href="python_api.html">Python API</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="documentation_build.html">Build and publish the current documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">AstroAKD-Bench</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">ADS and MCP connectivity</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="ads-and-mcp-connectivity">
+<h1>ADS and MCP connectivity<a class="headerlink" href="#ads-and-mcp-connectivity" title="Link to this heading"></a></h1>
+<p>ADS literature research is performed by the <strong>external Astroquery MCP server</strong>, not by the benchmark. The server must expose <code class="docutils literal notranslate"><span class="pre">astroquery_check_auth</span></code> and <code class="docutils literal notranslate"><span class="pre">ads_query_compact</span></code>, configure an ADS token, and reach the ADS service.</p>
+<section id="install-and-start-the-local-mcp-service">
+<h2>Install and start the local MCP service<a class="headerlink" href="#install-and-start-the-local-mcp-service" title="Link to this heading"></a></h2>
+<p>Run the following in a separate <strong>server terminal</strong>, outside the AstroAKD-Bench directory:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/NASA-IMPACT/astroquery-mcp.git
+<span class="nb">cd</span><span class="w"> </span>astroquery-mcp
+uv<span class="w"> </span>sync
+uv<span class="w"> </span>run<span class="w"> </span>fastmcp<span class="w"> </span>run<span class="w"> </span>server.py<span class="w"> </span>--transport<span class="w"> </span>http<span class="w"> </span>--host<span class="w"> </span><span class="m">127</span>.0.0.1<span class="w"> </span>--port<span class="w"> </span><span class="m">8000</span>
+</pre></div>
+</div>
+<p>Keep the terminal open; AstroAKD-Bench connects to <code class="docutils literal notranslate"><span class="pre">http://127.0.0.1:8000/mcp</span></code> by default. If you will use <code class="docutils literal notranslate"><span class="pre">--require-ads</span></code>, configure the ADS API token <strong>in this server terminal before starting the final command</strong> (<code class="docutils literal notranslate"><span class="pre">API_DEV_KEY</span></code>, or the supported <code class="docutils literal notranslate"><span class="pre">ADS_API_KEY</span></code> fallback). Restart the server after changing credentials. The token does not belong in the benchmark’s generated outputs.</p>
+<p>In a <strong>second terminal</strong>, change to the AstroAKD-Bench repository root and install its dependencies with <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">sync</span></code>. Configure <code class="docutils literal notranslate"><span class="pre">OPENAI_API_KEY</span></code> securely in this benchmark terminal for question generation and A/B/C runs; ADS authentication remains on the server. The diagnostic commands below run from the benchmark root. See <a class="reference internal" href="quickstart.html"><span class="std std-doc">Getting started</span></a> for the complete two-terminal setup.</p>
+</section>
+<section id="check-before-generation">
+<h2>Check before generation<a class="headerlink" href="#check-before-generation" title="Link to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>literature-auth<span class="w"> </span>--probe
+<span class="c1"># Test the exact target that failed after the generic bibcode probe passed:</span>
+uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>literature-auth<span class="w"> </span>--probe<span class="w"> </span>--query<span class="w"> </span><span class="s1">'PG 1211+143'</span>
+</pre></div>
+</div>
+<p>This performs a read-only authentication/tool inspection and a small real ADS bibliographic query. Successful configuration alone is insufficient: the request itself must succeed. The tool reports safe booleans and a diagnostic reason without printing credentials.</p>
+<p>Failure reasons include <code class="docutils literal notranslate"><span class="pre">ads_not_configured</span></code>, <code class="docutils literal notranslate"><span class="pre">ads_tool_unavailable</span></code>, <code class="docutils literal notranslate"><span class="pre">ads_search_unavailable</span></code>, <code class="docutils literal notranslate"><span class="pre">ads_probe_empty</span></code>, and <code class="docutils literal notranslate"><span class="pre">mcp_auth_check_unavailable</span></code>.</p>
+<p>The specific-query probe reports only sanitized error <em>classes</em> (for example <code class="docutils literal notranslate"><span class="pre">upstream_http_400_bad_query</span></code>, <code class="docutils literal notranslate"><span class="pre">upstream_http_401_authentication</span></code>, <code class="docutils literal notranslate"><span class="pre">upstream_http_403_forbidden</span></code>, <code class="docutils literal notranslate"><span class="pre">upstream_http_429_rate_limit</span></code>, <code class="docutils literal notranslate"><span class="pre">upstream_timeout</span></code>, or <code class="docutils literal notranslate"><span class="pre">mcp_ads_tool_error_unclassified</span></code>), not the server’s original exception text. The client cannot resolve an unclassified upstream error without a private inspection of the MCP server logs. The benchmark explicitly sends the curated research target as a query hint (including PG 1211+143 even when the plan’s long prose omitted it) and retries distinct query formulations using one compact ADS request each (the MCP server’s field presets filter the results after the same upstream Astroquery call). All literature results remain unreviewed evidence, never gold answers.</p>
+<p>The current Astroquery MCP server uses the <code class="docutils literal notranslate"><span class="pre">API_DEV_KEY</span></code> environment variable for ADS, with an <code class="docutils literal notranslate"><span class="pre">ADS_API_KEY</span></code> fallback. <strong>Set the token in the environment of the MCP server process before starting the server</strong>, not merely in the benchmark terminal. The token should never be checked into the repository or included in logs.</p>
+<p>A failure of <code class="docutils literal notranslate"><span class="pre">ads_search_unavailable</span></code> means the MCP ADS request failed despite reaching that route. It does <em>not</em> prove authentication was missing. Check the server’s network access to ADS, token validity, and ADS API availability. Run the probe again before repeating generation.</p>
+</section>
+<section id="required-vs-optional-ads">
+<h2>Required vs optional ADS<a class="headerlink" href="#required-vs-optional-ads" title="Link to this heading"></a></h2>
+<p>With <code class="docutils literal notranslate"><span class="pre">--require-ads</span></code>, a failed ADS preflight stops <code class="docutils literal notranslate"><span class="pre">create-queries</span></code> before any question-generation OpenAI calls. The preflight now checks <strong>each planned research query</strong> with distinct query formulations and compact ADS field selection; success of a generic bibcode probe is not enough. Increasing archive reference timeouts does not correct an ADS HTTP 400/401/403/429 error. When strict ADS research is optional, omit <code class="docutils literal notranslate"><span class="pre">--require-ads</span></code> to allow explicitly labeled OpenAI web-search fallback instead. No question files are published when all ADS research alternatives fail. On errors after GPT authoring, completed batches are retained in <code class="docutils literal notranslate"><span class="pre">generated/&lt;name&gt;.progress.jsonl</span></code>; use <code class="docutils literal notranslate"><span class="pre">create-queries</span> <span class="pre">--resume</span></code> after correcting the service. Without that flag, a failed ADS research route may use an OpenAI web-search fallback, labeled with its true provenance; it is not ADS evidence.</p>
+</section>
+<section id="mcp-endpoint">
+<h2>MCP endpoint<a class="headerlink" href="#mcp-endpoint" title="Link to this heading"></a></h2>
+<p>Default: <code class="docutils literal notranslate"><span class="pre">http://127.0.0.1:8000/mcp</span></code>. Override with <code class="docutils literal notranslate"><span class="pre">ASTROAKD_MCP_URL</span></code> or the CLI’s <code class="docutils literal notranslate"><span class="pre">--mcp-url</span></code>. Protected MCP servers can use <code class="docutils literal notranslate"><span class="pre">ASTROAKD_MCP_TOKEN</span></code> for client bearer authentication; this is distinct from the ADS credential used by the <strong>server</strong>.</p>
+<p>See the <a class="reference external" href="https://github.com/NASA-IMPACT/astroquery-mcp">Astroquery MCP server repository</a> for server installation and authentication details.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="create_queries.html" class="btn btn-neutral float-left" title="Create synthetic astronomical questions" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="references_and_review.html" class="btn btn-neutral float-right" title="Reference collection and scientific review" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

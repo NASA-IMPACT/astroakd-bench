@@ -1,0 +1,171 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Build and publish the current documentation &mdash; AstroAKD-Bench 0.6.7.11.13</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=d1655f8a"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Python API" href="python_api.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            AstroAKD-Bench
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="create_queries.html">Create synthetic astronomical questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ads_and_mcp.html">ADS and MCP connectivity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references_and_review.html">Reference collection and scientific review</a></li>
+<li class="toctree-l1"><a class="reference internal" href="evaluation_and_plots.html">Question-aware automatic reference-answer scoring (0.6.7.11.12)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="evaluation_and_plots.html#run-and-report-the-a-b-c-benchmark">Run and report the A/B/C benchmark</a></li>
+<li class="toctree-l1"><a class="reference internal" href="python_api.html">Python API</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Build and publish the current documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">AstroAKD-Bench</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Build and publish the current documentation</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="build-and-publish-the-current-documentation">
+<h1>Build and publish the current documentation<a class="headerlink" href="#build-and-publish-the-current-documentation" title="Link to this heading"></a></h1>
+<p>AstroAKD-Bench uses one maintained Sphinx/MyST documentation tree (<code class="docutils literal notranslate"><span class="pre">docs/</span></code>). It does not generate separate websites for historical releases. The version displayed by the site comes from <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code>.</p>
+<section id="build-locally">
+<h2>Build locally<a class="headerlink" href="#build-locally" title="Link to this heading"></a></h2>
+<p>From the repository root:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>make<span class="w"> </span>-C<span class="w"> </span>docs/sphinx<span class="w"> </span>clean
+make<span class="w"> </span>-C<span class="w"> </span>docs/sphinx<span class="w"> </span>html
+</pre></div>
+</div>
+<p>Open <code class="docutils literal notranslate"><span class="pre">docs/_build/html/index.html</span></code>. Sphinx, MyST and the Read the Docs theme are pinned in <code class="docutils literal notranslate"><span class="pre">docs/requirements.txt</span></code>. The build uses <code class="docutils literal notranslate"><span class="pre">-n</span> <span class="pre">-W</span> <span class="pre">--keep-going</span></code> to treat unresolved cross-references and warnings as failures. To use an installed Sphinx directly:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>docs/requirements.txt
+make<span class="w"> </span>-C<span class="w"> </span>docs/sphinx<span class="w"> </span>html<span class="w"> </span><span class="nv">SPHINXBUILD</span><span class="o">=</span>sphinx-build
+</pre></div>
+</div>
+<p>Link checking is an optional network-dependent step: <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">-C</span> <span class="pre">docs/sphinx</span> <span class="pre">linkcheck</span></code>.</p>
+</section>
+<section id="automatic-publishing-from-main-0-6-7-11-13">
+<h2>Automatic publishing from main (0.6.7.11.13)<a class="headerlink" href="#automatic-publishing-from-main-0-6-7-11-13" title="Link to this heading"></a></h2>
+<p>The GitHub Actions workflow <strong><code class="docutils literal notranslate"><span class="pre">.github/workflows/publish-docs.yml</span></code></strong> builds and publishes the site automatically when a push to <code class="docutils literal notranslate"><span class="pre">main</span></code> changes:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">docs/**</span></code> (including this document, <code class="docutils literal notranslate"><span class="pre">docs/index.md</span></code>, Sphinx config, themes/dependencies and all guides);</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">README.md</span></code>, <code class="docutils literal notranslate"><span class="pre">INSTALL.md</span></code>, <code class="docutils literal notranslate"><span class="pre">CHANGELOG.md</span></code>, <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code>, or <code class="docutils literal notranslate"><span class="pre">.readthedocs.yaml</span></code>;</p></li>
+<li><p>the publishing workflow or <code class="docutils literal notranslate"><span class="pre">scripts/export_wiki.py</span></code>, <code class="docutils literal notranslate"><span class="pre">scripts/sync_wiki.py</span></code>, <code class="docutils literal notranslate"><span class="pre">scripts/publish_gh_pages.sh</span></code>, <code class="docutils literal notranslate"><span class="pre">scripts/publish_wiki.sh</span></code>.</p></li>
+</ul>
+<p>It is also available under <strong>Actions → Publish documentation → Run workflow</strong> (<code class="docutils literal notranslate"><span class="pre">workflow_dispatch</span></code>). Updates on other branches do not publish until merged to <code class="docutils literal notranslate"><span class="pre">main</span></code>.</p>
+<p>The workflow:</p>
+<ol class="arabic simple">
+<li><p>Checks out <code class="docutils literal notranslate"><span class="pre">main</span></code>, installs pinned Sphinx dependencies and builds warning-clean HTML. It <strong>fails</strong> if HTML <code class="docutils literal notranslate"><span class="pre">index.html</span></code> is missing or empty.</p></li>
+<li><p>Copies the generated Sphinx site to the <strong>root of <code class="docutils literal notranslate"><span class="pre">gh-pages</span></code></strong>, so <code class="docutils literal notranslate"><span class="pre">gh-pages:index.html</span></code> exists; it also adds <code class="docutils literal notranslate"><span class="pre">.nojekyll</span></code>. It does not commit generated HTML to <code class="docutils literal notranslate"><span class="pre">main</span></code> and skips identical commits.</p></li>
+<li><p>Uploads that same built HTML as a GitHub Pages Actions artifact and performs an explicit GitHub Pages deployment. This is necessary because a commit made with <code class="docutils literal notranslate"><span class="pre">GITHUB_TOKEN</span></code> to <code class="docutils literal notranslate"><span class="pre">gh-pages</span></code> <strong>does not itself trigger GitHub Pages branch publishing</strong>.</p></li>
+<li><p>Exports current Markdown to GitHub wiki pages (<code class="docutils literal notranslate"><span class="pre">Home.md</span></code>, navigation sidebar, README, CHANGELOG, and individual guide pages). It clones the repository <code class="docutils literal notranslate"><span class="pre">.wiki.git</span></code>, updates <strong>only</strong> managed pages, and leaves unrelated human-authored wiki files intact. Identical wiki content is not committed twice.</p></li>
+</ol>
+<p>The website and the Wiki are <strong>generated outputs</strong>. Make changes to the source Markdown on <code class="docutils literal notranslate"><span class="pre">main</span></code>; do not edit managed Wiki pages or <code class="docutils literal notranslate"><span class="pre">gh-pages</span></code> directly. Old pages managed by the exporter are removed through its stored manifest when a guide is retired; unrelated pages remain untouched.</p>
+</section>
+<section id="one-time-repository-configuration">
+<h2>One-time repository configuration<a class="headerlink" href="#one-time-repository-configuration" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p>Repository <strong>Settings → Pages → Build and deployment → Source</strong>: choose <strong>GitHub Actions</strong>. Do not choose <code class="docutils literal notranslate"><span class="pre">gh-pages</span></code> as the live publish source; the workflow already keeps it as a mirror and performs a separate Actions deployment. The <code class="docutils literal notranslate"><span class="pre">gh-pages</span></code> branch is created on the first successful publishing run. You can browse the built <code class="docutils literal notranslate"><span class="pre">index.html</span></code> in the branch root.</p></li>
+<li><p>Repository <strong>Settings → General → Features</strong>: enable <strong>Wikis</strong>, then create/save the first wiki page in the browser. The <code class="docutils literal notranslate"><span class="pre">.wiki.git</span></code> remote does not exist until the wiki is initialized. The first automatic run will replace wiki <code class="docutils literal notranslate"><span class="pre">Home.md</span></code> with the generated home page and add the generated sidebar; preserve any content currently on the wiki home page elsewhere first.</p></li>
+<li><p>Allow repository Actions to run. The workflow explicitly requests <code class="docutils literal notranslate"><span class="pre">contents:</span> <span class="pre">write</span></code> (mirror/wiki), <code class="docutils literal notranslate"><span class="pre">pages:</span> <span class="pre">write</span></code> and <code class="docutils literal notranslate"><span class="pre">id-token:</span> <span class="pre">write</span></code> (live Pages deployment). Organization or branch restrictions may additionally need configuration. Protect <code class="docutils literal notranslate"><span class="pre">main</span></code> as desired; the job does not push to <code class="docutils literal notranslate"><span class="pre">main</span></code>.</p></li>
+<li><p>By default the Wiki sync uses GitHub’s ephemeral <code class="docutils literal notranslate"><span class="pre">GITHUB_TOKEN</span></code>. <strong>If that token cannot write the Wiki on your GitHub organization</strong>, configure a repository Actions secret named <strong><code class="docutils literal notranslate"><span class="pre">WIKI_TOKEN</span></code></strong> containing a properly authorized repository-scoped token; only the Wiki sync uses it. Tokens are not embedded in URL strings or echoed. Do not add <code class="docutils literal notranslate"><span class="pre">OPENAI_API_KEY</span></code>, <code class="docutils literal notranslate"><span class="pre">ADS_API_KEY</span></code>, or <code class="docutils literal notranslate"><span class="pre">API_DEV_KEY</span></code>: none is required for building or publishing docs.</p></li>
+</ol>
+<p>GitHub project Pages URL is usually <code class="docutils literal notranslate"><span class="pre">https://OWNER.github.io/REPO/</span></code>; account/org site repositories use <code class="docutils literal notranslate"><span class="pre">https://OWNER.github.io/</span></code>. The workflow prints the actual deployment URL in the GitHub Pages environment. The Wiki URL is <code class="docutils literal notranslate"><span class="pre">https://github.com/OWNER/REPO/wiki</span></code>.</p>
+</section>
+<section id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>HTML build fails:</strong> inspect the <code class="docutils literal notranslate"><span class="pre">Build</span> <span class="pre">the</span> <span class="pre">current</span> <span class="pre">Sphinx</span> <span class="pre">HTML</span> <span class="pre">site</span></code> step. Fix broken MyST syntax, doc links, or warning-producing changes on <code class="docutils literal notranslate"><span class="pre">main</span></code>. Re-run the workflow.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">gh-pages/index.html</span></code> exists but the web site is not live:</strong> ensure Pages <strong>Source = GitHub Actions</strong> and that <code class="docutils literal notranslate"><span class="pre">Deploy</span> <span class="pre">live</span> <span class="pre">GitHub</span> <span class="pre">Pages</span> <span class="pre">site</span></code> passed. GitHub docs specify that <code class="docutils literal notranslate"><span class="pre">GITHUB_TOKEN</span></code> commits cannot trigger a Pages branch rebuild.</p></li>
+<li><p><strong>Wiki clone fails:</strong> confirm Wikis are enabled and the first page exists. Check the repository’s Actions token policy. If necessary use <code class="docutils literal notranslate"><span class="pre">WIKI_TOKEN</span></code> with wiki-write access.</p></li>
+<li><p><strong>Wiki sync succeeds but a page looks different from Sphinx:</strong> the Wiki renders GitHub-Flavored Markdown, not Sphinx/MyST. The exporter removes navigation-only <code class="docutils literal notranslate"><span class="pre">{toctree}</span></code> directives and rewrites internal <code class="docutils literal notranslate"><span class="pre">.md</span></code> document links, while preserving fenced CLI examples. Prefer the Sphinx Pages site for the canonical formatting.</p></li>
+<li><p><strong>Manual wiki edits disappear:</strong> managed files are re-synced from <code class="docutils literal notranslate"><span class="pre">main</span></code>; keep personal pages under other names. The manifest <code class="docutils literal notranslate"><span class="pre">.astroakd-bench-managed-pages.json</span></code> tracks generated pages only.</p></li>
+<li><p><strong>Unchanged docs:</strong> the workflow avoids redundant commits. You can trigger a manual rebuild to redeploy identical content.</p></li>
+</ul>
+<p>No benchmark dataset, agent-run journal, MCP queries, or scoring evidence is modified by documentation publishing.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="python_api.html" class="btn btn-neutral float-left" title="Python API" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

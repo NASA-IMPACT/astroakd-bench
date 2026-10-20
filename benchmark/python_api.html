@@ -1,0 +1,145 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Python API &mdash; AstroAKD-Bench 0.6.7.11.13</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=d1655f8a"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Build and publish the current documentation" href="documentation_build.html" />
+    <link rel="prev" title="Question-aware automatic reference-answer scoring (0.6.7.11.12)" href="evaluation_and_plots.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            AstroAKD-Bench
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="create_queries.html">Create synthetic astronomical questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ads_and_mcp.html">ADS and MCP connectivity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references_and_review.html">Reference collection and scientific review</a></li>
+<li class="toctree-l1"><a class="reference internal" href="evaluation_and_plots.html">Question-aware automatic reference-answer scoring (0.6.7.11.12)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="evaluation_and_plots.html#run-and-report-the-a-b-c-benchmark">Run and report the A/B/C benchmark</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Python API</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="documentation_build.html">Build and publish the current documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">AstroAKD-Bench</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Python API</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="python-api">
+<h1>Python API<a class="headerlink" href="#python-api" title="Link to this heading"></a></h1>
+<p>Use the same named datasets and output root from Python:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">benchmark.api</span><span class="w"> </span><span class="kn">import</span> <span class="n">AstroAKDBench</span>
+
+<span class="n">bench</span> <span class="o">=</span> <span class="n">AstroAKDBench</span><span class="p">(</span><span class="s1">'.'</span><span class="p">)</span>
+
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+    <span class="k">await</span> <span class="n">bench</span><span class="o">.</span><span class="n">create_synthetic_queries</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="s1">'astroakd_100_v2'</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">output_dir</span><span class="o">=</span><span class="s1">'datasets'</span><span class="p">,</span>
+        <span class="n">require_ads</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">with_reference_answers</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
+
+<span class="c1"># Reports use saved evidence; they make no model or MCP calls.</span>
+<span class="n">reference_report</span> <span class="o">=</span> <span class="n">bench</span><span class="o">.</span><span class="n">create_reference_report</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">'astroakd_100_v2'</span><span class="p">,</span> <span class="n">output_dir</span><span class="o">=</span><span class="s1">'datasets'</span>
+<span class="p">)</span>
+<span class="n">agent_report</span> <span class="o">=</span> <span class="n">bench</span><span class="o">.</span><span class="n">create_agent_report</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">'astroakd_100_v2'</span><span class="p">,</span> <span class="n">output_dir</span><span class="o">=</span><span class="s1">'datasets'</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>For question generation alone use <code class="docutils literal notranslate"><span class="pre">with_reference_answers=False</span></code> (default), and then call <code class="docutils literal notranslate"><span class="pre">await</span> <span class="pre">bench.collect_named_references(name='astroakd_100_v2',</span> <span class="pre">output_dir='datasets')</span></code>. After a partial collection pass <code class="docutils literal notranslate"><span class="pre">resume=True</span></code> to the same named dataset.</p>
+<p><code class="docutils literal notranslate"><span class="pre">name</span></code> is a safe filename prefix, <code class="docutils literal notranslate"><span class="pre">count</span></code> supports the built-in 1–100 mix, and <code class="docutils literal notranslate"><span class="pre">output_dir</span></code> points to the study root; changing any does not alter a previously frozen dataset. An explicit seed can be supplied; the default is <code class="docutils literal notranslate"><span class="pre">20261018</span></code>.</p>
+<p>The lower-level package API is retained for specialized research workflows. For CLI parameters, run <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">run</span> <span class="pre">python</span> <span class="pre">-m</span> <span class="pre">benchmark</span> <span class="pre">--help</span></code> and <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">run</span> <span class="pre">python</span> <span class="pre">-m</span> <span class="pre">benchmark</span> <span class="pre">&lt;command&gt;</span> <span class="pre">--help</span></code>.</p>
+<p>For durable generation, the Python API uses the same filesystem checkpoints as the CLI. After a failure, call <code class="docutils literal notranslate"><span class="pre">await</span> <span class="pre">bench.create_synthetic_queries(name='astroakd_100_v2',</span> <span class="pre">count=100,</span> <span class="pre">output_dir='datasets',</span> <span class="pre">require_ads=True,</span> <span class="pre">with_reference_answers=True,</span> <span class="pre">resume=True)</span></code> with unchanged generation inputs.</p>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="evaluation_and_plots.html" class="btn btn-neutral float-left" title="Question-aware automatic reference-answer scoring (0.6.7.11.12)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="documentation_build.html" class="btn btn-neutral float-right" title="Build and publish the current documentation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

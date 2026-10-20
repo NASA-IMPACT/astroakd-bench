@@ -1,0 +1,220 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Question-aware automatic reference-answer scoring (0.6.7.11.12) &mdash; AstroAKD-Bench 0.6.7.11.13</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=d1655f8a"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Python API" href="python_api.html" />
+    <link rel="prev" title="Reference collection and scientific review" href="references_and_review.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            AstroAKD-Bench
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="create_queries.html">Create synthetic astronomical questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ads_and_mcp.html">ADS and MCP connectivity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references_and_review.html">Reference collection and scientific review</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Question-aware automatic reference-answer scoring (0.6.7.11.12)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#run-and-report-the-a-b-c-benchmark">Run and report the A/B/C benchmark</a></li>
+<li class="toctree-l1"><a class="reference internal" href="python_api.html">Python API</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="documentation_build.html">Build and publish the current documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">AstroAKD-Bench</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Question-aware automatic reference-answer scoring (0.6.7.11.12)</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="question-aware-automatic-reference-answer-scoring-0-6-7-11-12">
+<h1>Question-aware automatic reference-answer scoring (0.6.7.11.12)<a class="headerlink" href="#question-aware-automatic-reference-answer-scoring-0-6-7-11-12" title="Link to this heading"></a></h1>
+<p>The following commands evaluate saved agent answers against saved independent Astroquery MCP reference observations; they do not run LLMs or the MCP server. Baseline A/B/C runs remain frozen.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>--with<span class="w"> </span>matplotlib<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>score-reference-answers<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>astroakd_100_v2<span class="w"> </span>--output-dir<span class="w"> </span>datasets
+</pre></div>
+</div>
+<p>Outputs: <code class="docutils literal notranslate"><span class="pre">reports/astroakd_100_v2/automated/{match_rate,accuracy_by_archive,accuracy_by_question_type}.{png,svg}</span></code>, <code class="docutils literal notranslate"><span class="pre">automated_scores_per_question.csv</span></code>, <code class="docutils literal notranslate"><span class="pre">accuracy_breakdown.csv</span></code>, and <code class="docutils literal notranslate"><span class="pre">automated_scoring_summary.json</span></code>. Use <code class="docutils literal notranslate"><span class="pre">--replace</span></code> to regenerate reports. Each score is <code class="docutils literal notranslate"><span class="pre">correct</span></code>, <code class="docutils literal notranslate"><span class="pre">partially_correct</span></code>, <code class="docutils literal notranslate"><span class="pre">incorrect</span></code>, <code class="docutils literal notranslate"><span class="pre">abstained</span></code>, or <code class="docutils literal notranslate"><span class="pre">failed</span></code>, and the JSON includes an explicit exclusion count for tasks without complete, usable reference evidence. Strict match rates count only <strong>correct</strong>, not partial credit, over evaluable tasks.</p>
+<p>For missing independent multi-step evidence, <code class="docutils literal notranslate"><span class="pre">collect-multistep-references</span> <span class="pre">--name</span> <span class="pre">astroakd_100_v2</span> <span class="pre">--output-dir</span> <span class="pre">datasets</span> <span class="pre">--timeout</span> <span class="pre">900</span> <span class="pre">--limit</span> <span class="pre">5</span></code> creates a resumable journal; continue with <code class="docutils literal notranslate"><span class="pre">--resume</span></code>. The twelve two-archive questions have explicit per-step MCP read-only plans. The eight literature-driven questions require independent observation reference plans and verified paper–observation association evidence; ADS bibliographic searches alone do not supply complete ground truth. Existing questions, single-call reference results, and 300 agent traces are not regenerated or overwritten.</p>
+<p><strong>Current saved study (2026-10-19):</strong> The six previously incomplete VizieR multi-archive steps have now been recovered. The 80 single-call plus 12 multi-archive references make <strong>92/100 questions evaluable</strong>. The eight literature-driven questions remain excluded. With the original frozen A/B/C runs, strict archive-reference matches are <strong>87/92 (94.57%)</strong> for A, <strong>88/92 (95.65%)</strong> for B, and <strong>13/92 (14.13%)</strong> for C. The separate offline <code class="docutils literal notranslate"><span class="pre">draft-literature-plans</span></code> result (<code class="docutils literal notranslate"><span class="pre">draft_ready=6</span></code>, <code class="docutils literal notranslate"><span class="pre">requires_resolution=2</span></code>) does <strong>not</strong> change these denominators: drafts are unverified templates, not independently established observation references. See <a class="reference internal" href="references_and_review.html"><span class="std std-doc">Reference collection and scientific review</span></a> for the eight task IDs and safe interpretation.</p>
+<p><strong>Scope:</strong> Automated comparison is archive-reference agreement, not independently reviewed scientific accuracy. Tolerances, row multiplicity and matching decisions are described in the JSON scoring policy. Partial/abstained/failed counts remain distinct. Diagnostic higher-turn retries must not replace the original common-budget comparison.</p>
+</section>
+<hr class="docutils" />
+<section id="run-and-report-the-a-b-c-benchmark">
+<h1>Run and report the A/B/C benchmark<a class="headerlink" href="#run-and-report-the-a-b-c-benchmark" title="Link to this heading"></a></h1>
+<p>Run the three-agent experiment on one saved question dataset. Reference evidence and gold answers are hidden from the evaluated agents.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>--with<span class="w"> </span>openai<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>run-benchmark<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>astroakd_100_v2<span class="w"> </span>--output-dir<span class="w"> </span>datasets<span class="w"> </span>--limit<span class="w"> </span><span class="m">5</span>
+
+uv<span class="w"> </span>run<span class="w"> </span>--with<span class="w"> </span>openai<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>run-benchmark<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>astroakd_100_v2<span class="w"> </span>--output-dir<span class="w"> </span>datasets<span class="w"> </span>--resume
+</pre></div>
+</div>
+<p>The run journal is under <code class="docutils literal notranslate"><span class="pre">datasets/agent/</span></code>. The three arms are <strong>A: MCP only</strong>, <strong>B: MCP plus the frozen AstroAKD specialist instruction</strong>, <strong>C: Web only</strong>. The complete 100-question experiment has up to 300 question/arm results. Resume the same configuration to preserve comparisons.</p>
+<section id="offline-reports-and-figures">
+<h2>Offline reports and figures<a class="headerlink" href="#offline-reports-and-figures" title="Link to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>--with<span class="w"> </span>matplotlib<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>agent-report<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>astroakd_100_v2<span class="w"> </span>--output-dir<span class="w"> </span>datasets
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">run-benchmark</span></code> <strong>does not create plots</strong>; it writes the A/B/C run journal under <code class="docutils literal notranslate"><span class="pre">datasets/agent/</span></code>. Run <strong><code class="docutils literal notranslate"><span class="pre">agent-report</span></code> afterwards</strong> (or during an unfinished experiment for provisional figures). It reads saved runs offline without new OpenAI or MCP calls. Use <code class="docutils literal notranslate"><span class="pre">--replace</span></code> to regenerate existing report files, not the run journal:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>--with<span class="w"> </span>matplotlib<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>agent-report<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>astroakd_100_v2<span class="w"> </span>--output-dir<span class="w"> </span>datasets<span class="w"> </span>--replace
+</pre></div>
+</div>
+<p>The main A/B/C figures are saved in <strong><code class="docutils literal notranslate"><span class="pre">datasets/reports/astroakd_100_v2/agents/</span></code></strong>:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Figure</p></th>
+<th class="head"><p>Meaning</p></th>
+<th class="head"><p>Comparison with the earlier GPT-5.2 plots</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mean_runtime.png</span></code> / <code class="docutils literal notranslate"><span class="pre">.svg</span></code></p></td>
+<td><p>Mean seconds per <em>recorded</em> agent run, by arm</p></td>
+<td><p>Comparable to historical <code class="docutils literal notranslate"><span class="pre">mean_runtime.png</span></code>, subject to dataset/run-count differences</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">total_tokens.png</span></code> / <code class="docutils literal notranslate"><span class="pre">.svg</span></code></p></td>
+<td><p>Sum of recorded token usage, by arm</p></td>
+<td><p>Comparable to historical <code class="docutils literal notranslate"><span class="pre">total_tokens.png</span></code> only when run coverage is considered</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">completed_runs.png</span></code> / <code class="docutils literal notranslate"><span class="pre">.svg</span></code></p></td>
+<td><p>Number of completed runs</p></td>
+<td><p>Operational completion, <strong>not</strong> matching/science accuracy</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mean_mcp_events.png</span></code> / <code class="docutils literal notranslate"><span class="pre">.svg</span></code></p></td>
+<td><p>Mean MCP tool events per run</p></td>
+<td><p>Additional operational comparison</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">web_search_calls.png</span></code> / <code class="docutils literal notranslate"><span class="pre">.svg</span></code></p></td>
+<td><p>Total web searches by arm</p></td>
+<td><p>Additional operational comparison</p></td>
+</tr>
+</tbody>
+</table>
+<p>CSV output includes <code class="docutils literal notranslate"><span class="pre">arm_operational_summary.csv</span></code>, <code class="docutils literal notranslate"><span class="pre">per_task_operational.csv</span></code>, and <code class="docutils literal notranslate"><span class="pre">abc_answers.csv</span></code> (retains answers). A partial run is summarized as partial; do not compare total tokens between arms without checking their recorded run counts.</p>
+<section id="match-rate-figure-provisional-reference-snapshot-agreement">
+<h3>Match-rate figure: provisional reference-snapshot agreement<a class="headerlink" href="#match-rate-figure-provisional-reference-snapshot-agreement" title="Link to this heading"></a></h3>
+<p>The legacy 0.6.7.11.8 scorer now writes <strong><code class="docutils literal notranslate"><span class="pre">strict_snapshot_match_rate.png</span></code> / <code class="docutils literal notranslate"><span class="pre">.svg</span></code></strong> (kept for audit comparison); 0.6.7.11.11 writes the enhanced <code class="docutils literal notranslate"><span class="pre">match_rate.png</span></code> when <code class="docutils literal notranslate"><span class="pre">datasets/validated/astroakd_100_v2_references_review.csv</span></code> exists and contains complete, automatically comparable reference evidence. This is <strong>not independently verified scientific accuracy</strong>. The figure explicitly says “UNREVIEWED” and reports the number of eligible questions. Its exact-match denominator includes only supported complete single values, complete single-column record lists, and coordinate pairs; truncated, null, multifield, uncollected/multi-step and structurally unsuitable references are excluded. Errors and abstentions on eligible tasks are nonmatches. See <code class="docutils literal notranslate"><span class="pre">reference_agreement_summary.json</span></code> and <code class="docutils literal notranslate"><span class="pre">reference_agreement_per_question.csv</span></code> for a complete audit trail and exclusion reasons. If no usable snapshots exist, the program reports <code class="docutils literal notranslate"><span class="pre">NOT_SCORABLE</span></code> and does not invent a match rate.</p>
+<p>The provisional snapshot match report does <strong>not</strong> establish verified scientific correctness.</p>
+<p><strong>A reference-snapshot match is not an independently reviewed gold answer.</strong> Do not label this scientific accuracy or compare its percentage directly with the frozen earlier 50-question experiment without naming both score definitions and scorable populations. To claim verified scientific accuracy, use reviewed gold and the separate <code class="docutils literal notranslate"><span class="pre">score-three-arm</span></code> workflow.</p>
+</section>
+<section id="retry-only-the-failed-mcp-only-questions-preserving-the-original-experiment">
+<h3>Retry only the failed MCP-only questions, preserving the original experiment<a class="headerlink" href="#retry-only-the-failed-mcp-only-questions-preserving-the-original-experiment" title="Link to this heading"></a></h3>
+<p>After the baseline run is finalized, <code class="docutils literal notranslate"><span class="pre">--resume</span></code> will not reopen the journal and <code class="docutils literal notranslate"><span class="pre">--replace</span></code> would overwrite the experiment. <strong>Use <code class="docutils literal notranslate"><span class="pre">--retry-errors</span></code> instead:</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Offline preview: no OpenAI or MCP requests</span>
+uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>run-benchmark<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>astroakd_100_v2<span class="w"> </span>--output-dir<span class="w"> </span>datasets<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--retry-errors<span class="w"> </span>--dry-run<span class="w"> </span>--max-turns<span class="w"> </span><span class="m">16</span><span class="w"> </span>--max-calls<span class="w"> </span><span class="m">20</span>
+
+<span class="c1"># Two additional MCP-only attempts for the observed 2 error records</span>
+uv<span class="w"> </span>run<span class="w"> </span>--with<span class="w"> </span>openai<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>run-benchmark<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>astroakd_100_v2<span class="w"> </span>--output-dir<span class="w"> </span>datasets<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--retry-errors<span class="w"> </span>--max-turns<span class="w"> </span><span class="m">16</span><span class="w"> </span>--max-calls<span class="w"> </span><span class="m">20</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--timeout<span class="w"> </span><span class="m">900</span><span class="w"> </span>--task-timeout<span class="w"> </span><span class="m">2400</span>
+</pre></div>
+</div>
+<p>The original <code class="docutils literal notranslate"><span class="pre">datasets/agent/astroakd_100_v2_ABC_runs.jsonl</span></code> remains untouched. New files are named <code class="docutils literal notranslate"><span class="pre">astroakd_100_v2_mcp_only_turn16_retries.jsonl</span></code> and <code class="docutils literal notranslate"><span class="pre">astroakd_100_v2_ABC_runs_turn16_diagnostic.jsonl</span></code>. Only successes replace error records in the latter <em>derived</em>, visibly changed-budget diagnostic journal. To produce separate plots including provisional match rate:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>--with<span class="w"> </span>matplotlib<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>benchmark<span class="w"> </span>agent-report<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--name<span class="w"> </span>astroakd_100_v2<span class="w"> </span>--output-dir<span class="w"> </span>datasets<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--runs<span class="w"> </span>datasets/agent/astroakd_100_v2_ABC_runs_turn16_diagnostic.jsonl
+</pre></div>
+</div>
+<p>Its outputs are under <code class="docutils literal notranslate"><span class="pre">datasets/reports/astroakd_100_v2/agents_diagnostic/</span></code>. Never merge these changed-budget retries silently into the original A/B/C result. Scientific gold remains unavailable.</p>
+<p>For reference-side <strong>archive completeness and response-time figures</strong>, use the separate offline command documented in <a class="reference internal" href="references_and_review.html"><span class="std std-doc">Reference collection and scientific review</span></a>.</p>
+<p><strong>Interpretation:</strong> Successful agent execution or agreement with an unreviewed reference snapshot is not scientific accuracy. Report verified correctness only with a separate reviewed gold oracle and transparent denominators. Keep paper claims about the historical 50-question result separate from any new 100-question run.</p>
+</section>
+</section>
+<section id="multi-archive-scoring-closure-in-0-6-7-11-12">
+<h2>Multi-archive scoring closure in 0.6.7.11.12<a class="headerlink" href="#multi-archive-scoring-closure-in-0-6-7-11-12" title="Link to this heading"></a></h2>
+<p>The archive-reference comparator now checks each retrieved record with its <strong>archive and field provenance</strong> and preserves exact observation IDs, row multiplicity and mixed-field units. A comma-separated list of explicit HEASARC ObsIDs or archive-labelled SIMBAD matched IDs is parsed without accidentally extracting unrelated numbers from source descriptions. If one unlabeled value matches multiple archives or fields, the scorer refuses to invent its association. Extra records prevent a strict full match. Reported percentages are conditioned on <em>complete independent reference evidence</em>, not on independent scientific gold review.</p>
+<p>Run <code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">run</span> <span class="pre">--with</span> <span class="pre">matplotlib</span> <span class="pre">python</span> <span class="pre">-m</span> <span class="pre">benchmark</span> <span class="pre">score-reference-answers</span> <span class="pre">--name</span> <span class="pre">astroakd_100_v2</span> <span class="pre">--output-dir</span> <span class="pre">datasets</span> <span class="pre">--replace</span></code> after incomplete-step retries. The plotted denominator and explicit exclusion causes can change as independently collected references become complete; keep earlier figures archived when comparing results across scoring-policy versions.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="references_and_review.html" class="btn btn-neutral float-left" title="Reference collection and scientific review" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="python_api.html" class="btn btn-neutral float-right" title="Python API" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
