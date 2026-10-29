@@ -1,0 +1,4 @@
+arm,tasks_total,runs_recorded,runs_completed,run_errors,completion_pct_recorded,mean_runtime_s,median_runtime_s,total_input_tokens,total_output_tokens,total_tokens,mean_mcp_events_per_run,successful_mcp_queries,web_search_calls,scientific_accuracy
+mcp_only,100,100,98,2,98.0,21.2049,6.5675,0,0,800025,1.41,117,0,NOT_ASSESSED_UNREVIEWED_GOLD
+mcp_instruction,100,100,100,0,100.0,21.3258,6.2828,0,0,1474024,1.42,118,0,NOT_ASSESSED_UNREVIEWED_GOLD
+web_only,100,100,100,0,100.0,16.1906,14.0931,1641607,77864,1719471,0.0,0,436,NOT_ASSESSED_UNREVIEWED_GOLD

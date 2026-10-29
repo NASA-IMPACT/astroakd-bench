@@ -1,0 +1,117 @@
+{
+  "benchmark_scoring_version": "0.6.7.11.12",
+  "evaluable_questions": 92,
+  "excluded_literature_questions": 8,
+  "file_count_excluding_manifest": 24,
+  "files": {
+    "README.md": {
+      "bytes": 6389,
+      "sha256": "9d39440b359f1eccfc22d326759d78c1509463b35e4ba02ea8b2c16eaef50895"
+    },
+    "accuracy_breakdown.csv": {
+      "bytes": 1490,
+      "sha256": "864096b0d60960e1092b29381dc69550d623df2aa9a2165f80edf618fc2e7d00"
+    },
+    "agent_answers_sample.jsonl": {
+      "bytes": 62525,
+      "sha256": "b81ca99c99397f27fa43b147eae97fa7b50e2b05967d46928c21948a2afeb822"
+    },
+    "astroakd_100_v2.csv": {
+      "bytes": 53459,
+      "sha256": "3790719101f63595d0349580658a2c385eda27b3983b789a705f1539bb53a821"
+    },
+    "astroakd_100_v2_multistep_references.csv": {
+      "bytes": 16463,
+      "sha256": "473a51e97854af5944e7b9f256c437af083659f887b665e1882c612bb51ff48a"
+    },
+    "astroakd_100_v2_multistep_references.jsonl": {
+      "bytes": 20756,
+      "sha256": "1e6d5a837e6803b9e4fd6dfc867745f400468d20b66ef5f801cbaa552257c447"
+    },
+    "astroakd_100_v2_questions_and_references.csv": {
+      "bytes": 93155,
+      "sha256": "c462c91d82c62dab4b5b8d39fdef31d57320dbe9afd13dd450b21d3e214cb301"
+    },
+    "astroakd_100_v2_references.csv": {
+      "bytes": 147300,
+      "sha256": "64bf57e1ee8e3f7aae8ce5ed6a9f8a8a9f2f25d5f8267c1cab00e63862d533c9"
+    },
+    "automated_scores_per_question.csv": {
+      "bytes": 18214,
+      "sha256": "91ad3f508c16a539043450292d044461d2475575b0fea945fd44b02f4ac23135"
+    },
+    "automated_scoring_summary.json": {
+      "bytes": 7876,
+      "sha256": "2ac07866517fc628bc4cc5abed6c60e19d02b1e45b1d546e7db5f7e259dc6295"
+    },
+    "figures/accuracy_by_archive.png": {
+      "bytes": 75200,
+      "sha256": "e199fd75c4f5d4c29af6d8091c1c9075e2f753d45aba3f8dde2088d73bcaab69"
+    },
+    "figures/accuracy_by_archive.svg": {
+      "bytes": 48999,
+      "sha256": "c744528082f7ed4997ea2bd00380a800e45d0bb117bd5e5b199385a0af3aaba3"
+    },
+    "figures/accuracy_by_question_type.png": {
+      "bytes": 66565,
+      "sha256": "47502660c3dc7255b6effb305e35421c20ab31d2f981bca79bab318e2d3433c2"
+    },
+    "figures/accuracy_by_question_type.svg": {
+      "bytes": 47276,
+      "sha256": "9e040efa2ee598c4b441da57ec0c3589e91338a2c97442e5c382bd54f9aa8feb"
+    },
+    "figures/completed_runs.png": {
+      "bytes": 38497,
+      "sha256": "4f99bbdf2c3a15ddefc73ef86c5a11814f289b11470bda2d576a4783f24474b5"
+    },
+    "figures/match_rate.png": {
+      "bytes": 64094,
+      "sha256": "277eaf215ca7ff694485a18e873e18144c513e4da92bebe4169f369ee7f30539"
+    },
+    "figures/match_rate.svg": {
+      "bytes": 42770,
+      "sha256": "6d6c8377f4d1b9aeb258ff6fe12a95a45268ee6feb4db7cd052f6c84848c27c3"
+    },
+    "figures/mean_runtime.png": {
+      "bytes": 34150,
+      "sha256": "87a1e3505c13e59988fe469bd7abb2a537382dd978f4ceab75e7f002916029ae"
+    },
+    "figures/questions_by_archive.png": {
+      "bytes": 39784,
+      "sha256": "0fa1668455e8d51308764be4c9c7abf392f0741e7d0ed6dc58f4a2188b7548a8"
+    },
+    "figures/total_tokens.png": {
+      "bytes": 45051,
+      "sha256": "56f1c5caa87dab9544591f4a812b0c504b331cde4eb3f69e9b627ea46923ebe5"
+    },
+    "multi_archive_reference_sample.jsonl": {
+      "bytes": 750,
+      "sha256": "9e9969e5e4921793c7854c1464eefd7281563cf1313cc6e46cb5f286c55c0745"
+    },
+    "operational_summary.csv": {
+      "bytes": 554,
+      "sha256": "fb97acf011290543ff4f7aa1513800d6eb8dba17f27215e1900169b4edaf9d57"
+    },
+    "questions_sample.jsonl": {
+      "bytes": 9299,
+      "sha256": "b4fb490f1faeddc8b31522ae221285f5ea1d30a965f9b611cb870e947301af59"
+    },
+    "reference_values_sample.jsonl": {
+      "bytes": 7100,
+      "sha256": "983f4ce8d2b7566ee7a3e84054298c6bbe697b09f5d96eec8d988474e5f01e24"
+    }
+  },
+  "generated_questions_csv_rows": 100,
+  "joined_questions_with_available_references": 92,
+  "multi_archive_reference_complete": 12,
+  "multi_step_reference_records": 20,
+  "original_runs_sha256": "03e05928e9fc2efdb8221f20535d5f94affdc76ef934bbbe7b5d23db0f915abe",
+  "questions_sha256": "3e6e84cba6a5e36d58d0a35082715a686cc205cc70c534e40554cdd7251e97c5",
+  "sample_agent_answers": 30,
+  "sample_questions": 10,
+  "single_call_references_csv_rows": 80,
+  "single_call_references_sha256": "5f238dc86dd9c5b0ea229c813b83729aa2c745231346aa1b6ab4be4d53315461",
+  "source_archive": "datasets.tar(20261028-213411).gz",
+  "source_archive_sha256": "d65685f3b57a0e0bf9a88d7d3522ca85d71657238bc9f25a98160deeb1de9ea5",
+  "study": "astroakd_100_v2"
+}

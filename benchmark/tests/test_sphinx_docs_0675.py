@@ -52,7 +52,7 @@ class SphinxDocumentationTests(unittest.TestCase):
                 inside = False
             elif inside and stripped and not stripped.startswith(":"):
                 entries.append(stripped)
-        self.assertEqual(len(entries), 7)
+        self.assertEqual(len(entries), 8)
         for item in entries:
             self.assertTrue((ROOT / "docs" / f"{item}.md").is_file(), item)
 

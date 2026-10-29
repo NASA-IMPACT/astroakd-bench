@@ -22,6 +22,18 @@
 
 The benchmark separates **execution completion**, **archive-reference answer agreement**, and **resource usage**. Automatic agreement with archive responses is not the same as independently verified scientific accuracy.
 
+## Example questions and results
+
+A [published example dataset](examples/README.md) provides **all 100 generated questions**, a convenient [question-and-reference CSV](examples/astroakd_100_v2/astroakd_100_v2_questions_and_references.csv), original single-call and multi-archive reference tables, A/B/C scoring summaries, and selected plots.
+
+In this frozen study, **92 questions have complete archive-derived reference evidence** (80 single-call and 12 multi-archive); 8 literature-driven questions remain excluded. Strict automated reference agreement is **94.57% (A)**, **95.65% (B)**, and **14.13% (C)**. These are **not independently reviewed scientific accuracy rates**, and the one-question A/B difference is not conclusive.
+
+| Strict reference-answer agreement (92 evaluable) | Mean runtime per run (original baseline) |
+| --- | --- |
+| ![Strict A/B/C agreement](examples/astroakd_100_v2/figures/match_rate.png) | ![A/B/C baseline mean runtime](examples/astroakd_100_v2/figures/mean_runtime.png) |
+
+See [all example files and figures](examples/README.md) for per-question classifications, original input CSVs, and the limitations of automatic scoring.
+
 ## Requirements
 
 - Python 3.11+ and [uv](https://docs.astral.sh/uv/)
@@ -179,5 +191,7 @@ The [online documentation](https://danehkar.github.io/astroakd-bench/) covers:
 - [Question generation](docs/benchmark/create_queries.md) and [ADS/MCP configuration](docs/benchmark/ads_and_mcp.md)
 - [Reference evidence](docs/benchmark/references_and_review.md) and [A/B/C evaluation](docs/benchmark/evaluation_and_plots.md)
 - [Python API](docs/benchmark/python_api.md)
+
+Build the current HTML documentation locally with `make -C docs/sphinx clean` followed by `make -C docs/sphinx html`. The generated site appears under `docs/_build/html/`.
 
 For the complete command list, run `uv run python -m benchmark --help`. See [CHANGELOG.md](CHANGELOG.md) for release history and [the benchmark-generation instructions](instructions/astroakd_bench/AstroAKD-Bench_Instruction.md) for question-design policy.

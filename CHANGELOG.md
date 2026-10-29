@@ -1,3 +1,10 @@
+## Unreleased — Published example dataset and documentation figures (2026-10-28; version unchanged)
+
+- Add a curated `examples/astroakd_100_v2/` study with 100 generated questions, a joined question/reference CSV (92 complete reference sets; 8 excluded literature cases), original reference CSVs, representative agent answers, published scoring summaries, plots, and checksums.
+- Add `examples/README.md` and embed selected original figures in the examples and root README; provide an illustrated `docs/benchmark/example_results.md` in the current Sphinx site.
+- Extend the GitHub Pages documentation trigger to `examples/**` and include a Wiki example-results page with image paths rewritten to public repository links.
+- Preserve the frozen scientific data and scoring results; this is documentation/example packaging only, with no benchmark behavior, version, or science change.
+
 ## 0.6.7.11.13 — GH_PAGES_AND_WIKI_DOCUMENTATION_PUBLISHING
 
 - Add `.github/workflows/publish-docs.yml` on `main` to build warning-clean Sphinx HTML on documentation/source changes and manual dispatch, mirror the built site (with root `index.html` and `.nojekyll`) to `gh-pages`, and deploy that same artifact with GitHub Pages Actions. A `GITHUB_TOKEN` push to `gh-pages` alone does not trigger the live Pages build.

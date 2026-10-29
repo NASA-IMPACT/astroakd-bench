@@ -1,0 +1,318 @@
+{
+  "milestone": "0.6.7.11.12 - MULTISTEP_REFERENCE_AND_SCORING_CLOSURE",
+  "status": "PARTIAL_REFERENCE_COVERAGE",
+  "metric": "AUTOMATED_ARCHIVE_REFERENCE_ANSWER_AGREEMENT_NOT_INDEPENDENT_SCIENTIFIC_GOLD",
+  "dataset_sha256": "3e6e84cba6a5e36d58d0a35082715a686cc205cc70c534e40554cdd7251e97c5",
+  "runs_sha256": "03e05928e9fc2efdb8221f20535d5f94affdc76ef934bbbe7b5d23db0f915abe",
+  "references_sha256": "5f238dc86dd9c5b0ea229c813b83729aa2c745231346aa1b6ab4be4d53315461",
+  "total_questions": 100,
+  "evaluable_questions": 92,
+  "excluded_questions": 8,
+  "exclusion_reasons": {
+    "needs_independent_archive_query_plan": 8
+  },
+  "arms": {
+    "mcp_only": {
+      "correct": 87,
+      "partially_correct": 4,
+      "incorrect": 1,
+      "abstained": 0,
+      "failed": 0,
+      "evaluable": 92,
+      "strict_match_pct": 94.57
+    },
+    "mcp_instruction": {
+      "correct": 88,
+      "partially_correct": 4,
+      "incorrect": 0,
+      "abstained": 0,
+      "failed": 0,
+      "evaluable": 92,
+      "strict_match_pct": 95.65
+    },
+    "web_only": {
+      "correct": 13,
+      "partially_correct": 2,
+      "incorrect": 8,
+      "abstained": 69,
+      "failed": 0,
+      "evaluable": 92,
+      "strict_match_pct": 14.13
+    }
+  },
+  "by_archive": {
+    "gaia": {
+      "mcp_only": {
+        "correct": 18,
+        "partially_correct": 0,
+        "incorrect": 0,
+        "abstained": 0,
+        "failed": 0,
+        "evaluable": 18,
+        "strict_match_pct": 100.0
+      },
+      "mcp_instruction": {
+        "correct": 18,
+        "partially_correct": 0,
+        "incorrect": 0,
+        "abstained": 0,
+        "failed": 0,
+        "evaluable": 18,
+        "strict_match_pct": 100.0
+      },
+      "web_only": {
+        "correct": 0,
+        "partially_correct": 0,
+        "incorrect": 0,
+        "abstained": 18,
+        "failed": 0,
+        "evaluable": 18,
+        "strict_match_pct": 0.0
+      }
+    },
+    "heasarc": {
+      "mcp_only": {
+        "correct": 20,
+        "partially_correct": 0,
+        "incorrect": 0,
+        "abstained": 0,
+        "failed": 0,
+        "evaluable": 20,
+        "strict_match_pct": 100.0
+      },
+      "mcp_instruction": {
+        "correct": 20,
+        "partially_correct": 0,
+        "incorrect": 0,
+        "abstained": 0,
+        "failed": 0,
+        "evaluable": 20,
+        "strict_match_pct": 100.0
+      },
+      "web_only": {
+        "correct": 0,
+        "partially_correct": 0,
+        "incorrect": 0,
+        "abstained": 20,
+        "failed": 0,
+        "evaluable": 20,
+        "strict_match_pct": 0.0
+      }
+    },
+    "mast": {
+      "mcp_only": {
+        "correct": 1,
+        "partially_correct": 1,
+        "incorrect": 0,
+        "abstained": 0,
+        "failed": 0,
+        "evaluable": 2,
+        "strict_match_pct": 50.0
+      },
+      "mcp_instruction": {
+        "correct": 1,
+        "partially_correct": 1,
+        "incorrect": 0,
+        "abstained": 0,
+        "failed": 0,
+        "evaluable": 2,
+        "strict_match_pct": 50.0
+      },
+      "web_only": {
+        "correct": 0,
+        "partially_correct": 0,
+        "incorrect": 0,
+        "abstained": 2,
+        "failed": 0,
+        "evaluable": 2,
+        "strict_match_pct": 0.0
+      }
+    },
+    "multi_archive": {
+      "mcp_only": {
+        "correct": 8,
+        "partially_correct": 3,
+        "incorrect": 1,
+        "abstained": 0,
+        "failed": 0,
+        "evaluable": 12,
+        "strict_match_pct": 66.67
+      },
+      "mcp_instruction": {
+        "correct": 9,
+        "partially_correct": 3,
+        "incorrect": 0,
+        "abstained": 0,
+        "failed": 0,
+        "evaluable": 12,
+        "strict_match_pct": 75.0
+      },
+      "web_only": {
+        "correct": 0,
+        "partially_correct": 2,
+        "incorrect": 1,
+        "abstained": 9,
+        "failed": 0,
+        "evaluable": 12,
+        "strict_match_pct": 0.0
+      }
+    },
+    "simbad": {
+      "mcp_only": {
+        "correct": 20,
+        "partially_correct": 0,
+        "incorrect": 0,
+        "abstained": 0,
+        "failed": 0,
+        "evaluable": 20,
+        "strict_match_pct": 100.0
+      },
+      "mcp_instruction": {
+        "correct": 20,
+        "partially_correct": 0,
+        "incorrect": 0,
+        "abstained": 0,
+        "failed": 0,
+        "evaluable": 20,
+        "strict_match_pct": 100.0
+      },
+      "web_only": {
+        "correct": 13,
+        "partially_correct": 0,
+        "incorrect": 7,
+        "abstained": 0,
+        "failed": 0,
+        "evaluable": 20,
+        "strict_match_pct": 65.0
+      }
+    },
+    "vizier": {
+      "mcp_only": {
+        "correct": 20,
+        "partially_correct": 0,
+        "incorrect": 0,
+        "abstained": 0,
+        "failed": 0,
+        "evaluable": 20,
+        "strict_match_pct": 100.0
+      },
+      "mcp_instruction": {
+        "correct": 20,
+        "partially_correct": 0,
+        "incorrect": 0,
+        "abstained": 0,
+        "failed": 0,
+        "evaluable": 20,
+        "strict_match_pct": 100.0
+      },
+      "web_only": {
+        "correct": 0,
+        "partially_correct": 0,
+        "incorrect": 0,
+        "abstained": 20,
+        "failed": 0,
+        "evaluable": 20,
+        "strict_match_pct": 0.0
+      }
+    }
+  },
+  "by_question_type": {
+    "archive_driven": {
+      "mcp_only": {
+        "correct": 60,
+        "partially_correct": 0,
+        "incorrect": 0,
+        "abstained": 0,
+        "failed": 0,
+        "evaluable": 60,
+        "strict_match_pct": 100.0
+      },
+      "mcp_instruction": {
+        "correct": 60,
+        "partially_correct": 0,
+        "incorrect": 0,
+        "abstained": 0,
+        "failed": 0,
+        "evaluable": 60,
+        "strict_match_pct": 100.0
+      },
+      "web_only": {
+        "correct": 13,
+        "partially_correct": 0,
+        "incorrect": 7,
+        "abstained": 40,
+        "failed": 0,
+        "evaluable": 60,
+        "strict_match_pct": 21.67
+      }
+    },
+    "coordinate_driven": {
+      "mcp_only": {
+        "correct": 19,
+        "partially_correct": 1,
+        "incorrect": 0,
+        "abstained": 0,
+        "failed": 0,
+        "evaluable": 20,
+        "strict_match_pct": 95.0
+      },
+      "mcp_instruction": {
+        "correct": 19,
+        "partially_correct": 1,
+        "incorrect": 0,
+        "abstained": 0,
+        "failed": 0,
+        "evaluable": 20,
+        "strict_match_pct": 95.0
+      },
+      "web_only": {
+        "correct": 0,
+        "partially_correct": 0,
+        "incorrect": 0,
+        "abstained": 20,
+        "failed": 0,
+        "evaluable": 20,
+        "strict_match_pct": 0.0
+      }
+    },
+    "multi_archive": {
+      "mcp_only": {
+        "correct": 8,
+        "partially_correct": 3,
+        "incorrect": 1,
+        "abstained": 0,
+        "failed": 0,
+        "evaluable": 12,
+        "strict_match_pct": 66.67
+      },
+      "mcp_instruction": {
+        "correct": 9,
+        "partially_correct": 3,
+        "incorrect": 0,
+        "abstained": 0,
+        "failed": 0,
+        "evaluable": 12,
+        "strict_match_pct": 75.0
+      },
+      "web_only": {
+        "correct": 0,
+        "partially_correct": 2,
+        "incorrect": 1,
+        "abstained": 9,
+        "failed": 0,
+        "evaluable": 12,
+        "strict_match_pct": 0.0
+      }
+    }
+  },
+  "scoring_policy": {
+    "numeric_relative_tolerance": 2e-05,
+    "numeric_absolute_tolerance": 0.0011,
+    "coordinate_tolerance_deg": 1e-05,
+    "list_semantics": "duplicate-aware, order-independent",
+    "statuses": "distinct values only when question requests statuses as a set",
+    "multi_field": "complete tuples by row; no cross-row mixing",
+    "multi_archive": "archive/field-aware, duplicate-sensitive; unlabelled ambiguous values are not assumed correct"
+  },
+  "note": "Automatic agreement to observed archive values; no manual gold approval or external scientific verification is implied."
+}

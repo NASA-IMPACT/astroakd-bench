@@ -6,6 +6,7 @@ Purely local: reads source Markdown from this checkout; does not use an API.
 from __future__ import annotations
 
 import argparse
+import os
 import re
 from pathlib import Path
 
@@ -17,6 +18,7 @@ SOURCES = {
     "AstroAKD-ADS-and-MCP.md": "docs/benchmark/ads_and_mcp.md",
     "AstroAKD-References-and-Review.md": "docs/benchmark/references_and_review.md",
     "AstroAKD-Evaluation-and-Plots.md": "docs/benchmark/evaluation_and_plots.md",
+    "AstroAKD-Example-Results.md": "docs/benchmark/example_results.md",
     "AstroAKD-Python-API.md": "docs/benchmark/python_api.md",
     "AstroAKD-Documentation-Build.md": "docs/benchmark/documentation_build.md",
     "AstroAKD-README.md": "README.md",
@@ -24,6 +26,7 @@ SOURCES = {
 }
 LOOKUP = {(ROOT / source).resolve(): Path(page).stem for page, source in SOURCES.items()}
 LINK = re.compile(r"(?<!!)\[([^]]+)\]\(([^)]+)\)")
+IMAGE = re.compile(r"!\[([^]]*)\]\(([^)]+)\)")
 
 
 def convert(source_path: Path, text: str) -> str:
@@ -65,7 +68,27 @@ def convert(source_path: Path, text: str) -> str:
             slug = LOOKUP[candidate]
             return f"[{label}]({slug}{'#' + fragment if separator else ''})"
 
-        lines.append(LINK.sub(replace, line))
+        def replace_image(match: re.Match[str]) -> str:
+            label, uri = match.groups()
+            if not uri or ":" in uri or uri.startswith("/"):
+                return match.group(0)
+            target, separator, fragment = uri.partition("#")
+            candidate = (source_path.parent / target).resolve()
+            try:
+                relative = candidate.relative_to(ROOT)
+            except ValueError:
+                return match.group(0)
+            if not candidate.is_file():
+                return match.group(0)
+            repo = os.environ.get("GITHUB_REPOSITORY", "danehkar/astroakd-bench")
+            if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", repo):
+                raise ValueError("Invalid GitHub repository identifier")
+            raw = f"https://raw.githubusercontent.com/{repo}/main/{relative.as_posix()}"
+            return f"![{label}]({raw}{'#' + fragment if separator else ''})"
+
+        # Wiki files live in a flat Git repository, so repo-relative image paths
+        # need an absolute public URL. Preserve ordinary Markdown links as above.
+        lines.append(LINK.sub(replace, IMAGE.sub(replace_image, line)))
     return "".join(lines)
 
 

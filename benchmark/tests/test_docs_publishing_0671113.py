@@ -1,5 +1,6 @@
 """Offline checks for current-only GitHub Pages + GitHub Wiki publishing."""
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -18,6 +19,7 @@ def test_workflow_deploys_html_and_wiki_from_main():
     obj = yaml.load(flow.read_text(), Loader=yaml.BaseLoader)
     assert obj["on"]["push"]["branches"] == ["main"]
     assert "docs/**" in obj["on"]["push"]["paths"]
+    assert "examples/**" in obj["on"]["push"]["paths"]
     assert "README.md" in obj["on"]["push"]["paths"]
     assert "workflow_dispatch" in obj["on"]
     assert obj["permissions"] == {"contents": "write", "pages": "write", "id-token": "write"}
@@ -43,7 +45,11 @@ def test_wiki_export_rewrites_internal_links_and_preserves_code(tmp_path):
     assert (output / "_Sidebar.md").exists()
     assert (output / "AstroAKD-README.md").exists()
     assert (output / "AstroAKD-Changelog.md").exists()
-    assert len(list(output.glob("*.md"))) == 11
+    assert len(list(output.glob("*.md"))) == 12
+    assert "[published `astroakd_100_v2` example](AstroAKD-Example-Results)" in home
+    example = (output / "AstroAKD-Example-Results.md").read_text()
+    assert f"raw.githubusercontent.com/{os.environ.get('GITHUB_REPOSITORY', 'danehkar/astroakd-bench')}/main/docs/_static/examples/match_rate.png" in example
+    assert "![](_static/" not in home
 
 
 def test_wiki_sync_preserves_unmanaged_and_prunes_removed_managed(tmp_path):
