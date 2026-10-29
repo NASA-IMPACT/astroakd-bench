@@ -1,0 +1,171 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Published example: astroakd_100_v2 &mdash; AstroAKD-Bench 0.6.7.11.13</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=d1655f8a"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Python API" href="python_api.html" />
+    <link rel="prev" title="Question-aware automatic reference-answer scoring (0.6.7.11.12)" href="evaluation_and_plots.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            AstroAKD-Bench
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User guide</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="create_queries.html">Create synthetic astronomical questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ads_and_mcp.html">ADS and MCP connectivity</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references_and_review.html">Reference collection and scientific review</a></li>
+<li class="toctree-l1"><a class="reference internal" href="evaluation_and_plots.html">Question-aware automatic reference-answer scoring (0.6.7.11.12)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="evaluation_and_plots.html#run-and-report-the-a-b-c-benchmark">Run and report the A/B/C benchmark</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Published example: <code class="docutils literal notranslate"><span class="pre">astroakd_100_v2</span></code></a></li>
+<li class="toctree-l1"><a class="reference internal" href="python_api.html">Python API</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Development</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="documentation_build.html">Build and publish the current documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">AstroAKD-Bench</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Published example: <code class="docutils literal notranslate"><span class="pre">astroakd_100_v2</span></code></li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="published-example-astroakd-100-v2">
+<h1>Published example: <code class="docutils literal notranslate"><span class="pre">astroakd_100_v2</span></code><a class="headerlink" href="#published-example-astroakd-100-v2" title="Link to this heading"></a></h1>
+<p>The repository includes a <a class="reference external" href="https://github.com/danehkar/astroakd-bench/tree/main/examples/astroakd_100_v2">curated public example</a> containing generated astronomy questions, independently collected Astroquery MCP reference answers, the A/B/C baseline answer samples, scoring summaries and figures. No live OpenAI or archive calls are necessary to inspect these saved outputs.</p>
+<section id="inspect-the-questions-and-references">
+<h2>Inspect the questions and references<a class="headerlink" href="#inspect-the-questions-and-references" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference external" href="https://github.com/danehkar/astroakd-bench/blob/main/examples/astroakd_100_v2/astroakd_100_v2_questions_and_references.csv">All 100 questions joined with available reference answers</a> — easiest spreadsheet overview, joined on <code class="docutils literal notranslate"><span class="pre">task_id</span></code>.</p></li>
+<li><p><a class="reference external" href="https://github.com/danehkar/astroakd-bench/blob/main/examples/astroakd_100_v2/astroakd_100_v2.csv">Original 100-question generation CSV</a> — question specifications, without collected reference values.</p></li>
+<li><p><a class="reference external" href="https://github.com/danehkar/astroakd-bench/blob/main/examples/astroakd_100_v2/astroakd_100_v2_references.csv">80 single-call references</a> and <a class="reference external" href="https://github.com/danehkar/astroakd-bench/blob/main/examples/astroakd_100_v2/astroakd_100_v2_multistep_references.csv">20 multi-step reference statuses</a> — 12 completed multi-archive cases and 8 literature tasks without complete reference evidence.</p></li>
+<li><p><a class="reference external" href="https://github.com/danehkar/astroakd-bench/blob/main/examples/astroakd_100_v2/automated_scores_per_question.csv">Per-question classifications</a> and <a class="reference external" href="https://github.com/danehkar/astroakd-bench/blob/main/examples/astroakd_100_v2/automated_scoring_summary.json">scoring policy/summary</a>.</p></li>
+</ul>
+<p>The joined CSV preserves structured values as JSON inside cells. <strong>92 of 100</strong> questions have complete independent reference evidence; the eight literature-driven cases are excluded pending confirmed publication-to-observation associations.</p>
+</section>
+<section id="automatic-archive-reference-agreement">
+<h2>Automatic archive-reference agreement<a class="headerlink" href="#automatic-archive-reference-agreement" title="Link to this heading"></a></h2>
+<p><img alt="Strict reference-answer agreement for 92 evaluable questions" src="../_images/match_rate.png" /></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Outcome</p></th>
+<th class="head text-right"><p>A: MCP only</p></th>
+<th class="head text-right"><p>B: AstroAKD instructions</p></th>
+<th class="head text-right"><p>C: Web only</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Strict reference matches</p></td>
+<td class="text-right"><p>87/92</p></td>
+<td class="text-right"><p>88/92</p></td>
+<td class="text-right"><p>13/92</p></td>
+</tr>
+<tr class="row-odd"><td><p>Strict agreement</p></td>
+<td class="text-right"><p><strong>94.57%</strong></p></td>
+<td class="text-right"><p><strong>95.65%</strong></p></td>
+<td class="text-right"><p><strong>14.13%</strong></p></td>
+</tr>
+<tr class="row-even"><td><p>Partially correct</p></td>
+<td class="text-right"><p>4</p></td>
+<td class="text-right"><p>4</p></td>
+<td class="text-right"><p>2</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Interpretation:</strong> The figures measure agreement with independently retrieved Astroquery MCP reference snapshots, <em>not independently reviewed scientific accuracy</em>. Only fully matching answers count in the strict percentage. The single-question difference between A and B is not established evidence of a domain-instruction benefit; several borderline output-format classifications merit review.</p>
+</section>
+<section id="agreement-by-question-type">
+<h2>Agreement by question type<a class="headerlink" href="#agreement-by-question-type" title="Link to this heading"></a></h2>
+<p><img alt="Reference-answer agreement by question type" src="../_images/accuracy_by_question_type.png" /></p>
+</section>
+<section id="original-baseline-runtime">
+<h2>Original baseline runtime<a class="headerlink" href="#original-baseline-runtime" title="Link to this heading"></a></h2>
+<p><img alt="Mean runtime from original common-budget runs" src="../_images/mean_runtime.png" /></p>
+<p>The operational figures use the <strong>original common-budget</strong> A/B/C executions (100 questions per arm, 300 run records), without substituting subsequent higher-turn diagnostic retries. Reference coverage and runtime are different metrics.</p>
+<p>For the methodology and report commands, see <a class="reference internal" href="evaluation_and_plots.html"><span class="std std-doc">Evaluation and plots</span></a>. Additional PNG/SVG figures, archive breakdowns, and example JSONL files are listed in the <a class="reference external" href="https://github.com/danehkar/astroakd-bench/blob/main/examples/README.md">public examples README</a>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="evaluation_and_plots.html" class="btn btn-neutral float-left" title="Question-aware automatic reference-answer scoring (0.6.7.11.12)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="python_api.html" class="btn btn-neutral float-right" title="Python API" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

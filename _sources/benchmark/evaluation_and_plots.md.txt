@@ -15,6 +15,12 @@ For missing independent multi-step evidence, `collect-multistep-references --nam
 
 **Scope:** Automated comparison is archive-reference agreement, not independently reviewed scientific accuracy. Tolerances, row multiplicity and matching decisions are described in the JSON scoring policy. Partial/abstained/failed counts remain distinct. Diagnostic higher-turn retries must not replace the original common-budget comparison.
 
+## View the published example
+
+The frozen [`astroakd_100_v2` example](example_results.md) includes question/reference tables, per-task scoring CSVs, and plots. The strict-match figure below uses **92 evaluable questions**, not the earlier 69-question legacy snapshot:
+
+![Saved strict archive-reference match rate](../_static/examples/match_rate.png)
+
 ---
 
 # Run and report the A/B/C benchmark

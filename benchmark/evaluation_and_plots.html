@@ -19,7 +19,7 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Python API" href="python_api.html" />
+    <link rel="next" title="Published example: astroakd_100_v2" href="example_results.html" />
     <link rel="prev" title="Reference collection and scientific review" href="references_and_review.html" /> 
 </head>
 
@@ -50,6 +50,7 @@
 <li class="toctree-l1"><a class="reference internal" href="references_and_review.html">Reference collection and scientific review</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Question-aware automatic reference-answer scoring (0.6.7.11.12)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="#run-and-report-the-a-b-c-benchmark">Run and report the A/B/C benchmark</a></li>
+<li class="toctree-l1"><a class="reference internal" href="example_results.html">Published example: <code class="docutils literal notranslate"><span class="pre">astroakd_100_v2</span></code></a></li>
 <li class="toctree-l1"><a class="reference internal" href="python_api.html">Python API</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Development</span></p>
@@ -91,6 +92,11 @@
 <p>For missing independent multi-step evidence, <code class="docutils literal notranslate"><span class="pre">collect-multistep-references</span> <span class="pre">--name</span> <span class="pre">astroakd_100_v2</span> <span class="pre">--output-dir</span> <span class="pre">datasets</span> <span class="pre">--timeout</span> <span class="pre">900</span> <span class="pre">--limit</span> <span class="pre">5</span></code> creates a resumable journal; continue with <code class="docutils literal notranslate"><span class="pre">--resume</span></code>. The twelve two-archive questions have explicit per-step MCP read-only plans. The eight literature-driven questions require independent observation reference plans and verified paper–observation association evidence; ADS bibliographic searches alone do not supply complete ground truth. Existing questions, single-call reference results, and 300 agent traces are not regenerated or overwritten.</p>
 <p><strong>Current saved study (2026-10-19):</strong> The six previously incomplete VizieR multi-archive steps have now been recovered. The 80 single-call plus 12 multi-archive references make <strong>92/100 questions evaluable</strong>. The eight literature-driven questions remain excluded. With the original frozen A/B/C runs, strict archive-reference matches are <strong>87/92 (94.57%)</strong> for A, <strong>88/92 (95.65%)</strong> for B, and <strong>13/92 (14.13%)</strong> for C. The separate offline <code class="docutils literal notranslate"><span class="pre">draft-literature-plans</span></code> result (<code class="docutils literal notranslate"><span class="pre">draft_ready=6</span></code>, <code class="docutils literal notranslate"><span class="pre">requires_resolution=2</span></code>) does <strong>not</strong> change these denominators: drafts are unverified templates, not independently established observation references. See <a class="reference internal" href="references_and_review.html"><span class="std std-doc">Reference collection and scientific review</span></a> for the eight task IDs and safe interpretation.</p>
 <p><strong>Scope:</strong> Automated comparison is archive-reference agreement, not independently reviewed scientific accuracy. Tolerances, row multiplicity and matching decisions are described in the JSON scoring policy. Partial/abstained/failed counts remain distinct. Diagnostic higher-turn retries must not replace the original common-budget comparison.</p>
+<section id="view-the-published-example">
+<h2>View the published example<a class="headerlink" href="#view-the-published-example" title="Link to this heading"></a></h2>
+<p>The frozen <a class="reference internal" href="example_results.html"><span class="std std-doc"><code class="docutils literal notranslate"><span class="pre">astroakd_100_v2</span></code> example</span></a> includes question/reference tables, per-task scoring CSVs, and plots. The strict-match figure below uses <strong>92 evaluable questions</strong>, not the earlier 69-question legacy snapshot:</p>
+<p><img alt="Saved strict archive-reference match rate" src="../_images/match_rate.png" /></p>
+</section>
 </section>
 <hr class="docutils" />
 <section id="run-and-report-the-a-b-c-benchmark">
@@ -191,7 +197,7 @@ uv<span class="w"> </span>run<span class="w"> </span>--with<span class="w"> </sp
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="references_and_review.html" class="btn btn-neutral float-left" title="Reference collection and scientific review" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="python_api.html" class="btn btn-neutral float-right" title="Python API" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="example_results.html" class="btn btn-neutral float-right" title="Published example: astroakd_100_v2" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

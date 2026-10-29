@@ -49,6 +49,7 @@
 <li class="toctree-l1"><a class="reference internal" href="benchmark/references_and_review.html">Reference collection and scientific review</a></li>
 <li class="toctree-l1"><a class="reference internal" href="benchmark/evaluation_and_plots.html">Question-aware automatic reference-answer scoring (0.6.7.11.12)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="benchmark/evaluation_and_plots.html#run-and-report-the-a-b-c-benchmark">Run and report the A/B/C benchmark</a></li>
+<li class="toctree-l1"><a class="reference internal" href="benchmark/example_results.html">Published example: <code class="docutils literal notranslate"><span class="pre">astroakd_100_v2</span></code></a></li>
 <li class="toctree-l1"><a class="reference internal" href="benchmark/python_api.html">Python API</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Development</span></p>
@@ -119,10 +120,20 @@
 <li class="toctree-l2"><a class="reference internal" href="benchmark/references_and_review.html#multi-step-evidence-closure-and-literature-draft-report-0-6-7-11-12">Multi-step evidence closure and literature draft report (0.6.7.11.12)</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="benchmark/evaluation_and_plots.html">Question-aware automatic reference-answer scoring (0.6.7.11.12)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="benchmark/evaluation_and_plots.html">Question-aware automatic reference-answer scoring (0.6.7.11.12)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="benchmark/evaluation_and_plots.html#view-the-published-example">View the published example</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="benchmark/evaluation_and_plots.html#run-and-report-the-a-b-c-benchmark">Run and report the A/B/C benchmark</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="benchmark/evaluation_and_plots.html#offline-reports-and-figures">Offline reports and figures</a></li>
 <li class="toctree-l2"><a class="reference internal" href="benchmark/evaluation_and_plots.html#multi-archive-scoring-closure-in-0-6-7-11-12">Multi-archive scoring closure in 0.6.7.11.12</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="benchmark/example_results.html">Published example: <code class="docutils literal notranslate"><span class="pre">astroakd_100_v2</span></code></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="benchmark/example_results.html#inspect-the-questions-and-references">Inspect the questions and references</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark/example_results.html#automatic-archive-reference-agreement">Automatic archive-reference agreement</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark/example_results.html#agreement-by-question-type">Agreement by question type</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmark/example_results.html#original-baseline-runtime">Original baseline runtime</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="benchmark/python_api.html">Python API</a></li>
@@ -134,6 +145,12 @@
 <li class="toctree-l1"><a class="reference internal" href="benchmark/documentation_build.html">Build and publish the current documentation</a></li>
 </ul>
 </div>
+<section id="example-benchmark-results">
+<h2>Example benchmark results<a class="headerlink" href="#example-benchmark-results" title="Link to this heading"></a></h2>
+<p>The <a class="reference internal" href="benchmark/example_results.html"><span class="std std-doc">published <code class="docutils literal notranslate"><span class="pre">astroakd_100_v2</span></code> example</span></a> contains all 100 questions, 92 independently retrieved reference-answer sets, per-question A/B/C classifications, and the generated figures below.</p>
+<p><img alt="Strict archive-reference agreement of the three agents for 92 evaluable questions" src="_images/match_rate.png" /></p>
+<p>The percentages measure <strong>automatic agreement with saved archive evidence</strong>, not independently verified scientific accuracy. Eight literature tasks remain outside the scoring denominator.</p>
+</section>
 <section id="what-the-results-mean">
 <h2>What the results mean<a class="headerlink" href="#what-the-results-mean" title="Link to this heading"></a></h2>
 <p><strong>Archive observations are unreviewed evidence, not automatically verified scientific answers.</strong> A/B/C completion and tool-use plots measure agent behavior; independently reviewed gold references are required to report scientific accuracy.</p>

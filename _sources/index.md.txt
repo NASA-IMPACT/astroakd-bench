@@ -13,6 +13,7 @@ benchmark/create_queries
 benchmark/ads_and_mcp
 benchmark/references_and_review
 benchmark/evaluation_and_plots
+benchmark/example_results
 benchmark/python_api
 ```
 
@@ -22,6 +23,14 @@ benchmark/python_api
 
 benchmark/documentation_build
 ```
+
+## Example benchmark results
+
+The [published `astroakd_100_v2` example](benchmark/example_results.md) contains all 100 questions, 92 independently retrieved reference-answer sets, per-question A/B/C classifications, and the generated figures below.
+
+![Strict archive-reference agreement of the three agents for 92 evaluable questions](_static/examples/match_rate.png)
+
+The percentages measure **automatic agreement with saved archive evidence**, not independently verified scientific accuracy. Eight literature tasks remain outside the scoring denominator.
 
 ## What the results mean
 
