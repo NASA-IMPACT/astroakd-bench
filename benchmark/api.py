@@ -1,6 +1,6 @@
 """Supported Python API for AstroAKD-Bench workflows (v0.6.7.11.5).
 
-AstroAKD-Bench is an independent project. The NASA IMPACT Astroquery MCP
+AstroAKD-Bench is an independent project. The NASA ODSI Astroquery MCP
 server is a separate service accessed through its HTTP MCP endpoint.
 
 The facade delegates to the same guarded implementation used by the CLI:
