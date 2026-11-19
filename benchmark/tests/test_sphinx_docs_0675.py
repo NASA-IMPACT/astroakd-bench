@@ -19,7 +19,7 @@ class SphinxDocumentationTests(unittest.TestCase):
         self.assertTrue(target.is_file())
         self.assertFalse((target.parent / "llm_generation_instructions_v1.md").exists())
         self.assertEqual(hashlib.sha256(target.read_bytes()).hexdigest(),
-                         "949420a46865a253b31d41dea96d5d307e112a6dbc8c9138b71cc41b8f1fcc71")
+                         "86d780ecd80778ec8ea6764fca496f1bc65425463026569d12e8204533e15a1b")
         self.assertEqual(instruction_text(enabled=True), target.read_text(encoding="utf-8"))
 
     def test_sphinx_configuration_parseable(self):

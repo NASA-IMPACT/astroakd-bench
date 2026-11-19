@@ -76,7 +76,7 @@ abstract directly proves the availability of a requested archive dataset.
 
 ### Literature tool routing — required
 
-1. Use the **independent NASA IMPACT Astroquery MCP server** for all Astroquery
+1. Use the **independent ODSI Astroquery MCP server** for all Astroquery
    calls. Its authentication variable for ADS is **`API_DEV_KEY`** in the MCP
    server's launch environment. Never make direct `astroquery.nasa_ads`, `ads`,
    `requests` or independent ADS REST calls from the benchmark.

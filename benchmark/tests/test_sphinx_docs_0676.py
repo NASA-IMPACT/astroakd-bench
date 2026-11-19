@@ -46,7 +46,7 @@ class ReadTheDocsBuildTests(unittest.TestCase):
         import hashlib
         hashes={
           'instructions/astroakd/AstroAKD_Instruction.md':'c7e9b4b8ffb608f2b380418a2df2d98c98bb6a807b065fff61757c2f1253e4ab',
-          'instructions/astroakd_bench/AstroAKD-Bench_Instruction.md':'949420a46865a253b31d41dea96d5d307e112a6dbc8c9138b71cc41b8f1fcc71',
+          'instructions/astroakd_bench/AstroAKD-Bench_Instruction.md':'86d780ecd80778ec8ea6764fca496f1bc65425463026569d12e8204533e15a1b',
         }
         for name,expected in hashes.items():
             self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(),expected)

@@ -1,6 +1,6 @@
 # AstroAKD-Bench
 
-**AstroAKD-Bench** is a reproducible evaluation framework for AI agents that search astronomical data archives. It generates astronomy questions, collects reference answers through an independent [Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp), runs controlled agent comparisons, and produces traceable scoring and performance reports.
+**AstroAKD-Bench** is a reproducible evaluation framework for SI agents that search astronomical data archives. It generates astronomy questions, collects reference answers through an independent [Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp), runs controlled agent comparisons, and produces traceable scoring and performance reports.
 
 **[Documentation](https://danehkar.github.io/astroakd-bench/)** · **[Astroquery MCP server](https://github.com/NASA-IMPACT/astroquery-mcp)** · **[Changelog](CHANGELOG.md)**
 

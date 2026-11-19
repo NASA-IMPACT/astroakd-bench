@@ -23,7 +23,7 @@ class InstructionLayoutTests(unittest.TestCase):
     def test_bench_generation_prompt_current_policy(self):
         self.assertEqual(GEN_PATH, INSTRUCTIONS_PATH)
         self.assertEqual(hashlib.sha256(GEN_PATH.read_bytes()).hexdigest(),
-                         '949420a46865a253b31d41dea96d5d307e112a6dbc8c9138b71cc41b8f1fcc71')
+                         '86d780ecd80778ec8ea6764fca496f1bc65425463026569d12e8204533e15a1b')
         self.assertEqual(instruction_text(enabled=True),GEN_PATH.read_text(encoding='utf-8'))
 
     def test_docs_do_not_contain_operational_instruction_files(self):
