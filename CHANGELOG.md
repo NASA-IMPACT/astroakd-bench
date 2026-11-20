@@ -615,7 +615,7 @@ qualification** from **real laptop / live-service qualification**.
   excerpts; enforces an explicit read-only service/method and parameter policy.
 - Optional OpenAI Chat Completions tool-calling agent (`--agent openai`) and
   pluggable external async AstroAKD adapter (`--agent external --adapter`).
-  `--agent echo` is a harness-only test and explicitly not an AI evaluation.
+  `--agent echo` is a harness-only test and explicitly not an LLM evaluation.
 - Durable per-task execution journal, `--resume`, `--replace`, output manifest,
   model/runtime provenance, completion/error reporting, and per-archive totals.
 - Independent agent prompts: reference calls/results never enter the agent's
