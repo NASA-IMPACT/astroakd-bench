@@ -174,7 +174,7 @@ qualification** from **real laptop / live-service qualification**.
 
 ## [0.6.7.8] — PAIRED_THREE_ARM_ERROR_AND_EFFICIENCY_ANALYSIS (offline-qualified; 2026-10-15)
 
-- Documentation-only follow-up (same software version): add first-time local NASA ODSI `astroquery-mcp` clone and FastMCP HTTP launch instructions, then a new 100-query candidate generation / resumable validation / conditional scorable oracle / 300-arm-run / offline-score walkthrough. The strict all-`accepted_nonempty` reference gate, frozen-data preservation and no-live-100-run qualification are explicit. README, current quick-start and Sphinx navigation updated; no runtime, oracle or experiment data changes.
+- Documentation-only follow-up (same software version): add first-time local ODSI `astroquery-mcp` clone and FastMCP HTTP launch instructions, then a new 100-query candidate generation / resumable validation / conditional scorable oracle / 300-arm-run / offline-score walkthrough. The strict all-`accepted_nonempty` reference gate, frozen-data preservation and no-live-100-run qualification are explicit. README, current quick-start and Sphinx navigation updated; no runtime, oracle or experiment data changes.
 
 - Add optional five CSV reports to `score-scorable`: overall A/B/C results including MCP and web statistics; MCP A/B summary; per-question A/B/C paired answers and runtime/token/tool deltas; pairwise match contingency and efficiency summary; and observable-category mismatch audit requiring independent science review. Existing reports remain compatible.
 - Calculate exact two-sided McNemar discordance p-values, paired means and medians, quartiles, and deterministic 2000-resample percentile bootstrap intervals on paired **mean differences**. Missing arm runs remain unavailable rather than being coerced to zero or an incorrect answer.
@@ -496,7 +496,7 @@ qualification** from **real laptop / live-service qualification**.
   the scoring process; agents receive only response data for the calls they make.
 - The release includes root README/CHANGELOG, root-level accepted datasets,
   a built offline fixture, a detailed replay guide, test suite, and local
-  installation/qualification instructions. No changes to the external NASA
+  installation/qualification instructions. No changes to the external
   ODSI Astroquery MCP server or its contributor attribution.
 
 ### Qualification
@@ -528,7 +528,7 @@ qualification** from **real laptop / live-service qualification**.
 - `--pretty-output` is independent of `--json-format {compact,pretty}` (the latter continues to control console and summary-report formatting only). The new output is always pretty-formatted.
 - Reject `.jsonl` pretty-export destinations, collisions with any input/output path, and existing artifacts without an explicit `--replace`. Individual JSON output is published via atomic rename.
 - Added regression tests for saved-file contents, equality with compact JSONL, CLI integration, destination safety, unchanged accepted data fingerprints, and optional export behavior.
-- Updated the root `README.md`, `CHANGELOG.md`, detailed scoring documentation, installation guide, package version, and release archives. AstroAKD-Bench remains an independent repository; the NASA ODSI Astroquery MCP server is an external dependency.
+- Updated the root `README.md`, `CHANGELOG.md`, detailed scoring documentation, installation guide, package version, and release archives. AstroAKD-Bench remains an independent repository; the ODSI Astroquery MCP server is an external dependency.
 
 ### Qualification
 
@@ -555,7 +555,7 @@ qualification** from **real laptop / live-service qualification**.
 
 ### Boundaries
 
-- AstroAKD-Bench is a standalone repository built to work with the NASA ODSI Astroquery MCP server; it is not included in that server's repository. No unrelated MCP-server contributor attributions are included.
+- AstroAKD-Bench is a standalone repository built to work with the ODSI Astroquery MCP server; it is not included in that server's repository. No unrelated MCP-server contributor attributions are included.
 - Comprehensive scientific statement verification and MCP record/replay are future work, not 0.5.0 functionality.
 
 ## [0.4.1] - 2026-10-13
